@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_window_label">PS1 Bedroom: My Window</string>
+    <string name="widget_window_desc">A live pixel-art view out of your bedroom window, with the time and weather</string>
+    <string name="widget_control_label">PS1 Bedroom: Controls</string>
+    <string name="widget_control_desc">Play or pause your room and start a sleep timer</string>
+</resources>

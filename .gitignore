@@ -1,0 +1,10 @@
+# Private app signing key: never publish this
+android/signing/
+
+# Build outputs (APKs are attached to GitHub Releases instead)
+releases/
+*.apk
+*.idsig
+
+# Generated during the build from src/ps1_bedroom.html
+android/app/assets/index.html

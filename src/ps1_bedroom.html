@@ -2307,7 +2307,11 @@
                 vec3 L = lightToSample * inversesqrt(max(0.001, distToLightSq));
 
                 float cosAngle = dot(L, uLightDir);
-                if (cosAngle > uLightCosAngle) {
+                // Only air the window opening can see: the line back to the light must cross the back wall inside the window
+                float tWin = (-3.0 - uLightPos.z) / (samplePos.z - uLightPos.z + 0.00001);
+                vec2 winHit = uLightPos.xy + (samplePos.xy - uLightPos.xy) * tWin;
+                bool throughWindow = winHit.x > -0.58 && winHit.x < 2.18 && winHit.y > 1.55 && winHit.y < 3.75;
+                if (cosAngle > uLightCosAngle && throughWindow) {
                   vec3 shadowNDC = shadowClip.xyz / max(0.0001, shadowClip.w);
                   vec2 shadowUV = shadowNDC.xy * 0.5 + 0.5;
                   float currentDepth = shadowNDC.z * 0.5 + 0.5;
@@ -7822,8 +7826,8 @@
       const moonK = (1 - smooth(-9, -3, ENV.sunDeg)) * smooth(-0.04, 0.12, ENV.moonEl);
       activeBodyIsSun = sunK >= moonK * 0.9;
       // Keep the beam coming in through the window even when the body is high or off to the side
-      const el = Math.max(0.07, Math.min(0.9, activeBodyIsSun ? ENV.sunEl : ENV.moonEl));
-      const az = Math.max(-1.1, Math.min(1.1, activeBodyIsSun ? ENV.sunAz : ENV.moonAz));
+      const el = Math.max(0.07, Math.min(0.62, activeBodyIsSun ? ENV.sunEl : ENV.moonEl));
+      const az = Math.max(-0.85, Math.min(0.85, activeBodyIsSun ? ENV.sunAz : ENV.moonAz));
       celestialDir.set(Math.sin(az) * Math.cos(el), Math.sin(el), -Math.cos(az) * Math.cos(el));
       celestialPos.set(0.8 + celestialDir.x * 3.4, 2.55 + celestialDir.y * 3.4, -3.0 + celestialDir.z * 3.4);
       moonLight.position.copy(celestialPos);
@@ -8957,10 +8961,6 @@
       const leafGust = new Tone.Gain(0.5);
       nativeLfo(gainParam(leafGust), 0.13, 0.15, 1);
       new Tone.Noise('pink').start().chain(filt({ frequency: 2400, type: 'bandpass', Q: 0.8 }), leafGust, new Tone.Gain(0.35), SND.leaves);
-      const leafCrackle = new Tone.Player(makeTickBuffer(4, 45, 0.008, 0.03, 1.5));
-      leafCrackle.loop = true;
-      leafCrackle.chain(filt({ frequency: 2000, type: 'bandpass', Q: 0.7 }), new Tone.Gain(0.35), SND.leaves);
-      leafCrackle.start();
 
       SND.breeze = new Tone.Gain(0);
       SND.breeze.connect(SND.natureBus);
@@ -10300,8 +10300,13 @@
     });
 
     // ---------------- CHANGELOG (newest first; add a new entry at the top for every release) ----------------
-    const APP_VERSION = '1.1';
+    const APP_VERSION = '1.1.1';
     const CHANGELOG = [
+      { v: '1.1.1', name: 'Fixes', sections: {
+        Fixed: [
+          'Light rays could leak through the wall beside and above the window when the sun was high or off to the side. Rays now only shine through the window opening',
+          'Removed the clicking crackle that played outside in fall (the soft rustle of wind in the leaves stays)'
+        ] } },
       { v: '1.1', name: 'The living room update', sections: {
         Added: [
           'Real-time day and night: the sun and moon follow your clock along real paths, with real sunrise and sunset times for the season (and your city). The room light comes from whichever is up and changes colour from deep orange to warm daylight to cool moonlight',

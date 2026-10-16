@@ -2,6 +2,11 @@
 
 The in-app version of this list lives in `src/ps1_bedroom.html` (search for `const CHANGELOG`). Update both for each release, and bump `APP_VERSION`.
 
+## v1.1.1 — Fixes
+**Fixed**
+- Light rays could leak through the wall beside and above the window when the sun was high or off to the side; rays now only shine through the window opening
+- Removed the clicking crackle that played outside in fall (the soft leaf rustle stays)
+
 ## v1.1 — The living room update
 **Added**
 - Real-time day and night: the sun and moon follow your clock along real paths, with real sunrise/sunset times for the season (and your city); the room light comes from whichever is up

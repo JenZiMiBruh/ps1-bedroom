@@ -42,7 +42,7 @@ Every corner has its own sound, mixed in 3D: the hum of the CRT, the ceiling fan
 <td width="50%" valign="top">
 
 ### 📱 Android
-1. Grab **`PS1-Bedroom-v1.1.apk`** from the **[latest release](../../releases/latest)**.
+1. Grab the **`PS1-Bedroom-vX.Y.apk`** file from the **[latest release](../../releases/latest)**.
 2. Open it on your phone and tap **Install**. Allow installs from your browser / file manager if asked.
 3. If Play Protect warns you (it's not from the Play Store), tap **Install anyway**.
 4. Tap the screen to boot up. 🎮

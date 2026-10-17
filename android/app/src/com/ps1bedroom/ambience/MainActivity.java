@@ -298,6 +298,7 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void keepScreenOn(final boolean on) {
             runOnUiThread(new Runnable() { @Override public void run() {
+                if (webView != null) webView.setKeepScreenOn(on);
                 if (on) getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
                 else getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
             } });

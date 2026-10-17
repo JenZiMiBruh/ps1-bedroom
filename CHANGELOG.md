@@ -6,6 +6,10 @@ The in-app version of this list lives in `src/ps1_bedroom.html` (search for `con
 **Added**
 - Work in progress on the `beta` branch
 
+## v1.2.1 — TV power
+**Fixed**
+- The TV was hard to turn off: a bigger red power button with a standby light (easier to tap), and flipping past the last channel switches it off
+
 ## v1.2 — Stuff from 2001
 **Added**
 - A German Shepherd (blue eyes, his left one half brown) who wanders, sunbathes, watches TV, sits by you at the desk and sleeps on the bed at night; tap him for a tail wag

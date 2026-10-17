@@ -45,7 +45,10 @@ final class AppState {
         StringBuilder b = new StringBuilder();
         String w = s.optString("weather", "Clear");
         b.append(w);
-        if (!s.isNull("tempC") && s.has("tempC")) {
+        String tempText = s.optString("tempText", "");
+        if (tempText.length() > 0) {
+            b.append(" · ").append(tempText);
+        } else if (!s.isNull("tempC") && s.has("tempC")) {
             double t = s.optDouble("tempC", Double.NaN);
             if (!Double.isNaN(t)) b.append(" · ").append(Math.round(t * 9 / 5 + 32)).append("°F");
         }

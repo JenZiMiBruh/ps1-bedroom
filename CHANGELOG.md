@@ -2,6 +2,11 @@
 
 The in-app version of this list lives in `src/ps1_bedroom.html` (search for `const CHANGELOG`). Update both for each release, and bump `APP_VERSION`.
 
+## v1.1.4 — Temperature
+**Added**
+- The top bar always shows the temperature (live for your city, or an estimate for the season, hour and weather)
+- Choose Fahrenheit or Celsius in Menu → Display; the notification and widgets follow it too
+
 ## v1.1.3 — Dust in the light
 **Fixed**
 - The floating dust stayed in one spot; it now drifts inside the light beam wherever the sun or moon shines in from, and fades when the light does

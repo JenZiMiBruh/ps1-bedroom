@@ -439,6 +439,8 @@
           <label class="slider"><span><em>Light rays</em><em id="val-volumetric">100%</em></span><input type="range" id="ctrl-volumetric" min="0" max="200" step="10" value="100" /></label>
           <label class="slider"><span><em>Camera breathing</em><em id="val-sway">40%</em></span><input type="range" id="ctrl-sway" min="0" max="100" step="5" value="40" /></label>
         </details>
+        <h4>Temperature</h4>
+        <div class="seg" id="seg-unit"><button data-v="F">°F  Fahrenheit</button><button data-v="C">°C  Celsius</button></div>
         <label class="check"><input type="checkbox" id="chk-startscreen" checked /> Show the start screen when the app opens</label>
         <label class="check"><input type="checkbox" id="chk-debug-cam" /> Debug: the free camera can leave the room</label>
       </section>
@@ -10330,8 +10332,13 @@
     });
 
     // ---------------- CHANGELOG (newest first; add a new entry at the top for every release) ----------------
-    const APP_VERSION = '1.1.3';
+    const APP_VERSION = '1.1.4';
     const CHANGELOG = [
+      { v: '1.1.4', name: 'Temperature', sections: {
+        Added: [
+          'The top bar always shows the temperature (live for your city, or an estimate for the season, hour and weather)',
+          'Choose Fahrenheit or Celsius in Menu, then Display. The notification and widgets follow it too'
+        ] } },
       { v: '1.1.3', name: 'Dust in the light', sections: {
         Fixed: [
           'The floating dust stayed in one spot. It now drifts inside the light beam wherever the sun or moon shines in from, and fades when the light does'
@@ -11401,6 +11408,14 @@
     let tutorialSeen = false;
     let sleepDim = true;
     let fpsCap = 60;
+    let tempUnit = /^en-US/.test(navigator.language || 'en-US') ? 'F' : 'C';
+    // Live temperature when synced to a city, otherwise a believable estimate for the season, hour and weather
+    function currentTempC() {
+      if (ENV.weatherMode === 'live' && ENV.liveTempC !== null) return ENV.liveTempC;
+      const base = { summer: 24, spring: 14, fall: 11, winter: -1 }[currentSeason];
+      return base + (ENV.daylight - 0.5) * 8 - (isPrecipNow() ? 2 : 0) - W.wind * 2;
+    }
+    function formatTemp(c) { return tempUnit === 'F' ? `${Math.round(c * 9 / 5 + 32)}°F` : `${Math.round(c)}°C`; }
 
     // ---------- Environment controls ----------
     function setWeatherKind(kind, quiet) {
@@ -11695,6 +11710,7 @@
       ENV.realisticMoon = b.dataset.v === 'real';
       applyEnvironmentSettings(); refreshMenu(); playSfx('ui'); saveSettingsSoon();
     }));
+    document.querySelectorAll('#seg-unit button').forEach((b) => b.addEventListener('click', () => { tempUnit = b.dataset.v; refreshMenu(); playSfx('ui'); saveSettingsSoon(); pushAndroidState(); }));
     document.querySelectorAll('#seg-quality button').forEach((b) => b.addEventListener('click', () => { setQuality(b.dataset.v); saveSettingsSoon(); }));
     $('ctrl-hour').addEventListener('input', (e) => setPresetHour(parseFloat(e.target.value), true));
     $('city-go').addEventListener('click', () => { ENV.weatherMode = 'live'; fetchLiveWeather($('city-input').value); refreshMenu(); });
@@ -11757,6 +11773,7 @@
       $('btn-door').textContent = doorOpen ? 'DOOR: OPEN' : 'DOOR: CLOSED';
       $('btn-door').classList.toggle('active', doorOpen);
       setSeg('seg-quality', qualityMode);
+      setSeg('seg-unit', tempUnit);
       $('quality-note').textContent = QUALITY[qualityMode].note;
       $('quality-readout').textContent = `${internalW}×${internalH}`;
       $('chk-startscreen').checked = startScreenEnabled;
@@ -11771,8 +11788,7 @@
     function updateStatusChip() {
       const icon = ENV.daylight > 0.5 ? (W.cloud > 0.6 ? '☁️' : '☀️') : (ENV.daylight > 0.05 ? '🌅' : '🌙');
       $('status-time').textContent = `${icon} ${formatHour(ENV.hour)}`;
-      const temp = ENV.weatherMode === 'live' && ENV.liveTempC !== null ? ` ${Math.round(ENV.liveTempC)}°` : '';
-      $('status-weather').textContent = `${currentSeason[0].toUpperCase()}${currentSeason.slice(1)} · ${W.label}${temp}`;
+      $('status-weather').textContent = `${formatTemp(currentTempC())} · ${currentSeason[0].toUpperCase()}${currentSeason.slice(1)} · ${W.label}`;
     }
 
     // ---------- Saved settings ----------
@@ -11791,6 +11807,7 @@
         vol: { ...volMultipliers }, master: masterVolume, quality: qualityMode, vibe: vibeMode, res: resShort,
         jitter: jitterBase, affine: ps1Uniforms.uAffineStrength.value, dither: postMaterial.uniforms.uDitherStrength.value,
         volumetric: userVolumetricSetting, sway: swayAmount,
+        tempUnit,
         audioOn: audioReady ? isAudioPlaying : wantAudio, startScreen: startScreenEnabled, tutorialSeen, sleepDim
       };
     }
@@ -11851,6 +11868,7 @@
         if (typeof s.res === 'number' && s.res !== resShort) { resShort = s.res; $('ctrl-res').value = resShort; $('val-res').textContent = `${resShort}p`; resizeRenderTargets(); }
         setVibe(s.vibe || 'signature', true);
         wantAudio = s.audioOn !== false;
+        if (s.tempUnit === 'C' || s.tempUnit === 'F') tempUnit = s.tempUnit;
         startScreenEnabled = s.startScreen !== false;
         tutorialSeen = !!s.tutorialSeen;
         sleepDim = s.sleepDim !== false;
@@ -11953,6 +11971,7 @@
         weatherKind: ENV.weatherKind,
         season: currentSeason,
         tempC: ENV.liveTempC,
+        tempText: formatTemp(currentTempC()),
         city: ENV.cityName,
         daylight: ENV.daylight,
         sunDeg: ENV.sunDeg,

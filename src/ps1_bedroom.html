@@ -16860,21 +16860,35 @@
       jasper.mixer.update(Math.min(dt, 0.05) * (pose === 'sleep' ? 0.35 : 1));
       // Lying down / sitting: fold the legs and drop the body (on top of whatever the clip is doing)
       const lie = d.poseK, sit = d.sitK || 0;
-      jasper.wrap.position.y = -0.43 * lie - 0.12 * sit;
-      jasper.wrap.rotation.x = -0.38 * sit;
-      // (bone names lose their dots when loaded: FrontUpperLeg.L -> FrontUpperLegL; +x swings a leg backward)
-      ['L', 'R'].forEach((s) => {
-        bend('FrontUpperLeg' + s, JLIE.frontUpper, 0, 0, lie);                 // front legs stretched out ahead
-        bend('FrontLowerLeg' + s, JLIE.frontLower, 0, 0, lie);
-        bend('BackUpperLeg' + s, JLIE.backUpper, 0, 0, Math.max(lie, sit));    // hind legs folded under
-        bend('BackLowerLeg' + s, JLIE.backLower, 0, 0, Math.max(lie, sit));
-        bend('FrontUpperLeg' + s, 0.38, 0, 0, sit);                            // sitting: front legs straight down
-      });
-      bend('Head', pose === 'sleep' ? JLIE.headSleep : 0, 0, 0, lie);
-      // Tail: a gentle side-to-side wag only when petted; otherwise the animation's own tail moves it
+      jasper.wrap.position.y = -0.38 * lie - 0.18 * sit;
+      jasper.wrap.rotation.x = -0.38 * sit + 0.12 * lie; // lying: chest sinks a touch so the front paws rest on the floor
+      // Sit / lie: the pack has no such animations, so these are fixed poses built from the model's rest
+      // pose (not stacked on the moving idle, which made the legs flail), blended in with the pose amount.
+      // Bone names lose their dots when loaded (FrontUpperLeg.L -> FrontUpperLegL); +x swings a leg backward.
+      const k = Math.max(lie, sit);
+      if (k > 0.001) {
+        const P = lie >= sit ? JPOSE.lie : JPOSE.sit;
+        Object.keys(P).forEach((n) => {
+          const b = jasper.bones[n], r = jasper.rest[n];
+          if (!b || !r) return;
+          const [x, y, z] = P[n];
+          jtq.copy(r).multiply(jq.setFromEuler(je.set(x, y, z)));
+          b.quaternion.slerp(jtq, k);
+        });
+        if (pose === 'sleep') bend('Head', JLIE.headSleep, 0, 0, lie);
+      }
       if (t < d.wagUntil) ['Tail2', 'Tail4'].forEach((n) => bend(n, 0, Math.sin(t * 16) * 0.35, 0, 1));
     };
-    const JLIE = { frontUpper: -1.4, frontLower: 0.3, backUpper: -1.55, backLower: 2.5, headSleep: 0.35 };
+    const JLIE = { headSleep: 0.35 };
+    const jtq = new THREE.Quaternion();
+    // Rest-relative rotations [x, y, z] per bone. Same x on both sides: the rig's left and right legs bend the same way
+    const JPOSE = {
+      lie: { FrontUpperLegL: [-1.5, 0, 0], FrontUpperLegR: [-1.5, 0, 0], FrontLowerLegL: [0, 0, 0], FrontLowerLegR: [0, 0, 0],
+        BackUpperLegL: [-1.7, 0, 0], BackUpperLegR: [-1.7, 0, 0], BackLowerLegL: [1.2, 0, 0], BackLowerLegR: [1.2, 0, 0],
+        Tail1: [-0.16, 0, 0], Tail3: [-0.08, 0, 0] }, // tail lies flat on the floor / bed instead of arching up
+      sit: { FrontUpperLegL: [0.15, 0, 0], FrontUpperLegR: [0.15, 0, 0], FrontLowerLegL: [-0.3, 0, 0], FrontLowerLegR: [-0.3, 0, 0],
+        BackUpperLegL: [-1.6, 0, 0], BackUpperLegR: [-1.6, 0, 0], BackLowerLegL: [2.4, 0, 0], BackLowerLegR: [2.4, 0, 0] }
+    };
 
     applyEnvironmentSettings();
     animate();

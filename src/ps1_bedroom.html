@@ -11730,6 +11730,7 @@
         captureRequest = null;
         try { cb(renderer.domElement); } catch (err) { console.warn('photo failed', err); }
       }
+      tvScreenMesh.visible = !ytActive; // the fake channel picture must not peek out around the video
       if (ytActive) window.ytPlaceOverlay(); // keep the YouTube player pinned to the TV glass
     }
 
@@ -16473,6 +16474,7 @@
         #yt-bar { position: fixed; right: calc(10px + var(--safe-r)); top: calc(58px + var(--safe-t)); z-index: 46; display: none; gap: 4px;
           background: rgba(8, 10, 24, 0.82); border: 1px solid rgba(255,255,255,0.15); border-radius: 999px; padding: 4px; font: bold 11px 'Courier New', monospace; }
         #yt-bar.show { display: flex; }
+        body.photo-mode #yt-bar { display: none; }
         #yt-bar button { border: none; background: #1f2335; color: #f3f4f6; border-radius: 999px; padding: 6px 10px; font: inherit; }
         #yt-bar button.red { background: #cc0000; }
         #yt-dialog { position: fixed; inset: 0; z-index: 47; display: none; align-items: center; justify-content: center; background: rgba(4,6,18,0.6); padding: 16px; }
@@ -16644,7 +16646,7 @@
         centre.set(0, 0, 0.02).applyMatrix4(tvScreenMesh.matrixWorld);
         normal.set(0, 0, 1).applyMatrix3(nMat.getNormalMatrix(tvScreenMesh.matrixWorld)).normalize();
         toCam.subVectors(camera.position, centre);
-        let show = normal.dot(toCam) > 0.05 && !document.body.classList.contains('photo-mode');
+        let show = normal.dot(toCam) > 0.05; // stays up in photo mode: hiding the UI must not hide the video
         const rect = renderer.domElement.getBoundingClientRect();
         const pts = [];
         for (const c of corners) {

@@ -2,6 +2,11 @@
 
 The in-app version of this list lives in `src/ps1_bedroom.html` (search for `const CHANGELOG`). Update both for each release, and bump `APP_VERSION`.
 
+## v1.1.2 — Little touches
+**Changed**
+- The alarm clock by the bed shows the room's real time (with the PM dot)
+- Took down the EXCELLENCE poster above the desk
+
 ## v1.1.1 — Fixes
 **Fixed**
 - Light rays could leak through the wall beside and above the window when the sun was high or off to the side; rays now only shine through the window opening

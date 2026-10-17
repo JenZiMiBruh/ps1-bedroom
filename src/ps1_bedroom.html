@@ -4376,7 +4376,7 @@
     posterMesh.position.set(-0.05, 3.56, -0.72);
     posterMesh.castShadow = true;
     posterMesh.receiveShadow = true;
-    deskGroup.add(posterMesh);
+    // (1.1.2: the poster above the hutch was taken down; the wall is left bare)
 
     // 3. MULTI-PART SCULPTED HP PAVILION PC TOWER + 3D CURLED STICKY NOTE
     const pcTowerGroup = new THREE.Group();
@@ -7014,14 +7014,25 @@
     clockBody.castShadow = true;
     bedGroup.add(clockBody);
 
-    const alarmClockTex = createCanvasTex(64, 32, (ctx, w, h) => {
+    // The alarm clock shows the room's time (redrawn once a minute from the app heartbeat)
+    const alarmClockObj = createCanvasTex(64, 32, () => {});
+    const alarmClockTex = alarmClockObj.tex;
+    let alarmClockShown = '';
+    function drawAlarmClock(hour) {
+      const hh = Math.floor(hour) % 24, mm = Math.floor((hour % 1) * 60);
+      const text = `${String(((hh + 11) % 12) + 1).padStart(2, ' ')}:${String(mm).padStart(2, '0')}`;
+      if (text === alarmClockShown) return;
+      alarmClockShown = text;
+      const ctx = alarmClockObj.ctx;
       ctx.fillStyle = '#090406';
-      ctx.fillRect(0, 0, w, h);
+      ctx.fillRect(0, 0, 64, 32);
       ctx.fillStyle = '#ef4444';
       ctx.font = 'bold 18px "Courier New", monospace';
-      ctx.fillText('03:14', 6, 22);
-      ctx.fillRect(3, 8, 3, 3); // PM indicator dot
-    }).tex;
+      ctx.fillText(text, 6, 22);
+      if (hh >= 12) ctx.fillRect(3, 8, 3, 3); // PM indicator dot
+      alarmClockTex.needsUpdate = true;
+    }
+    drawAlarmClock(3 + 14 / 60);
     const clockFace = new THREE.Mesh(
       new THREE.PlaneGeometry(0.19, 0.068),
       makePS1Material({
@@ -10300,8 +10311,13 @@
     });
 
     // ---------------- CHANGELOG (newest first; add a new entry at the top for every release) ----------------
-    const APP_VERSION = '1.1.1';
+    const APP_VERSION = '1.1.2';
     const CHANGELOG = [
+      { v: '1.1.2', name: 'Little touches', sections: {
+        Changed: [
+          "The alarm clock by the bed now shows the room's real time (with the PM dot)",
+          'Took down the EXCELLENCE poster above the desk'
+        ] } },
       { v: '1.1.1', name: 'Fixes', sections: {
         Fixed: [
           'Light rays could leak through the wall beside and above the window when the sun was high or off to the side. Rays now only shine through the window opening',
@@ -11970,6 +11986,7 @@
       }
       if (ENV.weatherMode === 'auto' && now > autoNextAt) autoWeatherStep();
       updateStatusChip();
+      drawAlarmClock(ENV.hour);
       if (document.body.classList.contains('menu-open')) {
         $('time-readout').textContent = formatHour(ENV.hour);
         if (sleepEnd) updateTimerChip();

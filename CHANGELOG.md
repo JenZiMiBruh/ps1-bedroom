@@ -2,6 +2,10 @@
 
 The in-app version of this list lives in `src/ps1_bedroom.html` (search for `const CHANGELOG`). Update both for each release, and bump `APP_VERSION`.
 
+## v1.1.3 — Dust in the light
+**Fixed**
+- The floating dust stayed in one spot; it now drifts inside the light beam wherever the sun or moon shines in from, and fades when the light does
+
 ## v1.1.2 — Little touches
 **Changed**
 - The alarm clock by the bed shows the room's real time (with the PM dot)

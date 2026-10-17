@@ -7543,10 +7543,15 @@
     const dustGroup = new THREE.Group();
     scene.add(dustGroup);
     const dustMat = makePS1Material({ color: 0x93c5fd, emissive: 0x60a5fa, emissiveIntensity: 0.8 });
-    const dustMesh = makeInstanced(dustGroup, new THREE.BoxGeometry(0.02, 0.02, 0.02), dustMat, 48);
-    const dustMotes = Array.from({ length: 48 }, () => ({
-      x: randIn(0, 3.4), y: randIn(1.0, 3.6), z: randIn(-2.7, -0.2), speed: randIn(0.2, 0.6), phase: randIn(0, 6.28)
+    const dustMesh = makeInstanced(dustGroup, new THREE.BoxGeometry(0.02, 0.02, 0.02), dustMat, 64);
+    // Each mote lives somewhere inside the beam: s = distance along it, u / v = position across it
+    const dustMotes = Array.from({ length: 64 }, () => ({
+      s: Math.random(), u: randIn(-1, 1), v: randIn(-1, 1), speed: randIn(0.2, 0.6), phase: randIn(0, 6.28), drift: randIn(0.01, 0.03)
     }));
+    const beamOrigin = new THREE.Vector3(0.8, 2.6, -2.95);
+    const beamDir = new THREE.Vector3();
+    const beamSide = new THREE.Vector3();
+    const beamUp = new THREE.Vector3();
 
     const weather3DGroup = new THREE.Group();
     scene.add(weather3DGroup);
@@ -7724,12 +7729,26 @@
 
     // Per-frame particle motion
     function updateWeatherFx(t, dt) {
+      // Dust floats inside the light beam, wherever the sun or moon is shining in from (and fades with it)
+      beamDir.subVectors(roomLightTargetPos, beamOrigin).normalize();
+      beamSide.set(-beamDir.z, 0, beamDir.x).normalize();
+      beamUp.crossVectors(beamSide, beamDir).normalize();
+      const beamLen = 4.2;
+      const visible = moonBaseIntensity > 0.25 && blindsOpenState !== 2;
+      dustMesh.visible = visible;
       for (let i = 0; i < dustMotes.length; i++) {
         const m = dustMotes[i];
-        setInstance(dustMesh, i,
-          m.x + Math.cos(t * m.speed + m.phase) * 0.12,
-          m.y + Math.sin(t * m.speed * 0.8 + m.phase) * 0.18,
-          m.z + Math.sin(t * m.speed * 0.6 + m.phase * 2) * 0.1, 0, t * m.speed, 0, 1);
+        m.s += m.drift * dt * 0.6;
+        if (m.s > 1) { m.s = 0; m.u = randIn(-1, 1); m.v = randIn(-1, 1); }
+        const d = m.s * beamLen;
+        const spread = 0.9 + m.s * 1.1; // the beam widens as it crosses the room
+        const su = m.u * spread * 0.8 + Math.cos(t * m.speed + m.phase) * 0.08;
+        const sv = m.v * spread * 0.6 + Math.sin(t * m.speed * 0.8 + m.phase) * 0.12;
+        const px = beamOrigin.x + beamDir.x * d + beamSide.x * su + beamUp.x * sv;
+        const py = beamOrigin.y + beamDir.y * d + beamSide.y * su + beamUp.y * sv;
+        const pz = beamOrigin.z + beamDir.z * d + beamSide.z * su + beamUp.z * sv;
+        const inRoom = pz > -2.9 && py > 0.1 && py < 4.9 && px > ROOM.minX + 0.1 && px < ROOM.maxX - 0.1;
+        setInstance(dustMesh, i, px, py, pz, 0, t * m.speed, 0, inRoom ? 1 : 0);
       }
       dustMesh.instanceMatrix.needsUpdate = true;
 
@@ -10311,8 +10330,12 @@
     });
 
     // ---------------- CHANGELOG (newest first; add a new entry at the top for every release) ----------------
-    const APP_VERSION = '1.1.2';
+    const APP_VERSION = '1.1.3';
     const CHANGELOG = [
+      { v: '1.1.3', name: 'Dust in the light', sections: {
+        Fixed: [
+          'The floating dust stayed in one spot. It now drifts inside the light beam wherever the sun or moon shines in from, and fades when the light does'
+        ] } },
       { v: '1.1.2', name: 'Little touches', sections: {
         Changed: [
           "The alarm clock by the bed now shows the room's real time (with the PM dot)",

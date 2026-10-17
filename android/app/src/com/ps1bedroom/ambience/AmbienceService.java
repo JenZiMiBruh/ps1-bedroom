@@ -33,6 +33,29 @@ public class AmbienceService extends Service {
     static final String ACTION_PLAY = "play";
     static final String ACTION_SLEEP = "sleep30";
     static final String ACTION_STOP = "stop";
+    static final String ACTION_NEXT = "next";
+    static final String ACTION_PREV = "prev";
+
+    // What the boombox is playing (set by the page): song title / artist / album and the album cover
+    private static volatile String songTitle = null, songArtist = null, songAlbum = null;
+    private static volatile Bitmap songArt = null;
+
+    static void setNowPlaying(String json, String artB64) {
+        try {
+            if (json == null || "null".equals(json)) { songTitle = null; songArtist = null; songAlbum = null; songArt = null; return; }
+            JSONObject o = new JSONObject(json);
+            songTitle = o.optString("title", null);
+            songArtist = o.optString("artist", "");
+            songAlbum = o.optString("album", "");
+            if ("-".equals(artB64)) songArt = null;
+            else if (artB64 != null && artB64.length() > 0) {
+                byte[] b = android.util.Base64.decode(artB64, android.util.Base64.DEFAULT);
+                songArt = android.graphics.BitmapFactory.decodeByteArray(b, 0, b.length);
+            }
+        } catch (Exception ignored) {
+            // Keep whatever was showing
+        }
+    }
 
     private MediaSession session;
     private PowerManager.WakeLock wakeLock;
@@ -66,6 +89,8 @@ public class AmbienceService extends Service {
             @Override public void onPlay() { js("ps1App.play()"); }
             @Override public void onPause() { js("ps1App.pause()"); }
             @Override public void onStop() { js("ps1App.pause()"); }
+            @Override public void onSkipToNext() { js("ps1App.media('next')"); }
+            @Override public void onSkipToPrevious() { js("ps1App.media('prev')"); }
             @Override public void onCustomAction(String action, android.os.Bundle extras) {
                 if (ACTION_SLEEP.equals(action)) js("ps1App.sleep(30)");
             }
@@ -87,6 +112,8 @@ public class AmbienceService extends Service {
         if (ACTION_PAUSE.equals(action)) js("ps1App.pause()");
         else if (ACTION_PLAY.equals(action)) js("ps1App.play()");
         else if (ACTION_SLEEP.equals(action)) js("ps1App.sleep(30)");
+        else if (ACTION_NEXT.equals(action)) js("ps1App.media('next')");
+        else if (ACTION_PREV.equals(action)) js("ps1App.media('prev')");
         else if (ACTION_STOP.equals(action)) { js("ps1App.pause()"); stopSelf(); return START_NOT_STICKY; }
 
         JSONObject state = AppState.get(this);
@@ -124,16 +151,23 @@ public class AmbienceService extends Service {
         String line = (time.length() > 0 ? time + " · " : "") + AppState.statusLine(s);
         int sleepLeft = s.optInt("sleepLeftMin", 0);
         String sub = sleepLeft > 0 ? "Sleep in " + sleepLeft + " min" : (playing ? "Playing in the background" : "Paused");
-        Bitmap art = WidgetArt.render(this, s, AppState.hourNow(), 64, 64, 6);
+        // Music on the boombox: show the song, artist and album cover instead of the room's status
+        final String song = songTitle;
+        final boolean music = song != null && song.length() > 0;
+        Bitmap art = music && songArt != null ? songArt : WidgetArt.render(this, s, AppState.hourNow(), 64, 64, 6);
+        String title = music ? song : "PS1 Bedroom";
+        String text = music ? (songArtist != null && songArtist.length() > 0 ? songArtist : line) : line;
+        String album = music ? (songAlbum != null && songAlbum.length() > 0 ? songAlbum : "PS1 Bedroom") : sub;
 
         session.setMetadata(new MediaMetadata.Builder()
-                .putString(MediaMetadata.METADATA_KEY_TITLE, "PS1 Bedroom")
-                .putString(MediaMetadata.METADATA_KEY_ARTIST, line)
-                .putString(MediaMetadata.METADATA_KEY_ALBUM, sub)
+                .putString(MediaMetadata.METADATA_KEY_TITLE, title)
+                .putString(MediaMetadata.METADATA_KEY_ARTIST, text)
+                .putString(MediaMetadata.METADATA_KEY_ALBUM, album)
                 .putBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART, art)
                 .build());
         session.setPlaybackState(new PlaybackState.Builder()
-                .setActions(PlaybackState.ACTION_PLAY | PlaybackState.ACTION_PAUSE | PlaybackState.ACTION_PLAY_PAUSE | PlaybackState.ACTION_STOP)
+                .setActions(PlaybackState.ACTION_PLAY | PlaybackState.ACTION_PAUSE | PlaybackState.ACTION_PLAY_PAUSE | PlaybackState.ACTION_STOP
+                        | (music ? PlaybackState.ACTION_SKIP_TO_NEXT | PlaybackState.ACTION_SKIP_TO_PREVIOUS : 0))
                 .addCustomAction(new PlaybackState.CustomAction.Builder(ACTION_SLEEP, "Sleep 30 min", R.drawable.ic_sleep).build())
                 .setState(playing ? PlaybackState.STATE_PLAYING : PlaybackState.STATE_PAUSED, PlaybackState.PLAYBACK_POSITION_UNKNOWN, 1f)
                 .build());
@@ -143,25 +177,38 @@ public class AmbienceService extends Service {
 
         Notification.Builder b = Build.VERSION.SDK_INT >= 26 ? new Notification.Builder(this, CHANNEL) : new Notification.Builder(this);
         b.setSmallIcon(R.drawable.ic_stat_moon)
-                .setContentTitle("PS1 Bedroom")
-                .setContentText(line)
-                .setSubText(sub)
+                .setContentTitle(title)
+                .setContentText(text)
+                .setSubText(music ? album : sub)
                 .setLargeIcon(art)
                 .setContentIntent(openPi)
                 .setDeleteIntent(servicePi(ACTION_STOP, 4))
                 .setShowWhen(false)
                 .setOngoing(playing)
-                .setVisibility(Notification.VISIBILITY_PUBLIC)
-                .addAction(new Notification.Action.Builder(
-                        Icon.createWithResource(this, playing ? R.drawable.ic_pause : R.drawable.ic_play),
-                        playing ? "Pause" : "Play", servicePi(playing ? ACTION_PAUSE : ACTION_PLAY, 1)).build())
-                .addAction(new Notification.Action.Builder(
-                        Icon.createWithResource(this, R.drawable.ic_sleep), "Sleep 30", servicePi(ACTION_SLEEP, 2)).build())
-                .addAction(new Notification.Action.Builder(
-                        Icon.createWithResource(this, R.drawable.ic_stop), "Stop", servicePi(ACTION_STOP, 3)).build())
-                .setStyle(new Notification.MediaStyle()
-                        .setMediaSession(session.getSessionToken())
-                        .setShowActionsInCompactView(0, 1));
+                .setVisibility(Notification.VISIBILITY_PUBLIC);
+        Notification.Action playPause = new Notification.Action.Builder(
+                Icon.createWithResource(this, playing ? R.drawable.ic_pause : R.drawable.ic_play),
+                playing ? "Pause" : "Play", servicePi(playing ? ACTION_PAUSE : ACTION_PLAY, 1)).build();
+        Notification.Action sleep = new Notification.Action.Builder(
+                Icon.createWithResource(this, R.drawable.ic_sleep), "Sleep 30", servicePi(ACTION_SLEEP, 2)).build();
+        Notification.Action stop = new Notification.Action.Builder(
+                Icon.createWithResource(this, R.drawable.ic_stop), "Stop", servicePi(ACTION_STOP, 3)).build();
+        Notification.MediaStyle style = new Notification.MediaStyle().setMediaSession(session.getSessionToken());
+        if (music) {
+            // Your music: previous / play-pause / next up front, sleep and stop in the expanded card
+            b.addAction(new Notification.Action.Builder(Icon.createWithResource("android", android.R.drawable.ic_media_previous),
+                    "Previous", servicePi(ACTION_PREV, 5)).build());
+            b.addAction(playPause);
+            b.addAction(new Notification.Action.Builder(Icon.createWithResource("android", android.R.drawable.ic_media_next),
+                    "Next", servicePi(ACTION_NEXT, 6)).build());
+            b.addAction(sleep);
+            b.addAction(stop);
+            style.setShowActionsInCompactView(0, 1, 2);
+        } else {
+            b.addAction(playPause).addAction(sleep).addAction(stop);
+            style.setShowActionsInCompactView(0, 1);
+        }
+        b.setStyle(style);
         return b.build();
     }
 

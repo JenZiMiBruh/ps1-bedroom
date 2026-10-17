@@ -25,6 +25,7 @@ $map = @{
   'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js' = 'OrbitControls.js'
   'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/BufferGeometryUtils.js' = 'BufferGeometryUtils.js'
   'https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js' = 'Tone.js'
+  'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js' = 'GLTFLoader.js'
 }
 foreach ($k in $map.Keys) { $html = $html.Replace($k, $map[$k]) }
 if ($html -match 'https?://[^"''\s)]+\.js') { throw "Still loading a script from the internet: $($Matches[0])" }

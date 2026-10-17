@@ -2,6 +2,53 @@
 
 The in-app version of this list lives in `src/ps1_bedroom.html` (search for `const CHANGELOG`). Update both for each release, and bump `APP_VERSION`.
 
+## v1.2 — Stuff from 2001
+**Added**
+- A German Shepherd (blue eyes, his left one half brown) who wanders, sunbathes, watches TV, sits by you at the desk and sleeps on the bed at night; tap him for a tail wag
+- A working PC: 2001 desktop with instant messenger, WinBeats player, Minesweeper and dial-up
+- VCR tapes: Taped Off TV, Kung Fu Midnight, Ocean Dreams and the alien movie
+- Phone calls and an answering machine
+- MY MUSIC: your own songs on the boombox / WinBeats (stored on your device only)
+- Traffic that follows the clock and weather: rush hours, taxis, buses, police, wet-road reflections, snowy roofs
+- Rotating billboards picked for time, weather and season, and an LED ticker with time, temperature and conditions
+- Rain on the window glass
+- Glow-in-the-dark ceiling constellations
+- Space heater for winter nights
+- Poster picker, and wall / carpet / bedsheet colours
+- Seasonal decorations by date (Halloween, holidays, Valentine's, summer)
+- Focus timer on the bedside clock
+- New GTA radio-style soundtracks (80s pop, electro, modern pop, trap, pentatonic)
+- Tappable 2000s gadgets: CD player, handheld console, brick phone, virtual pet
+- Props from Kenney's Furniture Kit (CC0): desk speakers, plants, coat rack, box of old stuff
+- More detailed GTA cover tributes
+- Outside the window: 15 places, each with its own backdrop, props, sounds, climate and temperature: Downtown, Skyscraper (40th floor, rooftop billboards), Neon City, Neighborhood, Suburbs, Backyard, Trailer Park, Arizona, Desert Canyon, Tropical Island, Beach Boardwalk, Lakeside, Forest, Mountains, Countryside Farm
+- Boombox music player: play/pause, next/previous, shuffle, repeat, seek, volume, albums with covers, all songs, FM stations
+- Album folders: reads album, artist, track order and cover art (embedded or cover.jpg); the cover shows on a CD case on the dresser, the boombox cassette window and optionally the wall poster
+- YouTube on the bedroom TV (paste a link, or Share from the YouTube app on Android), on the CRT or full screen
+- Frame rate setting (Auto / 30 / 60 / 120 fps) and Eco idle
+- GAMES BACK IN ORDER button for the shelves
+- Android: song, artist and cover on the lock screen, with previous / next
+- Ambient occlusion (soft contact shadows), with a slider in PS1 effects
+- A sky box around the outside: no more black void or visible end of the world from any angle
+
+**Changed**
+- Full detail pass on the outside places: PS1-style textures, real 3D houses, brownstones, barn and silo, mountains, overwater bungalows, sprite trees and grass, a rooftop city below the skyscraper
+- Night windows outside vary (warm lamps, TV blue, dark rooms)
+- The PC desktop matches the one on the monitor (wallpaper, icon grid, buddy list, music player)
+- Per-pixel lighting (no more blotchy triangles), sharper shadows, gentler light rays, sparkling dust
+- Battery: frame cap on 120 Hz screens, off-screen screens and sky stop redrawing, no drawing in the background, silent sound layers switch off
+- Long sessions stay smooth: automatic quality steps down when the device is hot or busy and back up after
+- Android: notification and widgets update about once a minute instead of every second
+- Android: the app now runs from a secure local address (needed for YouTube), so settings and My Music start fresh once after updating
+
+**Fixed**
+- Audio clipping / crackle on loud moments and with your own music
+- Frame rate sinking after hours of running
+- Choosing a seasonal decoration by hand left the Halloween pumpkin on the sill
+
+**Removed**
+- The laundry pile in front of the bed
+
 ## v1.1.4 — Temperature
 **Added**
 - The top bar always shows the temperature (live for your city, or an estimate for the season, hour and weather)

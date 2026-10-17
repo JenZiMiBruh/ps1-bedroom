@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PS1 Bedroom Downloads</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&family=IBM+Plex+Sans:wght@400;600&display=swap">
+<style>
+  /* Layout: one column of source panels under a big total, like a CRT stats screen */
+  :root { --bg: #f3f1f8; --panel: #ffffff; --fg: #1d1a2b; --muted: #6b6684; --line: #dcd7ea; --accent: #6d4bd8; --good: #188a52;
+          --display: 'VT323', ui-monospace, monospace; --body: 'IBM Plex Sans', system-ui, sans-serif; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #0e0c16; --panel: #181527; --fg: #ece8fb; --muted: #9a94b8; --line: #2b2640; --accent: #a58bff; --good: #4ade80; color-scheme: dark; } }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 var(--body); padding: 24px max(16px, env(safe-area-inset-left)); }
+  main { max-width: 760px; margin: 0 auto; display: grid; gap: 18px; }
+  h1 { font: 44px/1 var(--display); margin: 0; letter-spacing: 1px; }
+  .total { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: flex; flex-wrap: wrap; gap: 24px; align-items: baseline; }
+  .big { font: 72px/1 var(--display); color: var(--accent); font-variant-numeric: tabular-nums; }
+  .muted { color: var(--muted); font-size: 13px; }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 10px; }
+  h2 { margin: 0; font-size: 16px; display: flex; justify-content: space-between; gap: 8px; }
+  h2 b { font: 28px/1 var(--display); color: var(--accent); font-variant-numeric: tabular-nums; }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  td, th { text-align: left; padding: 5px 4px; border-bottom: 1px solid var(--line); font-size: 14px; }
+  td:last-child, th:last-child { text-align: right; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  input { font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); min-width: 0; }
+  button { font: 600 14px var(--body); padding: 7px 12px; border-radius: 6px; border: 1px solid var(--accent); background: var(--accent); color: #fff; cursor: pointer; }
+  button.ghost { background: transparent; color: var(--accent); }
+  .err { color: #c2410c; font-size: 13px; }
+  .up { color: var(--good); font-size: 13px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>PS1 BEDROOM · DOWNLOADS</h1>
+  <div class="total">
+    <div><div class="big" id="total">…</div><div class="muted">total downloads, all places</div></div>
+    <div class="muted" id="since"></div>
+    <button id="refresh">Refresh</button>
+  </div>
+
+  <section>
+    <h2>GitHub releases <b id="gh-total">…</b></h2>
+    <div class="row"><label for="repo" class="muted">Repo</label><input id="repo" value="JenZiMiBruh/ps1-bedroom" size="28"><span class="muted">(counted live from GitHub)</span></div>
+    <div id="gh-err" class="err"></div>
+    <table><thead><tr><th>Release</th><th>File</th><th>Downloads</th></tr></thead><tbody id="gh-rows"></tbody></table>
+    <div class="muted" id="gh-extra"></div>
+  </section>
+
+  <section>
+    <h2>Other places <b id="manual-total">0</b></h2>
+    <div class="muted">itch.io, Google Play and the rest don't share their counts with a page like this. Type in the number from their dashboard now and then; it's saved in this browser.</div>
+    <table><tbody id="manual-rows"></tbody></table>
+    <div class="row"><input id="m-name" placeholder="Where (e.g. itch.io)"><input id="m-count" type="number" min="0" placeholder="Downloads" style="width:110px"><button id="m-add">Add / update</button></div>
+  </section>
+
+  <section>
+    <h2>History</h2>
+    <div class="muted">A snapshot is saved each time you open or refresh, so you can see growth.</div>
+    <table><thead><tr><th>When</th><th>Total</th></tr></thead><tbody id="history"></tbody></table>
+  </section>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+const load = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch (e) { return d; } };
+const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* private mode */ } };
+let manual = load('ps1dl.manual', {});
+let history = load('ps1dl.history', []);
+let ghTotal = 0;
+$('repo').value = load('ps1dl.repo', 'JenZiMiBruh/ps1-bedroom');
+
+function renderManual() {
+  const keys = Object.keys(manual);
+  $('manual-rows').innerHTML = keys.length ? keys.map((k) => `<tr><td>${k.replace(/</g, '&lt;')}</td><td>${manual[k].toLocaleString()} <button class="ghost" data-del="${encodeURIComponent(k)}">remove</button></td></tr>`).join('') : '<tr><td class="muted">Nothing yet.</td><td></td></tr>';
+  document.querySelectorAll('[data-del]').forEach((b) => b.onclick = () => { delete manual[decodeURIComponent(b.dataset.del)]; save('ps1dl.manual', manual); renderAll(); });
+}
+function manualTotal() { return Object.values(manual).reduce((a, b) => a + b, 0); }
+function renderAll() {
+  renderManual();
+  $('manual-total').textContent = manualTotal().toLocaleString();
+  const total = ghTotal + manualTotal();
+  $('total').textContent = total.toLocaleString();
+  const prev = history.length > 1 ? history[history.length - 2].total : null;
+  $('since').innerHTML = prev !== null ? `<span class="up">+${(total - prev).toLocaleString()}</span> since ${new Date(history[history.length - 2].t).toLocaleString()}` : '';
+  $('history').innerHTML = history.slice(-20).reverse().map((h) => `<tr><td>${new Date(h.t).toLocaleString()}</td><td>${h.total.toLocaleString()}</td></tr>`).join('');
+}
+async function refreshGitHub() {
+  const repo = $('repo').value.trim();
+  save('ps1dl.repo', repo);
+  $('gh-err').textContent = '';
+  try {
+    const [rel, info] = await Promise.all([
+      fetch(`https://api.github.com/repos/${repo}/releases?per_page=100`).then((r) => { if (!r.ok) throw new Error(`GitHub said ${r.status}`); return r.json(); }),
+      fetch(`https://api.github.com/repos/${repo}`).then((r) => r.ok ? r.json() : null)
+    ]);
+    const rows = [];
+    ghTotal = 0;
+    rel.forEach((r) => r.assets.forEach((a) => { ghTotal += a.download_count; rows.push(`<tr><td>${r.tag_name}</td><td>${a.name}</td><td>${a.download_count.toLocaleString()}</td></tr>`); }));
+    $('gh-rows').innerHTML = rows.join('') || '<tr><td class="muted" colspan="3">No release files yet.</td></tr>';
+    $('gh-total').textContent = ghTotal.toLocaleString();
+    if (info) $('gh-extra').textContent = `★ ${info.stargazers_count} stars · ${info.forks_count} forks · ${info.subscribers_count} watching`;
+  } catch (e) {
+    $('gh-err').textContent = `Couldn't reach GitHub (${e.message}). Check the repo name, or try again in a minute.`;
+  }
+  history.push({ t: Date.now(), total: ghTotal + manualTotal() });
+  history = history.slice(-200);
+  save('ps1dl.history', history);
+  renderAll();
+}
+$('refresh').onclick = refreshGitHub;
+$('m-add').onclick = () => {
+  const n = $('m-name').value.trim(), c = parseInt($('m-count').value, 10);
+  if (!n || !(c >= 0)) return;
+  manual[n] = c; save('ps1dl.manual', manual);
+  $('m-name').value = ''; $('m-count').value = '';
+  renderAll();
+};
+renderAll();
+refreshGitHub();
+</script>
+</body>
+</html>

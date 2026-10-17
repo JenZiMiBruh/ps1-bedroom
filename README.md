@@ -16,6 +16,8 @@
 
 ### *Your room. Your clock. Your weather. 2001 forever.*
 
+<sub>Made by **Daymion Gallo** · aka **Galloade** · aka **JenZiMiBruh**</sub>
+
 </div>
 
 ---
@@ -121,7 +123,7 @@ Drag to look, scroll to zoom, WASD to walk.
 Full history in **[CHANGELOG.md](CHANGELOG.md)** and in the app under **Menu → About**.
 
 <details>
-<summary><b>v1.2: Stuff from 2001</b> (latest)</summary>
+<summary><b>v1.2 — Stuff from 2001</b> (latest)</summary>
 
 <br>
 
@@ -134,9 +136,13 @@ Full history in **[CHANGELOG.md](CHANGELOG.md)** and in the app under **Menu →
 
 <br>
 
-- **1.1** · Real-time sun and moon, 15 weathers, the GTA collection, Android widgets and lock screen
-- **1.0** · First full release
-- **0.1 – 0.8** · Alpha and beta
+- **v1.1.4 — Temperature** · °F / °C in the top bar
+- **v1.1.3 — Dust in the light** · dust follows the light beam
+- **v1.1.2 — Little touches** · live bedside clock
+- **v1.1.1 — Fixes** · light rays stay in the window, no more fall crackle
+- **v1.1 — The living room update** · real sun and moon, 15 weathers, the GTA collection, Android widgets and lock screen
+- **v1.0 — First full release**
+- **v0.1 – v0.8** · alpha and beta
 
 </details>
 
@@ -166,7 +172,7 @@ No Gradle: the APK script runs `aapt2 → javac → d8 → zipalign → apksigne
 
 <sub>Some props from <a href="https://kenney.nl/assets/furniture-kit">Kenney's Furniture Kit</a> (CC0) · Built with <a href="https://threejs.org/">three.js</a> and <a href="https://tonejs.github.io/">Tone.js</a> · Live weather by <a href="https://open-meteo.com/">Open-Meteo</a></sub>
 
-<sub>An unofficial fan project, not affiliated with Sony Interactive Entertainment, Rockstar Games or anyone else. Game boxes and covers are hand-drawn tributes. Your music stays on your device.</sub>
+<sub>Made by Daymion Gallo (Galloade / JenZiMiBruh). An unofficial fan project, not affiliated with Sony Interactive Entertainment, Rockstar Games or anyone else. Game boxes and covers are hand-drawn tributes. Your music stays on your device.</sub>
 
 <br>
 

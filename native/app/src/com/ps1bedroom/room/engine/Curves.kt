@@ -175,6 +175,19 @@ object GeoCurves {
         return g
     }
 
+    /** BufferGeometryUtils.mergeBufferGeometries(list, false): one geometry, indices offset per part. */
+    fun merge(parts: List<Geometry>): Geometry {
+        val pos = ArrayList<Float>(); val nrm = ArrayList<Float>(); val uv = ArrayList<Float>(); val idx = ArrayList<Int>()
+        var base = 0
+        for (g in parts) {
+            g.positions.forEach { pos += it }; g.normals.forEach { nrm += it }; g.uvs.forEach { uv += it }
+            val ind = g.indices
+            if (ind != null) ind.forEach { idx += it + base } else for (i in 0 until g.vertexCount) idx += i + base
+            base += g.vertexCount
+        }
+        return Geometry(pos.toFloatArray(), nrm.toFloatArray(), uv.toFloatArray(), idx.toIntArray())
+    }
+
     /** three.js r128 IcosahedronGeometry. */
     fun icosahedron(radius: Float = 1f, detail: Int = 0): Geometry {
         val t = (1 + sqrt(5.0)) / 2

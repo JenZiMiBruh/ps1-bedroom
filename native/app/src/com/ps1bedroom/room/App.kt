@@ -36,6 +36,9 @@ class App : GLSurfaceView.Renderer {
     lateinit var exterior: Exterior; private set
     lateinit var desk: Desk; private set
     lateinit var bedroom: Bedroom; private set
+    lateinit var fan: Fan; private set
+    lateinit var furniture: Furniture; private set
+    private var lastCalendarCheck = 0f
     private var lastClockDraw = -99f
     private var lastSkylineUpdate = -99f
     private val SPHERE_WINDOW_C = Vec3(0.8f, 2.65f, -3.4f)
@@ -71,6 +74,9 @@ class App : GLSurfaceView.Renderer {
                 desk = Desk(room, tex); desk.build()
                 bedroom = Bedroom(room); bedroom.build()
                 room.extraDynamicRoots += bedroom.chairGroup
+                fan = Fan(room); fan.build()
+                room.extraDynamicRoots += fan.fanBladesGroup; room.extraDynamicRoots += fan.fanPullChain; room.extraDynamicRoots += fan.lightPullChain
+                furniture = Furniture(room); furniture.build()
                 room.extraBatchExcluded.addAll(desk.lavaBlobs)
             }
             room.build()
@@ -114,6 +120,9 @@ class App : GLSurfaceView.Renderer {
         if (debugPresetStep) { debugPresetStep = false; debugPreset = (debugPreset + 1) % env.TIME_PRESETS.size; env.setTimePreset(env.TIME_PRESETS[debugPreset].first) }
         exterior.update(t, dt, sky.outsideEnv)
         desk.update(t)
+        fan.update(dt)
+        room.updateAc(t, dt)
+        if (t - lastCalendarCheck > 60f) { lastCalendarCheck = t; furniture.refreshCalendar() }
         if (t - lastClockDraw > 1f) { lastClockDraw = t; bedroom.drawAlarmClock(env.currentHour()) }
         room.updateBlinds(dt)
         // The backdrop redraws ~3x a second while the window is on screen, every 2.5 s otherwise (as in the HTML)
@@ -180,6 +189,10 @@ class App : GLSurfaceView.Renderer {
             "switch" -> toggleFanLight()
             "lavalamp" -> desk.cycleLava()
             "cat" -> bedroom.toggleCatEyes()
+            "fan" -> toggleFanLight()
+            "fanspin" -> fan.toggleCeilingFanSpin()
+            "ac" -> room.toggleAcUnit()
+            "lamp" -> furniture.toggleLamp()
         }
     }
     fun toggleFanLight() {
@@ -187,6 +200,8 @@ class App : GLSurfaceView.Renderer {
         room.fanLight.intensity = if (fanLightOn) 1.85f else 0.0f
         room.fanHemiFill.intensity = if (fanLightOn) 0.52f else 0.0f
         renderer.post.fanLightOn = if (fanLightOn) 1f else 0f
+        fan.drawFanShadeTexture(fanLightOn)
+        fan.lightChainOffset = -0.045f
         renderer.shadowsNeedUpdate = true
     }
 

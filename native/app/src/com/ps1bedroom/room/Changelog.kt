@@ -24,6 +24,16 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.7", "Ceiling fan, dresser, nightstand and more", listOf(
+            "Ceiling fan: blades spin up and coast down, the glass shade glows when the light is on, pull chains jump",
+            "Tap the fan to toggle its light, tap the blades or motor to start / stop it, tap the AC to switch it",
+            "AC louvre sweeps while the unit runs",
+            "Dresser with drawers, boombox, family photo, trophy and the SMASH CITY band poster",
+            "Nightstand with a reading lamp (tap it), water glass and a book",
+            "Wastebasket with crumpled paper (and one missed shot), backpack by the dresser",
+            "Wall calendar showing today's month like 2001, with a pixel picture for every month and the days crossed off",
+            "THE MATRIKS movie poster over the bed"
+        )),
         Entry("0.6", "The bed, the chair and an in-app changelog", listOf(
             "The bed: bookcase headboard with turned posts and finials, rails, footboard, shoe box and skateboard underneath",
             "Fitted sheet, wrinkled space comforter, folded top sheet and plump pillows",

@@ -194,6 +194,12 @@ class Room(val scene: Scene, val tex: Textures) {
     // ---------------------------------------------------------------- 90s wall-mounted AC (HTML 2716-2783)
     lateinit var acLouvre: Group
     lateinit var acLedMat: com.ps1bedroom.room.engine.Material
+    var acUnitOn = true; private set
+    fun toggleAcUnit() { acUnitOn = !acUnitOn; acLedMat.emissiveIntensity = if (acUnitOn) 1.0f else 0.05f }
+    /** The louvre sweeps slowly while the unit runs and closes when it is off. */
+    fun updateAc(t: Float, dt: Float) {
+        acLouvre.rotation.z += ((if (acUnitOn) 0.55f + kotlin.math.sin(t * 0.45f) * 0.3f else 0f) - acLouvre.rotation.z) * minOf(1f, dt * 2)
+    }
     private fun buildAc() {
         val acGroup = Group()
         acGroup.position.set(4.24f, 4.15f, -1.15f)

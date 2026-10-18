@@ -34,6 +34,7 @@ class App : GLSurfaceView.Renderer {
     lateinit var env: Environment; private set
     lateinit var sky: Sky; private set
     lateinit var exterior: Exterior; private set
+    lateinit var desk: Desk; private set
     private var lastSkylineUpdate = -99f
     private val SPHERE_WINDOW_C = Vec3(0.8f, 2.65f, -3.4f)
 
@@ -51,19 +52,28 @@ class App : GLSurfaceView.Renderer {
         if (!built) {
             val tex = Textures()
             room = Room(scene, tex)
+            env = Environment(scene, room, renderer)
+            // Each part is built at its place in the HTML's creation order (that keeps the grime maps 1:1)
+            room.onBuildOutside = {
+                // The outside: painted backdrop, sky dome, sun, moon, clouds, horizon ring, then the 3D city.
+                // All of it moves or redraws, so it never takes part in static batching.
+                val exteriorWorldGroup = com.ps1bedroom.room.engine.Group(); scene.add(exteriorWorldGroup)
+                sky = Sky(scene, env)
+                sky.defaultCamPos = defaultCamPos
+                sky.addTo(exteriorWorldGroup)
+                com.ps1bedroom.room.engine.PS1.syncGrime(37)
+                exterior = Exterior(exteriorWorldGroup, env, room)
+                room.extraDynamicRoots += exteriorWorldGroup; room.extraDynamicRoots += sky.skyBoxGroup
+            }
+            room.onBuildInterior = {
+                desk = Desk(room, tex); desk.build()
+                room.extraBatchExcluded.addAll(desk.lavaBlobs)
+            }
             room.build()
             // Merge everything that never moves into a few big meshes (the HTML's batchStaticMeshes)
             val r = com.ps1bedroom.room.engine.Batching.batchStaticMeshes(scene, room.dynamicRoots(), emptySet(), room.batchExcluded(), STATIC_TAGS, room.interactables)
             room.onShadowsChanged = { renderer.shadowsNeedUpdate = true }
-            env = Environment(scene, room, renderer)
             room.onBlindsChanged = { env.applyEnvironmentSettings() }
-            // The outside: sky dome, sun, moon, clouds, horizon ring and the painted backdrop (added after batching:
-            // they are redrawn and animated, never merged)
-            val exteriorWorldGroup = com.ps1bedroom.room.engine.Group(); scene.add(exteriorWorldGroup)
-            sky = Sky(scene, env)
-            sky.defaultCamPos = defaultCamPos
-            sky.addTo(exteriorWorldGroup)
-            exterior = Exterior(exteriorWorldGroup, env, room)
             env.sky = sky; env.eye = defaultCamPos
             env.applyEnvironmentSettings()
             android.util.Log.i("PS1Bedroom", "static batching: ${r.removed} meshes -> ${r.added} batches")
@@ -99,6 +109,7 @@ class App : GLSurfaceView.Renderer {
         env.tick(System.currentTimeMillis())
         if (debugPresetStep) { debugPresetStep = false; debugPreset = (debugPreset + 1) % env.TIME_PRESETS.size; env.setTimePreset(env.TIME_PRESETS[debugPreset].first) }
         exterior.update(t, dt, sky.outsideEnv)
+        desk.update(t)
         room.updateBlinds(dt)
         // The backdrop redraws ~3x a second while the window is on screen, every 2.5 s otherwise (as in the HTML)
         if (t - lastSkylineUpdate > (if (renderer.sphereInView(SPHERE_WINDOW_C, 2.0f)) 0.33f else 2.5f)) {

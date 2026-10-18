@@ -21,9 +21,12 @@ class Room(val scene: Scene, val tex: Textures) {
     val interactables = ArrayList<Mesh>()
     fun registerInteractable(m: Mesh, tag: String) { m.userData["interactTag"] = tag; interactables += m }
     /** Groups that move or animate: never merged by static batching (the HTML's DYNAMIC_ROOTS). */
-    fun dynamicRoots(): Set<com.ps1bedroom.room.engine.Object3D> = setOf(doorLeaf)
+    fun dynamicRoots(): Set<com.ps1bedroom.room.engine.Object3D> = setOf(doorLeaf, acLouvre) + extraDynamicRoots
+    /** Other moving groups (the outside world, the sky) registered by their builders. */
+    val extraDynamicRoots = HashSet<com.ps1bedroom.room.engine.Object3D>()
+    val extraBatchExcluded = HashSet<com.ps1bedroom.room.engine.Object3D>()
     /** Meshes that change on their own (the HTML skips snowCapMeshes, blindSlats and lavaBlobs when batching). */
-    fun batchExcluded(): Set<com.ps1bedroom.room.engine.Object3D> = (snowCapMeshes + blindSlats).toSet()
+    fun batchExcluded(): Set<com.ps1bedroom.room.engine.Object3D> = (snowCapMeshes + blindSlats).toSet() + extraBatchExcluded
 
     val matWall = PS1.material(map = tex.wall)
     val matWood = PS1.material(map = tex.wood)
@@ -131,9 +134,108 @@ class Room(val scene: Scene, val tex: Textures) {
         val doorPanel = Mesh(Geo.box(0.06f, 3.48f, 1.52f, 1, 8, 4), PS1.material(map = tex.door))
         doorPanel.position.set(0f, 1.78f, 0.76f); doorPanel.castShadow = true; doorPanel.receiveShadow = true
         doorLeaf.add(doorPanel); registerInteractable(doorPanel, "door")
+        // 1.3: an UNDER CONSTRUCTION sign taped to the door (the hallway is closed for now)
+        val constructionTex = com.ps1bedroom.room.engine.createCanvasTex(64, 48) { ctx, w, h ->
+            ctx.fillStyle = "#facc15"; ctx.fillRect(0, 0, w, h)
+            var x = -48
+            while (x < w) {
+                ctx.fillStyle = "#111"; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + 6, 0); ctx.lineTo(x + 6 + 10, 9); ctx.lineTo(x + 10, 9); ctx.fill()
+                ctx.beginPath(); ctx.moveTo(x, h - 9); ctx.lineTo(x + 6, h - 9); ctx.lineTo(x + 16, h); ctx.lineTo(x + 10, h); ctx.fill()
+                x += 12
+            }
+            ctx.fillStyle = "#111"; ctx.font = "bold 9px monospace"; ctx.textAlign = "center"
+            ctx.fillText("UNDER", w / 2, 21); ctx.fillText("CONSTRUCTION", w / 2, 31)
+            ctx.font = "6px monospace"; ctx.fillText("KEEP OUT", w / 2, 38)
+        }.tex
+        for (s in intArrayOf(-1, 1)) {
+            val sign = Mesh(Geo.plane(0.62f, 0.46f), PS1.material(map = constructionTex, color = 0xffffff, polygonOffset = true, polygonOffsetFactor = -2f, polygonOffsetUnits = -2f))
+            sign.position.set(s * 0.033f, 2.25f, 0.76f); sign.rotation.set(0f, (s * PI / 2).toFloat(), s * 0.04f)
+            doorLeaf.add(sign); registerInteractable(sign, "door")
+        }
+        for (hy in floatArrayOf(0.45f, 1.8f, 3.15f)) {
+            val hinge = Mesh(Geo.box(0.07f, 0.14f, 0.03f), PS1.material(color = 0x8a7355))
+            hinge.position.set(0f, hy, 0.01f); doorLeaf.add(hinge)
+        }
+        // Brass knobs on both faces
+        val doorknob = Mesh(Geo.sphere(0.068f, 8, 6), PS1.material(color = 0xf59e0b))
+        doorknob.position.set(0.10f, 1.56f, 1.38f); doorLeaf.add(doorknob); registerInteractable(doorknob, "door")
+        for (nx in floatArrayOf(0.055f, -0.055f)) {
+            val knobNeck = Mesh(Geo.cylinder(0.022f, 0.032f, 0.05f, 8), PS1.material(color = 0xb45309))
+            knobNeck.rotation.z = (PI / 2).toFloat(); knobNeck.position.set(nx, 1.56f, 1.38f); doorLeaf.add(knobNeck)
+        }
+        val hallKnob = Mesh(Geo.sphere(0.068f, 8, 6), PS1.material(color = 0xf59e0b))
+        hallKnob.position.set(-0.10f, 1.56f, 1.38f); doorLeaf.add(hallKnob)
+        // Warm living-room light strip seeping under the door (sits entirely in the gap under the slab)
+        val doorCrackMat = PS1.material(color = 0xfde047, emissive = 0xf59e0b, emissiveIntensity = 0.95f)
+        val doorLightCrack = Mesh(Geo.box(0.05f, 0.03f, 1.48f), doorCrackMat)
+        doorLightCrack.position.set(0f, 0.02f, 0f); doorGroup.add(doorLightCrack)
 
-        buildWindow()
+        buildAc()
+        // (the CRT TV & VCR cart, HTML 2785-3490, comes with the TV phase)
+        onBuildOutside()           // HTML 3494: the exterior world (grime 37 onward)
+        buildWindow()              // HTML 4296 (grime 141)
+        onBuildInterior()          // HTML 4370 onward: the desk corner and the rest of the room
         buildLights()
+    }
+    /** Hooks for the parts built by other classes, called at their place in the HTML's creation order. */
+    var onBuildOutside: () -> Unit = {}
+    var onBuildInterior: () -> Unit = {}
+
+    // ---------------------------------------------------------------- 90s wall-mounted AC (HTML 2716-2783)
+    lateinit var acLouvre: Group
+    lateinit var acLedMat: com.ps1bedroom.room.engine.Material
+    private fun buildAc() {
+        val acGroup = Group()
+        acGroup.position.set(4.24f, 4.15f, -1.15f)
+        scene.add(acGroup)
+        // Curved front panel, slotted top intake, swinging louvre, temperature display, brand badge, line-set conduit.
+        // Local -X faces the room.
+        val matAcShell = PS1.material(color = 0xd6d3c4)
+        val matAcTrim = PS1.material(color = 0xb8b4a2)
+        fun acPart(geo: com.ps1bedroom.room.engine.Geometry, mat: com.ps1bedroom.room.engine.Material, x: Float, y: Float, z: Float, tag: String? = null): Mesh {
+            val m = Mesh(geo, mat)
+            m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true
+            acGroup.add(m)
+            if (tag != null) registerInteractable(m, tag)
+            return m
+        }
+        acPart(Geo.box(0.26f, 0.4f, 1.25f, 2, 2, 4), matAcShell, 0.02f, 0f, 0f, "ac")
+        // Front panel bows out toward the room
+        val acFrontGeo = Geo.box(0.05f, 0.4f, 1.25f, 1, 6, 8)
+        run {
+            val p = acFrontGeo.positions
+            for (v in 0 until acFrontGeo.vertexCount) if (p[v * 3] < 0) p[v * 3] = p[v * 3] - 0.035f * (1 - (p[v * 3 + 1] / 0.2f) * (p[v * 3 + 1] / 0.2f))
+            acFrontGeo.computeVertexNormals()
+        }
+        acPart(acFrontGeo, matAcShell, -0.13f, 0f, 0f, "ac")
+        for (i in 0 until 14) acPart(Geo.box(0.18f, 0.006f, 0.03f), matAcTrim, 0.0f, 0.203f, -0.52f + i * 0.08f)
+        // Air outlet with a louvre flap that swings while the unit runs
+        acPart(Geo.box(0.06f, 0.07f, 1.12f), matDarkPlastic, -0.14f, -0.17f, 0f)
+        acLouvre = Group()
+        acLouvre.position.set(-0.17f, -0.18f, 0f)
+        acGroup.add(acLouvre)
+        val louvreBlade = Mesh(Geo.box(0.07f, 0.012f, 1.08f), matAcTrim)
+        louvreBlade.position.set(-0.03f, 0f, 0f); louvreBlade.castShadow = true
+        acLouvre.add(louvreBlade)
+        // Status display, power LED and brand badge
+        val acDisplayTex = com.ps1bedroom.room.engine.createCanvasTex(32, 16) { ctx, w, h ->
+            ctx.fillStyle = "#04140a"; ctx.fillRect(0, 0, w, h)
+            ctx.fillStyle = "#4ade80"; ctx.font = "bold 11px monospace"; ctx.fillText("68°", 2, 12)
+        }.tex
+        val acDisplay = Mesh(Geo.plane(0.1f, 0.05f), PS1.material(map = acDisplayTex, emissive = 0xffffff, emissiveMap = acDisplayTex, emissiveIntensity = 0.9f))
+        acDisplay.rotation.y = (-PI / 2).toFloat(); acDisplay.position.set(-0.19f, 0.05f, 0.42f); acGroup.add(acDisplay)
+        acLedMat = PS1.material(color = 0x22c55e, emissive = 0x22c55e, emissiveIntensity = 1.0f)
+        val acLed = Mesh(Geo.box(0.02f, 0.018f, 0.018f), acLedMat)
+        acLed.position.set(-0.185f, 0.05f, 0.52f); acGroup.add(acLed)
+        val acBadgeTex = com.ps1bedroom.room.engine.createCanvasTex(64, 16, weather = com.ps1bedroom.room.engine.Weather(seed = 81.0, blotch = 0.1, scratches = 2)) { ctx, w, h ->
+            ctx.fillStyle = "#c9c5b3"; ctx.fillRect(0, 0, w, h)
+            ctx.fillStyle = "#1e3a8a"; ctx.font = "bold italic 10px sans-serif"; ctx.fillText("COOLAIRE", 4, 12)
+        }.tex
+        val acBadge = Mesh(Geo.plane(0.2f, 0.05f), PS1.material(map = acBadgeTex))
+        acBadge.rotation.y = (-PI / 2).toFloat(); acBadge.position.set(-0.185f, 0.09f, -0.35f); acGroup.add(acBadge)
+        // Refrigerant line-set conduit: out of the unit's lower end and down the wall into the floor
+        acPart(Geo.box(0.08f, 0.08f, 0.2f), matAcShell, 0.08f, -0.17f, -0.7f)
+        acPart(Geo.box(0.08f, 4.0f, 0.08f), matAcShell, 0.08f, -2.2f, -0.76f)
     }
 
     // ---------------------------------------------------------------- window and blinds (HTML 4296-4368, 10644-10681)
@@ -149,6 +251,7 @@ class Room(val scene: Scene, val tex: Textures) {
     var onBlindsChanged: () -> Unit = {}
 
     private fun buildWindow() {
+        PS1.syncGrime(141)
         // Window sill snow drift (visible in winter)
         val sillSnowMesh = Mesh(Geo.box(2.88f, 0.065f, 0.16f, 8, 1, 2), PS1.material(color = 0xf1f5f9, emissive = 0x94a3b8, emissiveIntensity = 0.25f))
         sillSnowMesh.position.set(0.8f, 1.58f, -3.05f); sillSnowMesh.visible = false

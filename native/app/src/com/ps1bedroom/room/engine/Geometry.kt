@@ -26,6 +26,25 @@ class Geometry(
     @JvmField var boundingRadius = -1f
     @JvmField val boundingCenter = Vec3()
 
+    /** three r128 computeVertexNormals: face normals (C - B) x (A - B) summed per vertex, then normalised. */
+    fun computeVertexNormals() {
+        normals.fill(0f)
+        val n = indices?.size ?: vertexCount
+        var i = 0
+        while (i + 2 < n) {
+            val a = indices?.get(i) ?: i; val b = indices?.get(i + 1) ?: (i + 1); val c = indices?.get(i + 2) ?: (i + 2)
+            val cbx = positions[c * 3] - positions[b * 3]; val cby = positions[c * 3 + 1] - positions[b * 3 + 1]; val cbz = positions[c * 3 + 2] - positions[b * 3 + 2]
+            val abx = positions[a * 3] - positions[b * 3]; val aby = positions[a * 3 + 1] - positions[b * 3 + 1]; val abz = positions[a * 3 + 2] - positions[b * 3 + 2]
+            val nx = cby * abz - cbz * aby; val ny = cbz * abx - cbx * abz; val nz = cbx * aby - cby * abx
+            for (v in intArrayOf(a, b, c)) { normals[v * 3] += nx; normals[v * 3 + 1] += ny; normals[v * 3 + 2] += nz }
+            i += 3
+        }
+        for (v in 0 until vertexCount) {
+            val l = sqrt(normals[v * 3] * normals[v * 3] + normals[v * 3 + 1] * normals[v * 3 + 1] + normals[v * 3 + 2] * normals[v * 3 + 2])
+            if (l > 0f) { normals[v * 3] /= l; normals[v * 3 + 1] /= l; normals[v * 3 + 2] /= l }
+        }
+    }
+
     fun computeBoundingSphere() {
         var minX = Float.MAX_VALUE; var minY = Float.MAX_VALUE; var minZ = Float.MAX_VALUE
         var maxX = -Float.MAX_VALUE; var maxY = -Float.MAX_VALUE; var maxZ = -Float.MAX_VALUE

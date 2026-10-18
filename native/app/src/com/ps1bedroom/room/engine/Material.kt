@@ -62,6 +62,8 @@ class Material(
 object PS1 {
     lateinit var grimeTextures: List<Texture>
     private var grimeCursor = 0
+    /** Jump to the HTML's grime cursor at the start of a section (see native/tools/grime-map.md). */
+    fun syncGrime(n: Int) { grimeCursor = n }
 
     fun material(
         color: Int = 0xffffff, map: Texture? = null, emissive: Int = 0x000000, emissiveIntensity: Float? = null,

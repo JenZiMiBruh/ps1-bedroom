@@ -1,0 +1,29 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Native shader check</title>
+<pre id="out">checking…</pre>
+<script>
+// Compiles every shader in native/app/src/.../engine/Shaders.kt with WebGL 2 (GLSL ES 3.00, the same language
+// as Android's OpenGL ES 3.0) and links each program, so shader mistakes show up before an APK goes to a phone.
+(async () => {
+  const out = document.getElementById('out');
+  const src = await (await fetch('../app/src/com/ps1bedroom/room/engine/Shaders.kt?' + Date.now())).text();
+  const shaders = {};
+  for (const m of src.matchAll(/const val (\w+) = """([\s\S]*?)"""/g)) shaders[m[1]] = m[2];
+  const gl = document.createElement('canvas').getContext('webgl2');
+  const lines = [];
+  const compile = (type, name) => {
+    const s = gl.createShader(type); gl.shaderSource(s, shaders[name]); gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) { lines.push(`FAIL ${name}: ${gl.getShaderInfoLog(s)}`); return null; }
+    lines.push(`ok   ${name}`); return s;
+  };
+  for (const [v, f] of [['PS1_VERT', 'PS1_FRAG'], ['DEPTH_VERT', 'DEPTH_FRAG'], ['QUAD_VERT', 'POST_FRAG'], ['QUAD_VERT', 'BLIT_FRAG']]) {
+    const vs = compile(gl.VERTEX_SHADER, v), fs = compile(gl.FRAGMENT_SHADER, f);
+    if (!vs || !fs) continue;
+    const p = gl.createProgram(); gl.attachShader(p, vs); gl.attachShader(p, fs); gl.linkProgram(p);
+    lines.push(gl.getProgramParameter(p, gl.LINK_STATUS) ? `ok   link ${v}+${f}` : `FAIL link ${v}+${f}: ${gl.getProgramInfoLog(p)}`);
+  }
+  out.textContent = lines.join('\n');
+  window.__result = lines;
+})();
+</script>

@@ -164,8 +164,13 @@ class Environment(private val scene: Scene, private val room: Room, private val 
 
     // ---- Sun & moon: shine the room light from whichever is brighter ----
     private val celestialDir = Vec3()
+    /** The painted sky (set once it's built); eye = the default camera position the backdrop is painted for. */
+    var sky: Sky? = null
+    var eye: Vec3? = null
     fun updateCelestialPosition() {
-        // (the painted sun / moon on the backdrop are placed by the sky-dome code)
+        // Paint them where they really are in the sky
+        val s = sky; val e = eye
+        if (s != null && e != null) s.projectBodies(e)
         val sunK = smooth(-4.0, 6.0, sunDeg) * smooth(1.9, 1.3, abs(sunAz))
         val moonK = (1 - smooth(-9.0, -3.0, sunDeg)) * smooth(-0.04, 0.12, moonEl)
         activeBodyIsSun = sunK >= moonK * 0.9
@@ -179,6 +184,7 @@ class Environment(private val scene: Scene, private val room: Room, private val 
         room.moonLight.target.position.copy(Room.roomLightTargetPos)
         room.moonLight.target.updateMatrixWorld()
         renderer.shadowsNeedUpdate = true
+        sky?.cityStaticDirty = true
     }
 
     private val envColA = Color(); private val envColB = Color()
@@ -187,6 +193,7 @@ class Environment(private val scene: Scene, private val room: Room, private val 
         currentWeather = W.base
         updateAstronomy()
         updateCelestialPosition()
+        sky?.cityStaticDirty = true
         renderer.shadowsNeedUpdate = true
         val winter = currentSeason == "winter"
 

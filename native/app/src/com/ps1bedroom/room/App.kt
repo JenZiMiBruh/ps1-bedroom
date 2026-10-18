@@ -32,6 +32,9 @@ class App : GLSurfaceView.Renderer {
     val renderer = Renderer()
     private lateinit var room: Room
     lateinit var env: Environment; private set
+    lateinit var sky: Sky; private set
+    private var lastSkylineUpdate = -99f
+    private val SPHERE_WINDOW_C = Vec3(0.8f, 2.65f, -3.4f)
 
     // settings (the HTML defaults: Balanced quality, 240p, wobble 160, camera breathing 40%)
     var resShort = 240
@@ -53,6 +56,13 @@ class App : GLSurfaceView.Renderer {
             room.onShadowsChanged = { renderer.shadowsNeedUpdate = true }
             env = Environment(scene, room, renderer)
             room.onBlindsChanged = { env.applyEnvironmentSettings() }
+            // The outside: sky dome, sun, moon, clouds, horizon ring and the painted backdrop (added after batching:
+            // they are redrawn and animated, never merged)
+            val exteriorWorldGroup = com.ps1bedroom.room.engine.Group(); scene.add(exteriorWorldGroup)
+            sky = Sky(scene, env)
+            sky.defaultCamPos = defaultCamPos
+            sky.addTo(exteriorWorldGroup)
+            env.sky = sky; env.eye = defaultCamPos
             env.applyEnvironmentSettings()
             android.util.Log.i("PS1Bedroom", "static batching: ${r.removed} meshes -> ${r.added} batches")
             renderer.post.rayLight = room.moonLight
@@ -87,6 +97,11 @@ class App : GLSurfaceView.Renderer {
         env.tick(System.currentTimeMillis())
         if (debugPresetStep) { debugPresetStep = false; debugPreset = (debugPreset + 1) % env.TIME_PRESETS.size; env.setTimePreset(env.TIME_PRESETS[debugPreset].first) }
         room.updateBlinds(dt)
+        // The backdrop redraws ~3x a second while the window is on screen, every 2.5 s otherwise (as in the HTML)
+        if (t - lastSkylineUpdate > (if (renderer.sphereInView(SPHERE_WINDOW_C, 2.0f)) 0.33f else 2.5f)) {
+            sky.updateCitySkyline(t)
+            lastSkylineUpdate = t
+        }
         controls.update()
         // Keep the free camera inside the room
         camera.position.x = max(Room.MIN_X + 0.2f, min(Room.MAX_X - 0.2f, camera.position.x))

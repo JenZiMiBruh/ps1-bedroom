@@ -10,6 +10,8 @@ class Texture(@JvmField var bitmap: Bitmap) {
     @JvmField var offsetY = 0f
     @JvmField var wrapRepeat = false
     @JvmField var nearest = true
+    /** linear minification with nearest magnification (three: magFilter Nearest, minFilter Linear) */
+    @JvmField var linearMin = false
     @JvmField var mipmaps = false
     /** Bump when the bitmap is redrawn so the renderer re-uploads it (three's needsUpdate). */
     @JvmField var version = 1

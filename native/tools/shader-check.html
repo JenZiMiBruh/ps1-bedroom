@@ -3,13 +3,19 @@
 <title>Native shader check</title>
 <pre id="out">checking…</pre>
 <script>
-// Compiles every shader in native/app/src/.../engine/Shaders.kt with WebGL 2 (GLSL ES 3.00, the same language
-// as Android's OpenGL ES 3.0) and links each program, so shader mistakes show up before an APK goes to a phone.
+// Compiles every native shader (engine/Shaders.kt and the sky's custom shaders in Sky.kt) with WebGL 2 (GLSL ES 3.00,
+// the same language as Android's OpenGL ES 3.0) and links each program, so mistakes show up before an APK goes to a phone.
 (async () => {
   const out = document.getElementById('out');
-  const src = await (await fetch('../app/src/com/ps1bedroom/room/engine/Shaders.kt?' + Date.now())).text();
+  const base = '../app/src/com/ps1bedroom/room/';
   const shaders = {};
-  for (const m of src.matchAll(/const val (\w+) = """([\s\S]*?)"""/g)) shaders[m[1]] = m[2];
+  for (const f of ['engine/Shaders.kt', 'Sky.kt']) {
+    const src = await (await fetch(base + f + '?' + Date.now())).text();
+    for (const m of src.matchAll(/const val (\w+) = """([\s\S]*?)"""/g)) shaders[m[1]] = m[2];
+    for (const m of src.matchAll(/const val (\w+) = "(?!")([^"\n]*)"/g)) shaders[m[1]] = m[2];
+  }
+  // Kotlin string templates ($NAME) inside the shader sources
+  for (const k of Object.keys(shaders)) shaders[k] = shaders[k].replace(/\$(\w+)/g, (s, n) => shaders[n] !== undefined ? shaders[n] : s);
   const gl = document.createElement('canvas').getContext('webgl2');
   const lines = [];
   const compile = (type, name) => {
@@ -17,7 +23,8 @@
     if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) { lines.push(`FAIL ${name}: ${gl.getShaderInfoLog(s)}`); return null; }
     lines.push(`ok   ${name}`); return s;
   };
-  for (const [v, f] of [['PS1_VERT', 'PS1_FRAG'], ['DEPTH_VERT', 'DEPTH_FRAG'], ['QUAD_VERT', 'POST_FRAG'], ['QUAD_VERT', 'BLIT_FRAG']]) {
+  const pairs = [['PS1_VERT', 'PS1_FRAG'], ['DEPTH_VERT', 'DEPTH_FRAG'], ['QUAD_VERT', 'POST_FRAG'], ['QUAD_VERT', 'BLIT_FRAG'], ['SKY_VERT', 'DOME_FRAG'], ['SKY_VERT', 'CLOUD_FRAG']];
+  for (const [v, f] of pairs) {
     const vs = compile(gl.VERTEX_SHADER, v), fs = compile(gl.FRAGMENT_SHADER, f);
     if (!vs || !fs) continue;
     const p = gl.createProgram(); gl.attachShader(p, vs); gl.attachShader(p, fs); gl.linkProgram(p);

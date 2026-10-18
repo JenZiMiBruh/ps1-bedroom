@@ -349,6 +349,11 @@ class Renderer {
         setPlane(4, m[3] - m[2], m[7] - m[6], m[11] - m[10], m[15] - m[14])
         setPlane(5, m[3] + m[2], m[7] + m[6], m[11] + m[10], m[15] + m[14])
     }
+    /** three's Frustum.intersectsSphere against the last frame's view (the HTML's inView). */
+    fun sphereInView(c: Vec3, r: Float): Boolean {
+        for (i in 0 until 6) if (planes[i * 4] * c.x + planes[i * 4 + 1] * c.y + planes[i * 4 + 2] * c.z + planes[i * 4 + 3] < -r) return false
+        return true
+    }
     private fun inFrustum(o: Mesh): Boolean {
         val g = o.geometry
         fc.copy(g.boundingCenter).applyMatrix4(o.matrixWorld)
@@ -641,7 +646,7 @@ class Renderer {
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrap); glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrap)
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, if (t.nearest) GL_NEAREST else GL_LINEAR)
             if (t.mipmaps) { glGenerateMipmap(GL_TEXTURE_2D); glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST) }
-            else glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, if (t.nearest) GL_NEAREST else GL_LINEAR)
+            else glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, if (t.nearest && !t.linearMin) GL_NEAREST else GL_LINEAR)
             t.uploadedVersion = t.version
             curTex0 = -1; curTex1 = -1
         }

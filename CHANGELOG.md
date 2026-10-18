@@ -2,7 +2,7 @@
 
 The in-app version of this list lives in `src/ps1_bedroom.html` (search for `const CHANGELOG`). Update both for each release, and bump `APP_VERSION`.
 
-## v1.4 — in progress (on the `beta` branch)
+## v1.3.5 — Clear Skies
 **Added**
 - **Wall calendar** shows the real month, crosses off the days gone by, circles today, and has its own pixel-art picture each month
 - **Tap the top bar:** time, temperature, season and weather each step to the next option, plus a new **location** button for the place outside; hold any of them for the World menu
@@ -28,6 +28,7 @@ The in-app version of this list lives in `src/ps1_bedroom.html` (search for `con
 - The summer box fan was standing inside the front wall
 - **Flicker, for real this time:** the PS1 wobble used to drag each corner’s depth sideways, so anything layered (posters, the TV, the rug, house windows outside) kept swapping which was in front. Corners now stay on their own surface, and far-away things wobble finer so they no longer collapse and vanish (the controller and games on the floor, windows on the houses)
 - The rug no longer swallows the controller and games lying on it when you zoom out
+- Jasper's neck leaned backwards and poked out through the back of his head; it now leans forward into it
 
 ## v1.3 — Goodnight, Jasper
 **Added**

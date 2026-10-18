@@ -11157,9 +11157,9 @@
     });
 
     // ---------------- CHANGELOG (newest first; add a new entry at the top for every release) ----------------
-    const APP_VERSION = '1.4';
+    const APP_VERSION = '1.3.5';
     const CHANGELOG = [
-      { v: '1.4', name: 'Beta', sections: {
+      { v: '1.3.5', name: 'Clear Skies', sections: {
         Added: [
           'WALL CALENDAR: the real month with today circled, past days crossed off, and its own pixel-art picture every month',
           'TAP THE TOP BAR: time, temperature, season and weather step to the next option, plus a new location button. Hold any of them for the World menu',
@@ -11175,7 +11175,8 @@
         Fixed: [
           'Ceiling fan brackets, game shelf covering the games, box fan inside the wall, handheld clipping the clock',
           'Achievement card peeking out on the title screen',
-          'Wall art and distant textures flickering',
+          "FLICKER: the PS1 wobble no longer makes layered things fight (TV border, posters, album cover, the rug, house windows outside), and small far-away things (the controller, games on the floor, windows) no longer vanish",
+          'Distant textures shimmering',
           'Jagged edges around YouTube on the TV'
         ]
       } },
@@ -12551,11 +12552,13 @@
     dogPart(dogBody, 0.3, 0.09, 0.5, dogDark, 0, 0.135, -0.07);          // black saddle
     dogPart(dogBody, 0.22, 0.2, 0.06, dogCream, 0, -0.03, 0.43);         // chest bib
     dogPart(dogBody, 0.2, 0.05, 0.46, dogCream, 0, -0.14, 0.0);          // belly
-    dogPart(dogBody, 0.18, 0.28, 0.18, dogTan, 0, 0.2, 0.42, -0.42);    // neck
-    dogPart(dogBody, 0.2, 0.04, 0.2, makePS1Material({ color: 0xb91c1c }), 0, 0.12, 0.47, -0.42); // collar
+    // Neck leans forward from the shoulders into the head, both ends buried (inside the chest and the skull).
+    // It used to lean back, so its top corner stuck out behind his head and cut through the back of his skull.
+    dogPart(dogBody, 0.17, 0.34, 0.17, dogTan, 0, 0.245, 0.43, 0.72);   // neck
+    dogPart(dogBody, 0.2, 0.04, 0.2, makePS1Material({ color: 0xb91c1c }), 0, 0.2, 0.39, 0.72); // collar
     const tagTex = createCanvasTex(8, 8, (ctx) => { ctx.fillStyle = '#d4a017'; ctx.fillRect(1, 1, 6, 6); ctx.fillStyle = '#8a6a10'; ctx.fillRect(3, 3, 2, 2); }).tex;
     tagTex.magFilter = THREE.NearestFilter;
-    dogPart(dogBody, 0.05, 0.05, 0.012, makePS1Material({ map: tagTex, color: 0xffffff }), 0, 0.06, 0.53);
+    dogPart(dogBody, 0.05, 0.05, 0.012, makePS1Material({ map: tagTex, color: 0xffffff }), 0, 0.105, 0.485); // tag hanging from the collar
     // Head: block skull, cheeks, snout with a black mask and nose, upright ears
     const dogHead = new THREE.Group();
     dogHead.position.set(0, 0.33, 0.52);

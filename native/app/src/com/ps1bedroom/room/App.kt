@@ -35,6 +35,8 @@ class App : GLSurfaceView.Renderer {
     lateinit var sky: Sky; private set
     lateinit var exterior: Exterior; private set
     lateinit var desk: Desk; private set
+    lateinit var bedroom: Bedroom; private set
+    private var lastClockDraw = -99f
     private var lastSkylineUpdate = -99f
     private val SPHERE_WINDOW_C = Vec3(0.8f, 2.65f, -3.4f)
 
@@ -67,6 +69,8 @@ class App : GLSurfaceView.Renderer {
             }
             room.onBuildInterior = {
                 desk = Desk(room, tex); desk.build()
+                bedroom = Bedroom(room); bedroom.build()
+                room.extraDynamicRoots += bedroom.chairGroup
                 room.extraBatchExcluded.addAll(desk.lavaBlobs)
             }
             room.build()
@@ -110,6 +114,7 @@ class App : GLSurfaceView.Renderer {
         if (debugPresetStep) { debugPresetStep = false; debugPreset = (debugPreset + 1) % env.TIME_PRESETS.size; env.setTimePreset(env.TIME_PRESETS[debugPreset].first) }
         exterior.update(t, dt, sky.outsideEnv)
         desk.update(t)
+        if (t - lastClockDraw > 1f) { lastClockDraw = t; bedroom.drawAlarmClock(env.currentHour()) }
         room.updateBlinds(dt)
         // The backdrop redraws ~3x a second while the window is on screen, every 2.5 s otherwise (as in the HTML)
         if (t - lastSkylineUpdate > (if (renderer.sphereInView(SPHERE_WINDOW_C, 2.0f)) 0.33f else 2.5f)) {
@@ -173,6 +178,8 @@ class App : GLSurfaceView.Renderer {
         when (tag) {
             "blinds" -> room.cycleWindowBlinds()
             "switch" -> toggleFanLight()
+            "lavalamp" -> desk.cycleLava()
+            "cat" -> bedroom.toggleCatEyes()
         }
     }
     fun toggleFanLight() {

@@ -101,11 +101,21 @@ class Room(val scene: Scene, val tex: Textures) {
         val baseboardLeft = Mesh(Geo.box(0.06f, 0.14f, 6.46f, 1, 1, 6), matWood)
         baseboardLeft.position.set(-3.70f, 0.07f, 0.25f)
         scene.add(baseboardLeft)
-        for ((bx, bw) in listOf(-1.9f to 5.66f, 4.08f to 0.6f)) {
-            val bb = Mesh(Geo.box(bw, 0.14f, 0.06f, 4, 1, 1), matWood)
-            bb.position.set(bx, 0.07f, 3.45f)
+        // Front wall: from the left corner right up to the door casing, and from the casing to the right corner
+        // (native fix: the HTML's runs stopped short of the door, leaving a bare gap)
+        val casingL = DOOR_X - 0.90f; val casingR = DOOR_X + 0.90f
+        for ((x0, x1) in listOf(MIN_X to casingL, casingR to MAX_X)) {
+            val bb = Mesh(Geo.box(x1 - x0, 0.14f, 0.06f, 4, 1, 1), matWood)
+            bb.position.set((x0 + x1) / 2, 0.07f, 3.45f)
             scene.add(bb)
         }
+        // Window wall and right wall, so the baseboard runs all the way around the room
+        val bbBack = Mesh(Geo.box(MAX_X - MIN_X, 0.14f, 0.06f, 8, 1, 1), matWood)
+        bbBack.position.set((MIN_X + MAX_X) / 2, 0.07f, MIN_Z + 0.03f)
+        scene.add(bbBack)
+        val bbRight = Mesh(Geo.box(0.06f, 0.14f, MAX_Z - MIN_Z, 1, 1, 6), matWood)
+        bbRight.position.set(MAX_X - 0.03f, 0.07f, (MIN_Z + MAX_Z) / 2)
+        scene.add(bbRight)
 
         // Light switch beside the door (controls the ceiling fan light)
         val switchPlate = Mesh(Geo.box(0.12f, 0.2f, 0.025f), matBeigePlastic)

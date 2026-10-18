@@ -27,6 +27,18 @@ class Desk(private val room: Room, private val tex: Textures) {
     lateinit var pcLedMat: Material
     lateinit var monScreen: Mesh
     private val rnd = Random.Default
+    private lateinit var lavaGlassMat: Material
+    private lateinit var blobMat: Material
+    private val lavaPalettes = arrayOf(intArrayOf(0x6b21a8, 0xff2a85, 0xd946ef), intArrayOf(0x065f46, 0xa3e635, 0x22c55e), intArrayOf(0x1e3a8a, 0x38bdf8, 0x0ea5e9), intArrayOf(0x7c2d12, 0xfacc15, 0xf97316))
+    private var currentLavaIdx = 0
+    /** Tap on the lava lamp: next palette (90s Magenta, Slime Green, Cyber Ice Blue, Solar Flare). */
+    fun cycleLava() {
+        currentLavaIdx = (currentLavaIdx + 1) % lavaPalettes.size
+        val p = lavaPalettes[currentLavaIdx]
+        lavaGlassMat.color.setHex(p[0]); lavaGlassMat.emissive.setHex(p[0])
+        blobMat.color.setHex(p[1]); blobMat.emissive.setHex(p[1])
+        room.lavaLight.color.setHex(p[2])
+    }
 
     fun build() {
         val matWood = room.matWood; val matDarkPlastic = room.matDarkPlastic
@@ -313,12 +325,12 @@ class Desk(private val room: Room, private val tex: Textures) {
         val lavaBase = Mesh(GeoCurves.lathe(lavaBasePts, 10), PS1.material(color = 0x26304d))
         lavaBase.castShadow = true; lavaBase.receiveShadow = true
         lavaGroup.add(lavaBase); room.registerInteractable(lavaBase, "lavalamp")
-        val lavaGlassMat = PS1.material(color = 0x6b21a8, emissive = 0x581c87, emissiveIntensity = 0.88f, transparent = true, opacity = 0.86f)
+        lavaGlassMat = PS1.material(color = 0x6b21a8, emissive = 0x581c87, emissiveIntensity = 0.88f, transparent = true, opacity = 0.86f)
         val lavaGlass = Mesh(Geo.cylinder(0.056f, 0.112f, 0.54f, 10, 4), lavaGlassMat)
         lavaGlass.position.y = 0.53f; lavaGroup.add(lavaGlass); room.registerInteractable(lavaGlass, "lavalamp")
         val lavaCap = Mesh(Geo.cylinder(0.036f, 0.058f, 0.15f, 10), PS1.material(color = 0x26304d))
         lavaCap.position.y = 0.87f; lavaCap.castShadow = true; lavaGroup.add(lavaCap); room.registerInteractable(lavaCap, "lavalamp")
-        val blobMat = PS1.material(color = 0xff2a85, emissive = 0xff1493, emissiveIntensity = 1.0f)
+        blobMat = PS1.material(color = 0xff2a85, emissive = 0xff1493, emissiveIntensity = 1.0f)
         for (i in 0 until 6) {
             val blob = Mesh(GeoCurves.icosahedron(0.044f - i * 0.004f, 1), blobMat)
             blobSpeed += 0.85f + i * 0.38f; blobOffset += i * 1.35f

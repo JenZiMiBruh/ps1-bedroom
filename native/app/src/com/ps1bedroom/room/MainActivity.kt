@@ -30,7 +30,10 @@ class MainActivity : Activity() {
         view.setRenderer(app)
         view.renderMode = GLSurfaceView.RENDERMODE_WHEN_DIRTY
         view.setOnTouchListener { _, e -> onTouch(e); true }
-        setContentView(view)
+        val root = android.widget.FrameLayout(this)
+        root.addView(view)
+        Changelog.addVersionTag(this, root)
+        setContentView(root)
         pacer = FramePacer(this, view, app)
         hideSystemBars()
     }

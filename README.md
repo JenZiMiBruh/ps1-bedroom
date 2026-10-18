@@ -19,7 +19,7 @@
 ![Free](https://img.shields.io/badge/free-no%20ads%2C%20no%20account-3b82f6?style=flat-square&labelColor=1a1033)
 ![three.js](https://img.shields.io/badge/three.js-r128-white?style=flat-square&logo=three.js&logoColor=white&labelColor=1a1033)
 
-<sub><a href="#-new-in-135--clear-skies">What's new</a> &nbsp;·&nbsp; <a href="#-the-room">The room</a> &nbsp;·&nbsp; <a href="#-15-places-outside">Places</a> &nbsp;·&nbsp; <a href="#%EF%B8%8F-get-it">Download</a> &nbsp;·&nbsp; <a href="#-made-for-android">Android</a> &nbsp;·&nbsp; <a href="#-changelog">Changelog</a></sub>
+<sub><a href="#-new-in-135--clear-skies">What's new</a> &nbsp;·&nbsp; <a href="#-the-room">The room</a> &nbsp;·&nbsp; <a href="#-15-places-outside">Places</a> &nbsp;·&nbsp; <a href="#%EF%B8%8F-get-it">Download</a> &nbsp;·&nbsp; <a href="#-made-for-android">Android</a> &nbsp;·&nbsp; <a href="#-changelog">Changelog</a> &nbsp;·&nbsp; <a href="../../wiki">📖 Wiki</a></sub>
 
 <br>
 

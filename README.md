@@ -57,14 +57,16 @@ Leave it on while you study, work, game or fall asleep. The room **follows your 
 
 ## 🔜 Coming soon in 1.4
 
-Already working on the [`beta`](../../tree/beta) branch:
+Already working on the [`beta`](../../tree/beta) branch. Try it early: grab the **[1.4 beta](../../releases/tag/v1.4-beta)** pre-release.
 
 - ✅ 📅 A working wall calendar, with a little pixel-art design for every month
 - ✅ 🕰️ A big LED clock on the nightstand you can read from the default view
 - ✅ 🌌 A brand new seamless sky dome around the whole world
 - ✅ 👆 Tap the top bar to switch time, weather, season and the new location button
 - ✅ 🏆 Achievements unlock with their own animation and fanfare
-- ✅ 🪚 Fixes: ceiling fan brackets, game shelf in front of the games
+- ✅ 📺 PS1 look on YouTube: the video wobbles with the TV and gets the room's chunky pixels
+- ✅ 🔊 A new default sound mix (your TV louder than the one down the hall, softer rain peaks)
+- ✅ 🪚 Fixes: ceiling fan brackets, game shelf in front of the games, box fan in the wall, wall art and distant textures flickering, jagged YouTube edges, achievement card peeking on the title screen
 - 🔧 🔋 A big performance pass: smoother, cooler phones, no more audio crackle (first pass done, testing)
 - 🚪 Later: the hallway comes back
 

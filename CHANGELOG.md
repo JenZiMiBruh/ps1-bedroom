@@ -2,6 +2,22 @@
 
 The in-app version of this list lives in `src/ps1_bedroom.html` (search for `const CHANGELOG`). Update both for each release, and bump `APP_VERSION`.
 
+## v1.4 — in progress (on the `beta` branch)
+**Added**
+- **Wall calendar** shows the real month, crosses off the days gone by, circles today, and has its own pixel-art picture each month
+- **Tap the top bar:** time, temperature, season and weather each step to the next option, plus a new **location** button for the place outside; hold any of them for the World menu
+- **Achievements** unlock with a trophy card, pixel confetti and a little fanfare, with a different colour, move and tune for each one
+
+**Changed**
+- **New sky:** one seamless dome around the whole world (no more visible seams or corners), with the sun, moon, stars and clouds drifting all the way round
+- The alarm clock is now a big LED clock radio on the nightstand, readable from the default view (tap it for the timers and alarm)
+- **Performance:** drops to 20 fps after 2 minutes untouched, the window redraws less often, and lighter audio processing on phones (less heat, fewer crackles)
+
+**Fixed**
+- Ceiling fan blades were missing their brackets
+- The game shelf's brackets and lip covered the game cases
+- The handheld console on the nightstand clipped into the clock
+
 ## v1.3 — Goodnight, Jasper
 **Added**
 - **Sleep mode:** one tap: lights down, fan on, you in bed with Jasper beside you, everything fades out in 45 minutes

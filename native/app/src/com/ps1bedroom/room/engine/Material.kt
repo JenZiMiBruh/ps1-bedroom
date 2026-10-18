@@ -15,6 +15,8 @@ class Texture(@JvmField var bitmap: Bitmap) {
     @JvmField var version = 1
     @JvmField var glId = 0
     @JvmField var uploadedVersion = 0
+    @JvmField var uploadedW = 0
+    @JvmField var uploadedH = 0
     fun needsUpdate() { version++ }
 }
 
@@ -47,7 +49,9 @@ class Material(
     @JvmField var ps1: Boolean = true,
     @JvmField var macro: Boolean = false,
     @JvmField var fog: Boolean = true,
-    @JvmField var vertexColors: Boolean = false
+    @JvmField var vertexColors: Boolean = false,
+    /** three.js ShaderMaterial: draw with this program instead of the PS1 one */
+    @JvmField var shader: CustomShader? = null
 )
 
 /** makePS1Material from the HTML, same defaults and the same grime / macro rules. */

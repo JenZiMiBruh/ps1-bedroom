@@ -114,6 +114,7 @@ class Renderer {
         // geometry / textures from a previous GL context are gone
         uploadedGeometries.forEach { it.uploaded = false }; uploadedGeometries.clear()
         uploadedTextures.forEach { it.glId = 0; it.uploadedVersion = 0 }; uploadedTextures.clear()
+        customShaders.forEach { it.program = 0 }; customShaders.clear()
         shadowTargets.clear()
         shadowsNeedUpdate = true
     }
@@ -230,9 +231,21 @@ class Renderer {
     }
     private val shadowPV = Mat4()
     private val sv1 = Vec3(); private val sv2 = Vec3()
+    private var shadowCull = -1
     private val shadowVisitor: (Object3D) -> Unit = { o ->
         if (o is Mesh && o.castShadow && o.material.visible) {
             upload(o.geometry)
+            // three r128 renders the opposite side into shadow maps (FrontSide -> BackSide, DoubleSide stays):
+            // the room's walls face away from the moon, so their back faces are what block it
+            val side = o.material.side
+            if (side != shadowCull) {
+                when (side) {
+                    FRONT_SIDE -> { glEnable(GL_CULL_FACE); glCullFace(GL_FRONT) }
+                    BACK_SIDE -> { glEnable(GL_CULL_FACE); glCullFace(GL_BACK) }
+                    else -> glDisable(GL_CULL_FACE)
+                }
+                shadowCull = side
+            }
             tmpM.multiplyMatrices(shadowPV, o.matrixWorld)
             glUniformMatrix4fv(depthMvp, 1, false, tmpM.e, 0)
             glBindVertexArray(o.geometry.vao)
@@ -260,7 +273,7 @@ class Renderer {
             glDepthMask(true); glClear(GL_DEPTH_BUFFER_BIT)
             glEnable(GL_DEPTH_TEST); glDepthFunc(GL_LEQUAL)
             glColorMask(false, false, false, false)
-            glEnable(GL_CULL_FACE); glCullFace(GL_BACK)
+            shadowCull = -1
             glDisable(GL_POLYGON_OFFSET_FILL)
             glUseProgram(depthProg)
             scene.traverseVisible(shadowVisitor)
@@ -288,7 +301,7 @@ class Renderer {
         if (o is Mesh) {
             val g = o.geometry
             if (g.boundingRadius < 0) g.computeBoundingSphere()
-            if (!o.frustumCulled || inFrustum(o, tmpM2)) {
+            if (!o.frustumCulled || inFrustum(o)) {
                 tmpV.copy(g.boundingCenter).applyMatrix4(o.matrixWorld)
                 val z = tmpV.applyMatrix4(curCamera.matrixWorldInverse).z
                 if (o.multiMaterial && g.groups.isNotEmpty()) {
@@ -313,25 +326,39 @@ class Renderer {
         opaque.clear(); transparent.clear(); poolUsed = 0
         curCamera = camera
         tmpM2.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse)
+        setPlanes(tmpM2)
         scene.traverseVisible(drawVisitor)
         opaque.sortWith(opaqueCmp)
         transparent.sortWith(transparentCmp)
     }
 
+    // three's Frustum.intersectsSphere: six normalised planes from projection * view, with a safety margin so
+    // things never pop out while any part of them (or their PS1 wobble) could still be on screen
     private val fc = Vec3()
-    private fun inFrustum(o: Mesh, vp: Mat4): Boolean {
+    private val planes = FloatArray(24)
+    private fun setPlane(i: Int, a: Float, b: Float, c: Float, d: Float) {
+        val l = kotlin.math.sqrt(a * a + b * b + c * c)
+        planes[i * 4] = a / l; planes[i * 4 + 1] = b / l; planes[i * 4 + 2] = c / l; planes[i * 4 + 3] = d / l
+    }
+    private fun setPlanes(vp: Mat4) {
+        val m = vp.e
+        setPlane(0, m[3] - m[0], m[7] - m[4], m[11] - m[8], m[15] - m[12])
+        setPlane(1, m[3] + m[0], m[7] + m[4], m[11] + m[8], m[15] + m[12])
+        setPlane(2, m[3] + m[1], m[7] + m[5], m[11] + m[9], m[15] + m[13])
+        setPlane(3, m[3] - m[1], m[7] - m[5], m[11] - m[9], m[15] - m[13])
+        setPlane(4, m[3] - m[2], m[7] - m[6], m[11] - m[10], m[15] - m[14])
+        setPlane(5, m[3] + m[2], m[7] + m[6], m[11] + m[10], m[15] + m[14])
+    }
+    private fun inFrustum(o: Mesh): Boolean {
         val g = o.geometry
         fc.copy(g.boundingCenter).applyMatrix4(o.matrixWorld)
         val e = o.matrixWorld.e
         val sx = e[0] * e[0] + e[1] * e[1] + e[2] * e[2]; val sy = e[4] * e[4] + e[5] * e[5] + e[6] * e[6]; val sz = e[8] * e[8] + e[9] * e[9] + e[10] * e[10]
-        val r = g.boundingRadius * kotlin.math.sqrt(maxOf(sx, sy, sz))
-        val m = vp.e
-        val x = m[0] * fc.x + m[4] * fc.y + m[8] * fc.z + m[12]
-        val y = m[1] * fc.x + m[5] * fc.y + m[9] * fc.z + m[13]
-        val w = m[3] * fc.x + m[7] * fc.y + m[11] * fc.z + m[15]
-        if (w < -r) return false
-        val lim = w + r * 2.5f
-        return x >= -lim && x <= lim && y >= -lim && y <= lim
+        val r = g.boundingRadius * kotlin.math.sqrt(maxOf(sx, sy, sz)) * 1.25f + 0.15f
+        for (i in 0 until 6) {
+            if (planes[i * 4] * fc.x + planes[i * 4 + 1] * fc.y + planes[i * 4 + 2] * fc.z + planes[i * 4 + 3] < -r) return false
+        }
+        return true
     }
 
     // State cache: skip GL calls when nothing changed between draws
@@ -343,6 +370,7 @@ class Renderer {
     private val mv = Mat4()
     private val uvT = FloatArray(9)
     private fun drawItem(d: DrawItem, camera: PerspectiveCamera) {
+        if (d.mat.shader != null) { drawCustom(d, camera); return }
         val o = d.mesh; val m = d.mat
         upload(o.geometry)
         mv.multiplyMatrices(camera.matrixWorldInverse, o.matrixWorld)
@@ -371,6 +399,40 @@ class Renderer {
         val t1 = if (em != null) texId(em) else whiteTex
         if (t1 != curTex1) { glActiveTexture(GL_TEXTURE1); glBindTexture(GL_TEXTURE_2D, t1); curTex1 = t1 }
         glUniform1i(L.hasEm, if (em != null) 1 else 0)
+        applyState(m)
+        val vao = o.geometry.vao
+        if (vao != curVao) { glBindVertexArray(vao); curVao = vao }
+        drawGeometry(o.geometry, d.group)
+        lastDrawCalls++
+    }
+
+    // ---- three.js ShaderMaterial (sky dome, clouds): its own program, then back to the PS1 one ----
+    private val customShaders = ArrayList<CustomShader>()
+    // Custom shaders get texture units 4-6 so the PS1 program's maps (0, 1) and shadow maps (2, 3) stay bound
+    private val texBinder = TexBinder { slot, t -> val id = texId(t); glActiveTexture(GL_TEXTURE4 + slot); glBindTexture(GL_TEXTURE_2D, id); 4 + slot }
+    private fun drawCustom(d: DrawItem, camera: PerspectiveCamera) {
+        val o = d.mesh; val m = d.mat; val s = m.shader!!
+        upload(o.geometry)
+        if (s.program == 0) {
+            s.program = program(s.vert, s.frag)
+            s.mvLoc = glGetUniformLocation(s.program, "modelViewMatrix"); s.projLoc = glGetUniformLocation(s.program, "projectionMatrix")
+            s.locate(s.program)
+            customShaders += s
+        }
+        glUseProgram(s.program)
+        mv.multiplyMatrices(camera.matrixWorldInverse, o.matrixWorld)
+        glUniformMatrix4fv(s.mvLoc, 1, false, mv.e, 0)
+        glUniformMatrix4fv(s.projLoc, 1, false, camera.projectionMatrix.e, 0)
+        s.apply(texBinder)
+        applyState(m)
+        val vao = o.geometry.vao
+        if (vao != curVao) { glBindVertexArray(vao); curVao = vao }
+        drawGeometry(o.geometry, d.group)
+        lastDrawCalls++
+        glUseProgram(ps1Prog)
+    }
+
+    private fun applyState(m: Material) {
         val cull = m.side
         if (cull != curCull) {
             when (cull) {
@@ -386,10 +448,6 @@ class Renderer {
         if (m.polygonOffset && (m.polygonOffsetFactor != curOffF || m.polygonOffsetUnits != curOffU)) {
             glPolygonOffset(m.polygonOffsetFactor, m.polygonOffsetUnits); curOffF = m.polygonOffsetFactor; curOffU = m.polygonOffsetUnits
         }
-        val vao = o.geometry.vao
-        if (vao != curVao) { glBindVertexArray(vao); curVao = vao }
-        drawGeometry(o.geometry, d.group)
-        lastDrawCalls++
     }
 
     private fun drawGeometry(g: Geometry, group: IntArray?) {
@@ -557,6 +615,7 @@ class Renderer {
         uploadedGeometries += g
     }
 
+    private var upPx = IntArray(0); private var upOut = IntArray(0); private var upBuf: ByteBuffer = ByteBuffer.allocateDirect(4)
     /** GL id for a texture, uploading it like a three.js CanvasTexture (flipY on, not premultiplied) when it changed. */
     private fun texId(t: Texture): Int {
         if (t.glId == 0) { val id = IntArray(1); glGenTextures(1, id, 0); t.glId = id[0]; uploadedTextures += t }
@@ -564,15 +623,20 @@ class Renderer {
             glActiveTexture(GL_TEXTURE7)
             glBindTexture(GL_TEXTURE_2D, t.glId)
             val bm = t.bitmap; val w = bm.width; val h = bm.height
-            val px = IntArray(w * h); bm.getPixels(px, 0, w, 0, 0, w, h)   // un-premultiplied ARGB
-            val buf = ByteBuffer.allocateDirect(w * h * 4)
-            for (y in h - 1 downTo 0) { // flipY
+            // Reused scratch buffers: canvases like the sky re-upload a few times a second, so no garbage per upload
+            if (upPx.size < w * h) { upPx = IntArray(w * h); upOut = IntArray(w * h); upBuf = ByteBuffer.allocateDirect(w * h * 4).order(ByteOrder.nativeOrder()) }
+            val px = upPx; val out = upOut
+            bm.getPixels(px, 0, w, 0, 0, w, h)   // un-premultiplied ARGB
+            // flipY, ARGB -> RGBA bytes (written as little-endian ints: 0xAABBGGRR)
+            var o = 0
+            for (y in h - 1 downTo 0) {
                 val row = y * w
-                for (x in 0 until w) { val c = px[row + x]; buf.put((c shr 16).toByte()); buf.put((c shr 8).toByte()); buf.put(c.toByte()); buf.put((c ushr 24).toByte()) }
+                for (x in 0 until w) { val c = px[row + x]; out[o++] = (c and 0xff00ff00.toInt()) or ((c shr 16) and 0xff) or ((c and 0xff) shl 16) }
             }
-            buf.position(0)
+            val ib = upBuf.asIntBuffer(); ib.put(out, 0, w * h); upBuf.position(0)
             glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, buf)
+            if (t.uploadedW == w && t.uploadedH == h) glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, upBuf)
+            else { glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, upBuf); t.uploadedW = w; t.uploadedH = h }
             val wrap = if (t.wrapRepeat) GL_REPEAT else GL_CLAMP_TO_EDGE
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrap); glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrap)
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, if (t.nearest) GL_NEAREST else GL_LINEAR)

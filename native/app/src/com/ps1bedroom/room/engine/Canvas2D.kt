@@ -71,9 +71,14 @@ class Canvas2D(@JvmField val width: Int, @JvmField val height: Int) {
 
     fun fillRect(x: Number, y: Number, w: Number, h: Number) { prepFill(); canvas.drawRect(x.toFloat(), y.toFloat(), x.toFloat() + w.toFloat(), y.toFloat() + h.toFloat(), fill) }
     fun strokeRect(x: Number, y: Number, w: Number, h: Number) { prepStroke(); canvas.drawRect(x.toFloat(), y.toFloat(), x.toFloat() + w.toFloat(), y.toFloat() + h.toFloat(), stroke) }
+    private val clearPaint = Paint().apply { xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR) }
+    private val imgPaint = Paint()
+    private val dstRect = RectF(); private val srcRect = android.graphics.Rect()
     fun clearRect(x: Number, y: Number, w: Number, h: Number) {
-        val p = Paint().apply { xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR) }
-        canvas.drawRect(x.toFloat(), y.toFloat(), x.toFloat() + w.toFloat(), y.toFloat() + h.toFloat(), p)
+        val fx = x.toFloat(); val fy = y.toFloat(); val fw = w.toFloat(); val fh = h.toFloat()
+        // whole canvas: wipe the bitmap directly (cheapest)
+        if (fx <= 0f && fy <= 0f && fx + fw >= width && fy + fh >= height && canvas.saveCount == 1) { bitmap.eraseColor(0); return }
+        canvas.drawRect(fx, fy, fx + fw, fy + fh, clearPaint)
     }
 
     fun beginPath() { path = Path() }
@@ -184,13 +189,15 @@ class Canvas2D(@JvmField val width: Int, @JvmField val height: Int) {
     fun drawImage(src: Canvas2D, dx: Number, dy: Number) = drawImage(src.bitmap, dx, dy, src.width, src.height)
     fun drawImage(src: Canvas2D, dx: Number, dy: Number, dw: Number, dh: Number) = drawImage(src.bitmap, dx, dy, dw, dh)
     fun drawImage(src: Bitmap, dx: Number, dy: Number, dw: Number, dh: Number) {
-        val p = Paint().apply { isFilterBitmap = imageSmoothingEnabled; alpha = (globalAlpha * 255).toInt(); xfermode = fill.xfermode }
-        canvas.drawBitmap(src, null, RectF(dx.toFloat(), dy.toFloat(), dx.toFloat() + dw.toFloat(), dy.toFloat() + dh.toFloat()), p)
+        val p = imgPaint; p.isFilterBitmap = imageSmoothingEnabled; p.alpha = (globalAlpha * 255).toInt(); p.xfermode = fill.xfermode
+        dstRect.set(dx.toFloat(), dy.toFloat(), dx.toFloat() + dw.toFloat(), dy.toFloat() + dh.toFloat())
+        canvas.drawBitmap(src, null, dstRect, p)
     }
     fun drawImage(src: Canvas2D, sx: Number, sy: Number, sw: Number, sh: Number, dx: Number, dy: Number, dw: Number, dh: Number) {
-        val p = Paint().apply { isFilterBitmap = imageSmoothingEnabled; alpha = (globalAlpha * 255).toInt(); xfermode = fill.xfermode }
-        canvas.drawBitmap(src.bitmap, android.graphics.Rect(sx.toInt(), sy.toInt(), (sx.toFloat() + sw.toFloat()).toInt(), (sy.toFloat() + sh.toFloat()).toInt()),
-            RectF(dx.toFloat(), dy.toFloat(), dx.toFloat() + dw.toFloat(), dy.toFloat() + dh.toFloat()), p)
+        val p = imgPaint; p.isFilterBitmap = imageSmoothingEnabled; p.alpha = (globalAlpha * 255).toInt(); p.xfermode = fill.xfermode
+        srcRect.set(sx.toInt(), sy.toInt(), (sx.toFloat() + sw.toFloat()).toInt(), (sy.toFloat() + sh.toFloat()).toInt())
+        dstRect.set(dx.toFloat(), dy.toFloat(), dx.toFloat() + dw.toFloat(), dy.toFloat() + dh.toFloat())
+        canvas.drawBitmap(src.bitmap, srcRect, dstRect, p)
     }
     /** RGBA bytes like ImageData.data (0..255 per channel, row by row). */
     fun getImageData(): IntArray {
@@ -209,7 +216,17 @@ class Canvas2D(@JvmField val width: Int, @JvmField val height: Int) {
         private val named = mapOf("white" to 0xffffffff.toInt(), "black" to 0xff000000.toInt(), "transparent" to 0, "red" to 0xffff0000.toInt())
         fun withAlpha(argb: Int, ga: Float): Int { val a = ((argb ushr 24) * ga).toInt().coerceIn(0, 255); return (a shl 24) or (argb and 0xffffff) }
         /** '#rgb', '#rrggbb', 'rgb()', 'rgba()', 'hsl()' and a few names -> ARGB */
+        // Parsed colours are cached: the same few style strings are set over and over every redraw
+        private val cssCache = HashMap<String, Int>()
+        private val RGB_RE = Regex("rgba?\\(([^)]*)\\)"); private val HSL_RE = Regex("hsla?\\(([^)]*)\\)")
         fun parseCss(s: String): Int {
+            cssCache[s]?.let { return it }
+            val v = parseCssUncached(s)
+            if (cssCache.size > 4096) cssCache.clear()
+            cssCache[s] = v
+            return v
+        }
+        private fun parseCssUncached(s: String): Int {
             val t = s.trim().lowercase()
             named[t]?.let { return it }
             if (t.startsWith("#")) {
@@ -217,13 +234,13 @@ class Canvas2D(@JvmField val width: Int, @JvmField val height: Int) {
                 val full = if (h.length == 3) "" + h[0] + h[0] + h[1] + h[1] + h[2] + h[2] else h
                 return (0xff shl 24) or Integer.parseInt(full.substring(0, 6), 16)
             }
-            Regex("rgba?\\(([^)]*)\\)").find(t)?.let { m ->
+            RGB_RE.find(t)?.let { m ->
                 val p = m.groupValues[1].split(",").map { it.trim() }
                 val r = p[0].toFloat().toInt().coerceIn(0, 255); val g = p[1].toFloat().toInt().coerceIn(0, 255); val b = p[2].toFloat().toInt().coerceIn(0, 255)
                 val a = if (p.size > 3) (p[3].toFloat() * 255).toInt().coerceIn(0, 255) else 255
                 return (a shl 24) or (r shl 16) or (g shl 8) or b
             }
-            Regex("hsla?\\(([^)]*)\\)").find(t)?.let { m ->
+            HSL_RE.find(t)?.let { m ->
                 val p = m.groupValues[1].split(",").map { it.trim().removeSuffix("%").removeSuffix("deg") }
                 val h = p[0].toFloat() / 360f; val sat = p[1].toFloat() / 100f; val l = p[2].toFloat() / 100f
                 val q = if (l < 0.5f) l * (1 + sat) else l + sat - l * sat; val pp = 2 * l - q

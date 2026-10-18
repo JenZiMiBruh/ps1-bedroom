@@ -53,7 +53,9 @@ class Material(
     @JvmField var fog: Boolean = true,
     @JvmField var vertexColors: Boolean = false,
     /** three.js ShaderMaterial: draw with this program instead of the PS1 one */
-    @JvmField var shader: CustomShader? = null
+    @JvmField var shader: CustomShader? = null,
+    /** three.js AdditiveBlending (glows that brighten what is behind them) */
+    @JvmField var additive: Boolean = false
 )
 
 /** makePS1Material from the HTML, same defaults and the same grime / macro rules. */

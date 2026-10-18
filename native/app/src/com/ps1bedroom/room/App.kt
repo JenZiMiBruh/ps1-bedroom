@@ -33,6 +33,7 @@ class App : GLSurfaceView.Renderer {
     private lateinit var room: Room
     lateinit var env: Environment; private set
     lateinit var sky: Sky; private set
+    lateinit var exterior: Exterior; private set
     private var lastSkylineUpdate = -99f
     private val SPHERE_WINDOW_C = Vec3(0.8f, 2.65f, -3.4f)
 
@@ -62,6 +63,7 @@ class App : GLSurfaceView.Renderer {
             sky = Sky(scene, env)
             sky.defaultCamPos = defaultCamPos
             sky.addTo(exteriorWorldGroup)
+            exterior = Exterior(exteriorWorldGroup, env, room)
             env.sky = sky; env.eye = defaultCamPos
             env.applyEnvironmentSettings()
             android.util.Log.i("PS1Bedroom", "static batching: ${r.removed} meshes -> ${r.added} batches")
@@ -96,6 +98,7 @@ class App : GLSurfaceView.Renderer {
         handleTaps()
         env.tick(System.currentTimeMillis())
         if (debugPresetStep) { debugPresetStep = false; debugPreset = (debugPreset + 1) % env.TIME_PRESETS.size; env.setTimePreset(env.TIME_PRESETS[debugPreset].first) }
+        exterior.update(t, dt, sky.outsideEnv)
         room.updateBlinds(dt)
         // The backdrop redraws ~3x a second while the window is on screen, every 2.5 s otherwise (as in the HTML)
         if (t - lastSkylineUpdate > (if (renderer.sphereInView(SPHERE_WINDOW_C, 2.0f)) 0.33f else 2.5f)) {

@@ -186,7 +186,7 @@ class Renderer {
         glEnable(GL_DEPTH_TEST); glDepthFunc(GL_LEQUAL); curDepthTest = true
         glDisable(GL_BLEND)
         for (i in opaque.indices) drawItem(opaque[i], camera)
-        glEnable(GL_BLEND); glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA)
+        glEnable(GL_BLEND); glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA); curAdditive = false
         for (i in transparent.indices) drawItem(transparent[i], camera)
         glDisable(GL_BLEND); glDepthMask(true); glDisable(GL_POLYGON_OFFSET_FILL)
 
@@ -367,6 +367,7 @@ class Renderer {
     }
 
     // State cache: skip GL calls when nothing changed between draws
+    private var curAdditive = false
     private var curCull = -1; private var curDepthTest = true; private var curDepthWrite = true; private var curOffset = false
     private var curOffF = 0f; private var curOffU = 0f; private var curTex0 = -1; private var curTex1 = -1; private var curVao = -1
     private fun resetState() { curCull = -1; curOffset = false; glDisable(GL_POLYGON_OFFSET_FILL); curTex0 = -1; curTex1 = -1; curVao = -1 }
@@ -438,6 +439,10 @@ class Renderer {
     }
 
     private fun applyState(m: Material) {
+        if (m.transparent && m.additive != curAdditive) {
+            if (m.additive) glBlendFunc(GL_SRC_ALPHA, GL_ONE) else glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA)
+            curAdditive = m.additive
+        }
         val cull = m.side
         if (cull != curCull) {
             when (cull) {

@@ -231,6 +231,118 @@ object Geo {
         return b.build()
     }
 
+    /**
+     * three.js r128 PolyhedronGeometry: non-indexed, each face subdivided `detail` times and pushed onto the sphere of
+     * `radius`, with three's spherical UVs (seam and pole fixes included). Detail 0 gets flat face normals.
+     */
+    fun polyhedron(vertices: DoubleArray, indices: IntArray, radius: Float, detail: Int): Geometry {
+        val vb = ArrayList<Double>()
+        fun push(p: DoubleArray) { vb += p[0]; vb += p[1]; vb += p[2] }
+        fun lerp(a: DoubleArray, b: DoubleArray, t: Double) = doubleArrayOf(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t)
+        fun vtx(i: Int) = doubleArrayOf(vertices[i * 3], vertices[i * 3 + 1], vertices[i * 3 + 2])
+        var f = 0
+        while (f < indices.size) {
+            val a = vtx(indices[f]); val b = vtx(indices[f + 1]); val c = vtx(indices[f + 2])
+            val cols = detail + 1
+            val v = Array(cols + 1) { ArrayList<DoubleArray>() }
+            for (i in 0..cols) {
+                val aj = lerp(a, c, i.toDouble() / cols); val bj = lerp(b, c, i.toDouble() / cols)
+                val rows = cols - i
+                for (j in 0..rows) v[i] += if (j == 0 && i == cols) aj else lerp(aj, bj, j.toDouble() / rows)
+            }
+            for (i in 0 until cols) for (j in 0 until 2 * (cols - i) - 1) {
+                val k = j / 2
+                if (j % 2 == 0) { push(v[i][k + 1]); push(v[i + 1][k]); push(v[i][k]) }
+                else { push(v[i][k + 1]); push(v[i + 1][k + 1]); push(v[i + 1][k]) }
+            }
+            f += 3
+        }
+        val pos = DoubleArray(vb.size) { vb[it] }
+        // applyRadius
+        var i = 0
+        while (i < pos.size) {
+            val l = sqrt(pos[i] * pos[i] + pos[i + 1] * pos[i + 1] + pos[i + 2] * pos[i + 2])
+            pos[i] = pos[i] / l * radius; pos[i + 1] = pos[i + 1] / l * radius; pos[i + 2] = pos[i + 2] / l * radius
+            i += 3
+        }
+        // generateUVs
+        fun azimuth(x: Double, z: Double) = kotlin.math.atan2(z, -x)
+        fun inclination(x: Double, y: Double, z: Double) = kotlin.math.atan2(-y, sqrt(x * x + z * z))
+        val n = pos.size / 3
+        val uv = DoubleArray(n * 2)
+        for (k in 0 until n) {
+            val x = pos[k * 3]; val y = pos[k * 3 + 1]; val z = pos[k * 3 + 2]
+            uv[k * 2] = azimuth(x, z) / 2 / Math.PI + 0.5
+            uv[k * 2 + 1] = 1 - (inclination(x, y, z) / Math.PI + 0.5)
+        }
+        // correctUVs
+        var t = 0
+        while (t < n) {
+            val cx = (pos[t * 3] + pos[t * 3 + 3] + pos[t * 3 + 6]) / 3; val cz = (pos[t * 3 + 2] + pos[t * 3 + 5] + pos[t * 3 + 8]) / 3
+            val azi = azimuth(cx, cz)
+            for (q in 0 until 3) {
+                val vi = t + q
+                if (azi < 0 && uv[vi * 2] == 1.0) uv[vi * 2] = uv[vi * 2] - 1
+                if (pos[vi * 3] == 0.0 && pos[vi * 3 + 2] == 0.0) uv[vi * 2] = azi / 2 / Math.PI + 0.5
+            }
+            t += 3
+        }
+        // correctSeam
+        var s = 0
+        while (s < uv.size) {
+            val x0 = uv[s]; val x1 = uv[s + 2]; val x2 = uv[s + 4]
+            if (maxOf(x0, x1, x2) > 0.9 && minOf(x0, x1, x2) < 0.1) {
+                if (x0 < 0.2) uv[s] += 1.0
+                if (x1 < 0.2) uv[s + 2] += 1.0
+                if (x2 < 0.2) uv[s + 4] += 1.0
+            }
+            s += 6
+        }
+        val p = FloatArray(pos.size) { pos[it].toFloat() }
+        val nrm = FloatArray(pos.size)
+        if (detail == 0) {
+            // computeVertexNormals on a non-indexed geometry: one flat normal per triangle, (C - B) x (A - B)
+            var tri = 0
+            while (tri < n) {
+                val o = tri * 3
+                val cbx = p[o + 6] - p[o + 3]; val cby = p[o + 7] - p[o + 4]; val cbz = p[o + 8] - p[o + 5]
+                val abx = p[o] - p[o + 3]; val aby = p[o + 1] - p[o + 4]; val abz = p[o + 2] - p[o + 5]
+                var nx = cby * abz - cbz * aby; var ny = cbz * abx - cbx * abz; var nz = cbx * aby - cby * abx
+                val l = sqrt(nx * nx + ny * ny + nz * nz).let { if (it == 0f) 1f else it }
+                nx /= l; ny /= l; nz /= l
+                for (q in 0 until 3) { nrm[o + q * 3] = nx; nrm[o + q * 3 + 1] = ny; nrm[o + q * 3 + 2] = nz }
+                tri += 3
+            }
+        } else {
+            for (k in 0 until n) { val l = sqrt(p[k * 3] * p[k * 3] + p[k * 3 + 1] * p[k * 3 + 1] + p[k * 3 + 2] * p[k * 3 + 2]); nrm[k * 3] = p[k * 3] / l; nrm[k * 3 + 1] = p[k * 3 + 1] / l; nrm[k * 3 + 2] = p[k * 3 + 2] / l }
+        }
+        return Geometry(p, nrm, FloatArray(uv.size) { uv[it].toFloat() }, null)
+    }
+
+    /** three.js r128 DodecahedronGeometry. */
+    fun dodecahedron(radius: Float = 1f, detail: Int = 0): Geometry {
+        val t = (1 + sqrt(5.0)) / 2; val r = 1 / t
+        val v = doubleArrayOf(
+            -1.0, -1.0, -1.0, -1.0, -1.0, 1.0, -1.0, 1.0, -1.0, -1.0, 1.0, 1.0,
+            1.0, -1.0, -1.0, 1.0, -1.0, 1.0, 1.0, 1.0, -1.0, 1.0, 1.0, 1.0,
+            0.0, -r, -t, 0.0, -r, t, 0.0, r, -t, 0.0, r, t,
+            -r, -t, 0.0, -r, t, 0.0, r, -t, 0.0, r, t, 0.0,
+            -t, 0.0, -r, t, 0.0, -r, -t, 0.0, r, t, 0.0, r
+        )
+        val idx = intArrayOf(
+            3, 11, 7, 3, 7, 15, 3, 15, 13, 7, 19, 17, 7, 17, 6, 7, 6, 15, 17, 4, 8, 17, 8, 10, 17, 10, 6,
+            8, 0, 16, 8, 16, 2, 8, 2, 10, 0, 12, 1, 0, 1, 18, 0, 18, 16, 6, 10, 2, 6, 2, 13, 6, 13, 15,
+            2, 16, 18, 2, 18, 3, 2, 3, 13, 18, 1, 9, 18, 9, 11, 18, 11, 3, 4, 14, 12, 4, 12, 0, 4, 0, 8,
+            11, 9, 5, 11, 5, 19, 11, 19, 7, 19, 5, 14, 19, 14, 4, 19, 4, 17, 1, 12, 14, 1, 14, 5, 1, 5, 9
+        )
+        return polyhedron(v, idx, radius, detail)
+    }
+
+    /** three.js r128 OctahedronGeometry. */
+    fun octahedron(radius: Float = 1f, detail: Int = 0) = polyhedron(
+        doubleArrayOf(1.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, -1.0),
+        intArrayOf(0, 2, 4, 0, 4, 3, 0, 3, 5, 0, 5, 2, 1, 2, 5, 1, 5, 3, 1, 3, 4, 1, 4, 2), radius, detail)
+
     /** three.js r128 CircleGeometry (in XY, facing +Z). */
     fun circle(radius: Float, segments: Int = 8, thetaStart: Float = 0f, thetaLength: Float = (Math.PI * 2).toFloat()): Geometry {
         val b = Builder()

@@ -34,7 +34,28 @@ Leave it on while you study, work, game or fall asleep. The room **follows your 
 
 ---
 
-## 🆕 New in 1.2
+## 🆕 New in 1.3 — Goodnight, Jasper
+
+<table>
+<tr>
+<td width="50%"><img src="docs/images/v13-sleep-mode.png" alt="Sleep mode"><br><sub><b>Sleep mode</b>: one tap, lights down, Jasper curls up on the bed, everything fades out</sub></td>
+<td width="50%"><img src="docs/images/v13-jasper.png" alt="Jasper"><br><sub><b>Jasper</b>, rebuilt in chunky PS1 style. Pick his coat colours</sub></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/images/v13-share-card.png" alt="Share card"><br><sub><b>Share cards</b>: a postcard of your room to post anywhere</sub></td>
+<td width="50%" valign="top">
+
+- ⏰ **Sunrise alarm**: the room glows warmer before your alarm, then your music plays
+- 🏆 **18 achievements**
+- 🎁 **Daily surprises** hidden in the room
+- 🔇 Living room TV properly muffled · 📱 screen sleeps after the sleep timer
+- 🛠️ Fixes: TV power, YouTube in Photo mode, chair, backpack, audio crackle
+
+</td>
+</tr>
+</table>
+
+## New in 1.2
 
 <div align="center">
 <img src="docs/images/window-places.gif" alt="All 15 places outside the window" width="88%">
@@ -78,7 +99,7 @@ Leave it on while you study, work, game or fall asleep. The room **follows your 
 <td width="50%" valign="top">
 
 ### 📱 Android
-1. Download **`PS1-Bedroom-v1.2.apk`** from the **[latest release](../../releases/latest)**.
+1. Download **`PS1-Bedroom-v1.3.apk`** from the **[latest release](../../releases/latest)**.
 2. Open it and tap **Install** (allow installs from your browser if asked).
 3. If Play Protect warns you, tap **Install anyway**. It's just not from the Play Store.
 
@@ -88,7 +109,7 @@ Works great on a TV with **Samsung DeX**.
 <td width="50%" valign="top">
 
 ### 💻 Browser
-**[Play it right now](https://jenzimibruh.github.io/ps1-bedroom/play/)**, or download **`PS1-Bedroom-web-v1.2.zip`** from the release and open `index.html`.
+**[Play it right now](https://jenzimibruh.github.io/ps1-bedroom/play/)**, or download **`PS1-Bedroom-web-v1.3.zip`** from the release and open `index.html`.
 
 Drag to look, scroll to zoom, WASD to walk.
 
@@ -123,7 +144,16 @@ Drag to look, scroll to zoom, WASD to walk.
 Full history in **[CHANGELOG.md](CHANGELOG.md)** and in the app under **Menu → About**.
 
 <details>
-<summary><b>v1.2 — Stuff from 2001</b> (latest)</summary>
+<summary><b>v1.3 — Goodnight, Jasper</b> (latest)</summary>
+
+<br>
+
+Sleep mode · sunrise alarm · share cards · 18 achievements · daily surprises · Jasper rebuilt with coat colours · muffled living room TV · screen sleeps after the timer · fixes for the TV, YouTube in Photo mode, chair, backpack and audio crackle
+
+</details>
+
+<details>
+<summary><b>v1.2 — Stuff from 2001</b></summary>
 
 <br>
 

@@ -7,8 +7,11 @@ The in-app version of this list lives in `src/ps1_bedroom.html` (search for `con
 - **Wall calendar** shows the real month, crosses off the days gone by, circles today, and has its own pixel-art picture each month
 - **Tap the top bar:** time, temperature, season and weather each step to the next option, plus a new **location** button for the place outside; hold any of them for the World menu
 - **Achievements** unlock with a trophy card, pixel confetti and a little fanfare, with a different colour, move and tune for each one
+- **PS1 look on YouTube** (Menu → Display, on by default): the video wobbles with the TV and gets the room's chunky pixels
 
 **Changed**
+- **New default sound mix:** the bedroom TV is clearly louder than the muffled one down the hall, the fan and AC sit under the rain, and music comes first. Layer volumes reset to the new mix once (master volume is kept)
+- Rain is just as full but with far lower peaks, so it no longer slams the limiter (another source of crackle)
 - **New sky:** one seamless dome around the whole world (no more visible seams or corners), with the sun, moon, stars and clouds drifting all the way round
 - The alarm clock is now a big LED clock radio on the nightstand, readable from the default view (tap it for the timers and alarm)
 - **Performance:** drops to 20 fps after 2 minutes untouched, the window redraws less often, and lighter audio processing on phones (less heat, fewer crackles)
@@ -17,6 +20,11 @@ The in-app version of this list lives in `src/ps1_bedroom.html` (search for `con
 - Ceiling fan blades were missing their brackets
 - The game shelf's brackets and lip covered the game cases
 - The handheld console on the nightstand clipped into the clock
+- The achievement card peeked out under the notch on the title screen, and achievements could unlock before the room had even loaded
+- Posters, the calendar and rugs flickered and clipped into the wall from far away
+- Textures far away shimmered and flickered (distant surfaces now use smaller mip levels; still crunchy up close)
+- YouTube on the TV: jagged black bits around the picture and the video overlapping the TV's frame
+- The summer box fan was standing inside the front wall
 
 ## v1.3 — Goodnight, Jasper
 **Added**

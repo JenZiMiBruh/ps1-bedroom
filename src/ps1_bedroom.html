@@ -419,15 +419,15 @@
         <details>
           <summary>Mixer</summary>
           <label class="slider"><span><em>PC tower fan &amp; HDD</em><em id="val-vol-pc">75%</em></span><input type="range" id="ctrl-vol-pc" min="0" max="150" step="5" value="75" /></label>
-          <label class="slider"><span><em>Ceiling fan</em><em id="val-vol-fan">80%</em></span><input type="range" id="ctrl-vol-fan" min="0" max="150" step="5" value="80" /></label>
-          <label class="slider"><span><em>Wall AC</em><em id="val-vol-ac">75%</em></span><input type="range" id="ctrl-vol-ac" min="0" max="150" step="5" value="75" /></label>
-          <label class="slider"><span><em>Living room TV (muffled)</em><em id="val-vol-livtv">85%</em></span><input type="range" id="ctrl-vol-livtv" min="0" max="150" step="5" value="85" /></label>
-          <label class="slider"><span><em>Bedroom TV &amp; PS1</em><em id="val-vol-bedtv">75%</em></span><input type="range" id="ctrl-vol-bedtv" min="0" max="150" step="5" value="75" /></label>
-          <label class="slider"><span><em>Rain, wind &amp; storms</em><em id="val-vol-weather">100%</em></span><input type="range" id="ctrl-vol-weather" min="0" max="150" step="5" value="100" /></label>
-          <label class="slider"><span><em>Outdoors: city, birds, crickets</em><em id="val-vol-nature">75%</em></span><input type="range" id="ctrl-vol-nature" min="0" max="150" step="5" value="75" /></label>
+          <label class="slider"><span><em>Ceiling fan</em><em id="val-vol-fan">70%</em></span><input type="range" id="ctrl-vol-fan" min="0" max="150" step="5" value="70" /></label>
+          <label class="slider"><span><em>Wall AC</em><em id="val-vol-ac">65%</em></span><input type="range" id="ctrl-vol-ac" min="0" max="150" step="5" value="65" /></label>
+          <label class="slider"><span><em>Living room TV (muffled)</em><em id="val-vol-livtv">35%</em></span><input type="range" id="ctrl-vol-livtv" min="0" max="150" step="5" value="35" /></label>
+          <label class="slider"><span><em>Bedroom TV &amp; PS1</em><em id="val-vol-bedtv">100%</em></span><input type="range" id="ctrl-vol-bedtv" min="0" max="150" step="5" value="100" /></label>
+          <label class="slider"><span><em>Rain, wind &amp; storms</em><em id="val-vol-weather">90%</em></span><input type="range" id="ctrl-vol-weather" min="0" max="150" step="5" value="90" /></label>
+          <label class="slider"><span><em>Outdoors: city, birds, crickets</em><em id="val-vol-nature">80%</em></span><input type="range" id="ctrl-vol-nature" min="0" max="150" step="5" value="80" /></label>
           <label class="slider"><span><em>PC speakers</em><em id="val-vol-pcspk">75%</em></span><input type="range" id="ctrl-vol-pcspk" min="0" max="150" step="5" value="75" /></label>
-          <label class="slider"><span><em>Clicks, PS1 drive, lava lamp</em><em id="val-vol-sfx">85%</em></span><input type="range" id="ctrl-vol-sfx" min="0" max="150" step="5" value="85" /></label>
-          <label class="slider"><span><em>Boombox radio</em><em id="val-vol-radio">80%</em></span><input type="range" id="ctrl-vol-radio" min="0" max="150" step="5" value="80" /></label>
+          <label class="slider"><span><em>Clicks, PS1 drive, lava lamp</em><em id="val-vol-sfx">80%</em></span><input type="range" id="ctrl-vol-sfx" min="0" max="150" step="5" value="80" /></label>
+          <label class="slider"><span><em>Boombox radio</em><em id="val-vol-radio">90%</em></span><input type="range" id="ctrl-vol-radio" min="0" max="150" step="5" value="90" /></label>
         </details>
       </section>
 
@@ -475,7 +475,8 @@
         <div class="note" id="quality-note"></div>
         <h4>Frame rate</h4>
         <div class="seg" id="seg-fps"><button data-v="auto">Auto</button><button data-v="30">30</button><button data-v="60">60</button><button data-v="120">120 Hz</button></div>
-        <label class="check"><input type="checkbox" id="chk-eco-idle" checked /> Eco idle: drop to 30 fps when you haven't touched anything for a bit</label>
+        <label class="check"><input type="checkbox" id="chk-eco-idle" checked /> Eco idle: drop to 30 fps when you haven't touched anything for a bit, then 20 fps after 2 minutes</label>
+        <label class="check"><input type="checkbox" id="chk-yt-ps1" checked /> PS1 look on YouTube: the video wobbles with the TV and gets the room's chunky pixels</label>
         <h4>Look</h4>
         <div class="chips" id="chips-vibe"></div>
         <details>
@@ -2464,7 +2465,7 @@
     // Rug sits 3 cm up with a light polygonOffset: enough to beat the floor, not so much that it swallows thin objects lying on it
     const areaRug = new THREE.Mesh(
       new THREE.PlaneGeometry(4.2, 3.2, 8, 8),
-      makePS1Material({ map: rugTex, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 })
+      makePS1Material({ map: rugTex, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 })
     );
     areaRug.rotation.x = -Math.PI / 2;
     areaRug.position.set(-0.2, 0.03, 0.5);
@@ -2529,7 +2530,7 @@
     addSolidWall(1.2, 1.9, 0.24, DOOR_X, 4.55, 7.4);
     const hallRunner = new THREE.Mesh(
       new THREE.PlaneGeometry(0.9, 3.4),
-      makePS1Material({ color: 0x7f1d1d, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 })
+      makePS1Material({ color: 0x7f1d1d, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 })
     );
     hallRunner.rotation.x = -Math.PI / 2;
     hallRunner.position.set(DOOR_X, 0.012, 5.55);
@@ -8662,17 +8663,20 @@
     let audioBuilding = false;
 
     // User volume multipliers (0.0 to 1.5) from the Soundscape Mixer
+    // Default mix (1.4, measured from the default view): the room's own TV now sits clearly above the muffled one
+    // down the hall, the fan and AC sit under the rain, and music on the boombox is the loudest thing in the room
+    const MIX_VERSION = 2;
     const volMultipliers = {
       pc: 0.75,
-      fan: 0.80,
-      ac: 0.75,
-      livtv: 0.85,
-      bedtv: 0.75,
+      fan: 0.70,
+      ac: 0.65,
+      livtv: 0.35,
+      bedtv: 1.00,
       pcspk: 0.75,
-      weather: 1.00,
-      nature: 0.75,
-      sfx: 0.85,
-      radio: 0.8
+      weather: 0.90,
+      nature: 0.80,
+      sfx: 0.80,
+      radio: 0.90
     };
 
     const SND = { spots: [], birdNext: 0, lastFanRev: 0, nextFoghorn: 0, lastSpatial: 0, pcActive: null, tvActive: null };
@@ -9699,9 +9703,10 @@
       SND.rain = new Tone.Gain(0);
       SND.rain.connect(SND.weatherBus);
       gate(new Tone.Noise('pink'), SND.rain).chain(filt({ frequency: 500, type: 'highpass' }), filt({ frequency: 7500, type: 'lowpass' }), new Tone.Gain(1.0), SND.rain);
-      const drops = new Tone.Player(makeTickBuffer(4, 160, 0.002, 0.008, 2.2));
+      // More, quieter drops: the same patter with far lower peaks (the old loud ticks hit 0 dBFS and slammed the limiter)
+      const drops = new Tone.Player(makeTickBuffer(4, 260, 0.002, 0.008, 2.2));
       drops.loop = true;
-      drops.chain(filt({ frequency: 3200, type: 'bandpass', Q: 0.5 }), new Tone.Gain(1.8), SND.rain);
+      drops.chain(filt({ frequency: 3200, type: 'bandpass', Q: 0.5 }), new Tone.Gain(0.85), SND.rain);
       gate(drops, SND.rain);
       // Rain on the window glass: a close, soft patter right at the window (inside the room, not muffled by it)
       SND.glassSpot = makeSpot(new THREE.Vector3(0.8, 2.6, -2.9), { ref: 1.8, verb: 0.12, level: volMultipliers.weather });
@@ -11973,9 +11978,12 @@
     };
     const wallPicture = (drawFn, w, h, x, y, z, rotY, weather) => {
       const tex = createCanvasTex(64, Math.round(64 * h / w), drawFn, 1, 1, weather).tex;
-      const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), makePS1Material({ map: tex, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 }));
+      // A strong slope-scaled offset plus 1 cm off the wall: the PS1 vertex snap shifts the wall's depth by more than a
+      // couple of centimetres at grazing angles, which made far-away art flicker and clip into the wall
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), makePS1Material({ map: tex, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }));
       m.position.set(x, y, z);
       m.rotation.y = rotY;
+      m.translateZ(0.01);
       scene.add(m);
       return m;
     };
@@ -12215,9 +12223,10 @@
     }
     const CAL_WEATHER = { seed: 103, blotch: 0.12, warm: 0.15, creases: 1 };
     const calendarTex = createCanvasTex(128, 198, drawCalendar, 1, 1, CAL_WEATHER);
-    const calendarMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.55, 0.85), makePS1Material({ map: calendarTex.tex, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 }));
+    const calendarMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.55, 0.85), makePS1Material({ map: calendarTex.tex, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }));
     calendarMesh.position.set(-3.715, 2.55, -0.15);
     calendarMesh.rotation.y = Math.PI / 2;
+    calendarMesh.translateZ(0.01);
     scene.add(calendarMesh);
     let calendarKey = '';
     function refreshCalendar() {
@@ -13201,7 +13210,8 @@
     const card = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.18, 0.01), makePS1Material({ color: 0xff8fab }));
     card.position.set(-1.0, 1.58, -1.25); card.rotation.set(-0.15, 0.5, 0); decor.valentine.add(card);
     // Summer: a box fan on the floor, blades spinning
-    const boxFan = new THREE.Group(); boxFan.position.set(-0.9, 0, 2.95); boxFan.rotation.y = Math.PI * 0.9; decor.summer.add(boxFan);
+    const boxFan = new THREE.Group(); boxFan.position.set(-0.9, 0, 2.6); // clear of the front wall (its face is at z 2.9)
+    boxFan.rotation.y = Math.PI * 0.9; decor.summer.add(boxFan);
     const frame = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.55, 0.12), makePS1Material({ color: 0xe5e7eb })); frame.position.y = 0.3; boxFan.add(frame);
     const grille = new THREE.Mesh(new THREE.CircleGeometry(0.24, 16), makePS1Material({ color: 0x374151 })); grille.position.set(0, 0.3, 0.062); boxFan.add(grille);
     const fanBlades = new THREE.Group(); fanBlades.position.set(0, 0.3, 0.07); boxFan.add(fanBlades);
@@ -16210,7 +16220,7 @@
         blinds: blindsOpenState, fanLight: fanLightOn, fanSpin: fanSpinning, ac: acUnitOn, lamp: lampOn, string: stringLightsMode,
         tv: bedroomTvOn, tvCh: bedroomTvChannel === PS1_TV_CHANNEL ? 0 : bedroomTvChannel, pcCh: currentChannel, radio: radioStation,
         livingTv: livingRoomTvOn, door: doorOpen, lava: currentLavaIdx,
-        vol: { ...volMultipliers }, master: masterVolume, quality: qualityMode, vibe: vibeMode, res: resShort,
+        vol: { ...volMultipliers }, mixVer: MIX_VERSION, master: masterVolume, quality: qualityMode, vibe: vibeMode, res: resShort,
         jitter: jitterBase, affine: ps1Uniforms.uAffineStrength.value, dither: postMaterial.uniforms.uDitherStrength.value,
         volumetric: userVolumetricSetting, sway: swayAmount, ao: aoBase,
         tempUnit, fpsChoice, ecoIdle,
@@ -16258,7 +16268,8 @@
         for (let i = 0; i < (s.radio || 0); i++) cycleRadio();
         if (s.livingTv === false && livingRoomTvOn) toggleLivingRoomTv();
         if (s.door && !doorOpen && HALLWAY_ENABLED) toggleDoor();
-        if (s.vol) Object.keys(volMultipliers).forEach((k) => {
+        // Layer volumes saved before the 1.4 mix start fresh on the new defaults (master volume is kept)
+        if (s.vol && s.mixVer === MIX_VERSION) Object.keys(volMultipliers).forEach((k) => {
           if (typeof s.vol[k] !== 'number') return;
           volMultipliers[k] = s.vol[k];
           const el = $(`ctrl-vol-${k}`), lab = $(`val-vol-${k}`);
@@ -16896,11 +16907,22 @@
       const css = document.createElement('style');
       css.textContent = `
         #yt-layer { position: fixed; inset: 0; pointer-events: none; z-index: 6; overflow: hidden; }
-        #yt-screen { position: absolute; left: 0; top: 0; width: 640px; height: 480px; transform-origin: 0 0; pointer-events: auto; background: #000;
-          display: none; border-radius: 26px / 30px; overflow: hidden; }
-        #yt-screen iframe { width: 100%; height: 100%; border: 0; display: block; filter: saturate(1.12) contrast(1.05) brightness(0.96); }
-        #yt-screen .scan { position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
+        /* The layer covers the TV's whole black glass (so the low-res 3D mask never peeks out in jagged bits) and
+           draws its own smooth black rim, with the picture inset like a real CRT */
+        #yt-screen { position: absolute; left: 0; top: 0; width: 640px; height: 480px; transform-origin: 0 0; pointer-events: auto; background: #040405;
+          display: none; border-radius: 14px; overflow: hidden; }
+        #yt-screen iframe, #yt-screen .scan, #yt-screen .px { position: absolute; left: 3.6%; top: 3.6%; width: 92.8%; height: 92.8%; border-radius: 28px / 32px; }
+        #yt-screen iframe { border: 0; display: block; filter: saturate(1.12) contrast(1.05) brightness(0.96); }
+        #yt-screen .scan { pointer-events: none;
           background: repeating-linear-gradient(rgba(0,0,0,0.14) 0 2px, transparent 2px 4px); box-shadow: inset 0 0 70px rgba(0,0,0,0.7), inset 0 0 8px rgba(0,0,0,0.8); }
+        /* PS1 look (Menu > Display): a pixel grid the size of the room's own pixels, chunkier scanlines and punchier colour */
+        #yt-screen { --px: 6px; }
+        #yt-screen .px { pointer-events: none; display: none;
+          background-image: linear-gradient(90deg, rgba(0,0,0,0.2) 1px, transparent 1px), linear-gradient(rgba(0,0,0,0.2) 1px, transparent 1px);
+          background-size: var(--px) var(--px); mix-blend-mode: multiply; }
+        #yt-screen.ps1 .px { display: block; }
+        #yt-screen.ps1 iframe { filter: saturate(1.3) contrast(1.14) brightness(0.95) blur(0.35px); }
+        #yt-screen.ps1 .scan { background: repeating-linear-gradient(rgba(0,0,0,0.2) 0 calc(var(--px) / 2), transparent calc(var(--px) / 2) var(--px)); }
         #yt-layer.full { z-index: 45; background: #000; pointer-events: auto; }
         #yt-layer.full #yt-screen { transform: none !important; left: var(--safe-l); top: var(--safe-t); right: var(--safe-r); bottom: var(--safe-b);
           width: auto; height: auto; border-radius: 10px; display: block; }
@@ -16929,7 +16951,7 @@
       document.head.appendChild(css);
       const layer = document.createElement('div');
       layer.id = 'yt-layer';
-      layer.innerHTML = '<div id="yt-screen"><div class="scan"></div></div>';
+      layer.innerHTML = '<div id="yt-screen"><div class="scan"></div><div class="px"></div></div>';
       document.body.appendChild(layer);
       const bar = document.createElement('div');
       bar.id = 'yt-bar';
@@ -17068,7 +17090,17 @@
       const basis = (p) => { const m = [p[0], p[2], p[4], p[1], p[3], p[5], 1, 1, 1]; const v = mulMV(adj(m), [p[6], p[7], 1]); return mulMM(m, [v[0], 0, 0, 0, v[1], 0, 0, 0, v[2]]); };
       const SRC = basis([0, 0, 640, 0, 0, 480, 640, 480]);
       const SRC_ADJ = adj(SRC);
-      const corners = [new THREE.Vector3(-0.37, 0.28, 0.006), new THREE.Vector3(0.37, 0.28, 0.006), new THREE.Vector3(-0.37, -0.28, 0.006), new THREE.Vector3(0.37, -0.28, 0.006)];
+      // The whole black glass (tvGlassMask is 0.79 x 0.60, just behind the screen)
+      const corners = [new THREE.Vector3(-0.395, 0.3, 0), new THREE.Vector3(0.395, 0.3, 0), new THREE.Vector3(-0.395, -0.3, 0), new THREE.Vector3(0.395, -0.3, 0)];
+      let ytPs1 = true; // on unless turned off in Menu > Display
+      try { const v = localStorage.getItem('ps1bedroom.ytPs1'); if (v !== null) ytPs1 = v === '1'; } catch (err) { /* private mode */ }
+      const applyYtPs1 = () => { screenEl.classList.toggle('ps1', ytPs1); const c = g('chk-yt-ps1'); if (c) c.checked = ytPs1; };
+      applyYtPs1();
+      const chkYtPs1 = g('chk-yt-ps1');
+      if (chkYtPs1) chkYtPs1.addEventListener('change', (e) => {
+        ytPs1 = e.target.checked; applyYtPs1(); playSfx('ui');
+        try { localStorage.setItem('ps1bedroom.ytPs1', ytPs1 ? '1' : '0'); } catch (err) { /* private mode */ }
+      });
       const tmp = new THREE.Vector3(), centre = new THREE.Vector3(), normal = new THREE.Vector3(), toCam = new THREE.Vector3();
       const nMat = new THREE.Matrix3();
       window.ytPlaceOverlay = function () {
@@ -17087,10 +17119,21 @@
           const vw = tmp.clone().applyMatrix4(camera.matrixWorldInverse);
           if (vw.z > -0.05) { show = false; break; } // behind the camera
           tmp.project(camera);
+          if (ytPs1) {
+            // Snap the corners exactly like the PS1 vertex shader snaps the TV around it, so they wobble together
+            const jg = ps1Uniforms.uJitterGrid.value;
+            tmp.x = Math.floor(jg.x * tmp.x + 0.5) / jg.x;
+            tmp.y = Math.floor(jg.y * tmp.y + 0.5) / jg.y;
+          }
           pts.push(rect.left + (tmp.x + 1) / 2 * rect.width, rect.top + (1 - tmp.y) / 2 * rect.height);
         }
         screenEl.style.display = show ? 'block' : 'none';
         if (!show) return;
+        if (ytPs1) {
+          // One grid cell per pixel of the room's low-res picture
+          const widthInRoomPx = Math.max(8, (Math.hypot(pts[2] - pts[0], pts[3] - pts[1]) / rect.width) * internalW);
+          screenEl.style.setProperty('--px', `${(640 / widthInRoomPx).toFixed(2)}px`);
+        }
         const t = mulMM(basis(pts), SRC_ADJ);
         for (let i = 0; i < 9; i++) t[i] /= t[8];
         screenEl.style.transform = `matrix3d(${t[0]},${t[3]},0,${t[6]},${t[1]},${t[4]},0,${t[7]},0,0,1,0,${t[2]},${t[5]},0,${t[8]})`;
@@ -17137,12 +17180,12 @@
     (() => {
       const st = document.createElement('style');
       st.textContent = `
-        #ach-pop { position: fixed; left: 50%; top: calc(14px + var(--safe-t, 0px)); z-index: 60; transform: translate(-50%, -160%);
+        #ach-pop { position: fixed; left: 50%; top: calc(14px + var(--safe-t, 0px)); z-index: 60; transform: translate(-50%, calc(-100% - 140px)); visibility: hidden; opacity: 0;
           display: flex; align-items: center; gap: 12px; padding: 10px 18px 10px 12px; min-width: 240px; max-width: calc(100vw - 32px);
           background: linear-gradient(180deg, #1a1f45, #0c1030); border: 2px solid var(--ach, #ffd23f); border-radius: 14px;
           box-shadow: 0 0 0 2px #05071a, 0 0 22px var(--ach, #ffd23f), inset 0 0 18px rgba(255,255,255,0.06);
           font-family: "Courier New", monospace; color: #fff; pointer-events: none; overflow: hidden; }
-        #ach-pop.show { animation: ach-drop 4.2s cubic-bezier(.2,.9,.3,1.2) forwards; }
+        #ach-pop.show { visibility: visible; animation: ach-drop 4.2s cubic-bezier(.2,.9,.3,1.2) forwards; }
         #ach-pop .ic { font-size: 30px; width: 44px; height: 44px; display: grid; place-items: center; border-radius: 10px;
           background: radial-gradient(circle, var(--ach, #ffd23f) 0%, transparent 70%); }
         #ach-pop .tx small { display: block; font-size: 9px; letter-spacing: 3px; color: var(--ach, #ffd23f); }
@@ -17157,7 +17200,7 @@
         #ach-pop.show .ic.ach-flip { animation: ach-flip 0.9s 0.35s ease-out; }
         .ach-px { position: fixed; z-index: 61; width: 6px; height: 6px; pointer-events: none; image-rendering: pixelated;
           animation: ach-burst 1.1s ease-out forwards; }
-        @keyframes ach-drop { 0% { transform: translate(-50%, -160%); } 10% { transform: translate(-50%, 0); } 85% { transform: translate(-50%, 0); opacity: 1; } 100% { transform: translate(-50%, -160%); opacity: 0; } }
+        @keyframes ach-drop { 0% { transform: translate(-50%, calc(-100% - 140px)); opacity: 1; } 10% { transform: translate(-50%, 0); opacity: 1; } 85% { transform: translate(-50%, 0); opacity: 1; } 100% { transform: translate(-50%, calc(-100% - 140px)); opacity: 0; } }
         @keyframes ach-shine { to { left: 130%; } }
         @keyframes ach-spin { 0% { transform: scale(0.3) rotate(-200deg); } 70% { transform: scale(1.3) rotate(15deg); } 100% { transform: scale(1) rotate(0); } }
         @keyframes ach-bounce { 0% { transform: translateY(-30px) scale(0.5); } 40% { transform: translateY(0) scale(1.25, 0.8); } 60% { transform: translateY(-10px) scale(0.95, 1.1); } 100% { transform: none; } }
@@ -17204,6 +17247,7 @@
       pop.querySelector('b').textContent = name;
       pop.querySelector('em').textContent = desc;
       pop.classList.remove('show'); void pop.offsetWidth; pop.classList.add('show');
+      clearTimeout(pop.hideTimer); pop.hideTimer = setTimeout(() => pop.classList.remove('show'), 4300); // fully hidden afterwards (no glow under the notch)
       playAchievementJingle(h);
       // Pixel confetti from behind the icon, in the achievement's colours
       setTimeout(() => {
@@ -17222,6 +17266,7 @@
     }
     function achieve(id) {
       if (!ACHIEVEMENTS[id] || unlocked[id]) return;
+      if (bootStage !== 3) return; // nothing unlocks behind the title screen; the checks run again once the room is up
       unlocked[id] = Date.now();
       store13.set('achievements', unlocked);
       setTimeout(() => showAchievement(id), 600);
@@ -17353,6 +17398,50 @@
     }
     applyEnvironmentSettings();
     animate();
+
+    // ---- Distant texture flicker (1.4): every texture is nearest-filtered with no mipmaps, so far-away walls, carpet
+    // and art shimmer as the camera moves. Give the textures that rarely change mip levels (still nearest-sampled,
+    // so they stay crunchy up close). Textures that redraw all the time (TV, PC, window, sky) are left alone; a
+    // texture that later starts redrawing often loses its mipmaps again so it never costs anything.
+    (function steadyDistantTextures() {
+      const seen = new Map(); // texture -> { v: last version, changes: recent redraws, mip: has mipmaps }
+      const collect = () => {
+        const out = new Set();
+        scene.traverse((o) => {
+          if (!o.isMesh || !o.material) return;
+          (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => ['map', 'emissiveMap'].forEach((k) => { const t = m[k]; if (t && t.isTexture && t.image && t.image.width >= 16) out.add(t); }));
+        });
+        return out;
+      };
+      const setMip = (t, on) => {
+        t.generateMipmaps = on;
+        t.minFilter = on ? THREE.NearestMipmapNearestFilter : THREE.NearestFilter;
+        t.needsUpdate = true;
+      };
+      const sample = () => {
+        collect().forEach((t) => {
+          const s = seen.get(t);
+          if (!s) { seen.set(t, { v: t.version, changes: 0, mip: t.generateMipmaps && t.minFilter !== THREE.NearestFilter && t.minFilter !== THREE.LinearFilter }); return; }
+          s.changes = s.changes * 0.5 + (t.version !== s.v ? 1 : 0);
+          s.v = t.version;
+        });
+      };
+      sample();
+      setTimeout(() => {
+        sample();
+        setTimeout(() => {
+          sample();
+          seen.forEach((s, t) => {
+            if (s.changes === 0 && !s.mip && t.magFilter === THREE.NearestFilter) { setMip(t, true); s.mip = true; s.ours = true; s.v = t.version; }
+          });
+          // Keep watching: anything we gave mipmaps to that starts redrawing a lot goes back to plain sampling
+          setInterval(() => {
+            sample();
+            seen.forEach((s, t) => { if (s.ours && s.mip && s.changes > 1.2) { setMip(t, false); s.mip = false; s.v = t.version; } });
+          }, 4000);
+        }, 4000);
+      }, 6000);
+    })();
   </script>
 </body>
 </html>

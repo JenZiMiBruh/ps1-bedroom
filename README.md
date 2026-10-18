@@ -4,110 +4,115 @@
 
 <br>
 
-[![Play in your browser](https://img.shields.io/badge/PLAY-in%20your%20browser-ff3ea5?style=for-the-badge&logo=googlechrome&logoColor=white&labelColor=1a1033)](https://jenzimibruh.github.io/ps1-bedroom/play/)
-[![Download APK](https://img.shields.io/badge/DOWNLOAD-Android%20APK-7ff3ff?style=for-the-badge&logo=android&logoColor=white&labelColor=1a1033)](../../releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/JenZiMiBruh/ps1-bedroom/total?style=for-the-badge&label=DOWNLOADS&color=ffd23f&labelColor=1a1033)](../../releases)
+<h3><i>Your room. Your clock. Your weather. 2001 forever.</i></h3>
 
-![Version](https://img.shields.io/github/v/release/JenZiMiBruh/ps1-bedroom?style=flat-square&label=version&color=a78bfa)
-![Android 7+](https://img.shields.io/badge/Android-7.0%2B-22c55e?style=flat-square&logo=android&logoColor=white)
-![Free](https://img.shields.io/badge/free-no%20ads-3b82f6?style=flat-square)
-![APK](https://img.shields.io/badge/APK-~570%20KB-ef4444?style=flat-square)
-![three.js](https://img.shields.io/badge/three.js-r128-black?style=flat-square&logo=three.js)
+<p>A cozy ambience app that looks like a PlayStation game from 2001.<br>Leave it on while you study, work, game or fall asleep.</p>
 
-### *Your room. Your clock. Your weather. 2001 forever.*
+[![Play in your browser](https://img.shields.io/badge/▶%20PLAY-in%20your%20browser-ff3ea5?style=for-the-badge&logo=googlechrome&logoColor=white&labelColor=1a1033)](https://jenzimibruh.github.io/ps1-bedroom/play/)
+[![Download APK](https://img.shields.io/badge/⬇%20DOWNLOAD-Android%20APK-7ff3ff?style=for-the-badge&logo=android&logoColor=white&labelColor=1a1033)](../../releases/latest)
+[![itch.io](https://img.shields.io/badge/ALSO%20ON-itch.io-fa5c5c?style=for-the-badge&logo=itchdotio&logoColor=white&labelColor=1a1033)](https://galloade.itch.io/ps1-bedroom)
 
-<sub>Made by **Daymion Gallo** · aka **Galloade** · aka **JenZiMiBruh**</sub>
+[![Version](https://img.shields.io/github/v/release/JenZiMiBruh/ps1-bedroom?style=flat-square&label=version&color=a78bfa&labelColor=1a1033)](../../releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/JenZiMiBruh/ps1-bedroom/total?style=flat-square&label=downloads&color=ffd23f&labelColor=1a1033)](../../releases)
+![Android 7+](https://img.shields.io/badge/Android-7.0%2B-22c55e?style=flat-square&logo=android&logoColor=white&labelColor=1a1033)
+![APK](https://img.shields.io/badge/APK-~600%20KB-ef4444?style=flat-square&labelColor=1a1033)
+![Free](https://img.shields.io/badge/free-no%20ads%2C%20no%20account-3b82f6?style=flat-square&labelColor=1a1033)
+![three.js](https://img.shields.io/badge/three.js-r128-white?style=flat-square&logo=three.js&logoColor=white&labelColor=1a1033)
 
-</div>
+<sub><a href="#-new-in-135--clear-skies">What's new</a> &nbsp;·&nbsp; <a href="#-the-room">The room</a> &nbsp;·&nbsp; <a href="#-15-places-outside">Places</a> &nbsp;·&nbsp; <a href="#%EF%B8%8F-get-it">Download</a> &nbsp;·&nbsp; <a href="#-made-for-android">Android</a> &nbsp;·&nbsp; <a href="#-changelog">Changelog</a></sub>
 
----
+<br>
 
-## 🌙 What is it?
+<img src="docs/images/v135-hero.png" alt="The bedroom at golden hour: desk, CRT, lava lamp, the city through the window and the clock radio by the bed" width="100%">
 
-**PS1 Bedroom** is a cozy ambience app that looks like a PlayStation game from 2001: wobbly low-poly 3D, dithered colour, chunky textures and real light rays slicing through the blinds.
+<sub>Golden hour downtown. The clock by the bed shows the room's real time.</sub>
 
-Leave it on while you study, work, game or fall asleep. The room **follows your real clock and your city's weather**, every sound is placed in 3D, and almost everything can be tapped: the CRT, the PlayStation and every game on the shelf, the PC, the boombox, the phone, the dog.
-
-<div align="center">
-<img src="docs/images/v12-hero.png" alt="The bedroom at dusk" width="88%">
-</div>
-
----
-
-## 🆕 New in 1.3 — Goodnight, Jasper
-
-<table>
-<tr>
-<td width="50%"><img src="docs/images/v13-sleep-mode.png" alt="Sleep mode"><br><sub><b>Sleep mode</b>: one tap, lights down, Jasper curls up on the bed, everything fades out</sub></td>
-<td width="50%"><img src="docs/images/v13-jasper.png" alt="Jasper"><br><sub><b>Jasper</b>, rebuilt in chunky PS1 style. Pick his coat colours</sub></td>
-</tr>
-<tr>
-<td width="50%"><img src="docs/images/v13-share-card.png" alt="Share card"><br><sub><b>Share cards</b>: a postcard of your room to post anywhere</sub></td>
-<td width="50%" valign="top">
-
-- ⏰ **Sunrise alarm**: the room glows warmer before your alarm, then your music plays
-- 🏆 **18 achievements**
-- 🎁 **Daily surprises** hidden in the room
-- 🔇 Living room TV properly muffled · 📱 screen sleeps after the sleep timer
-- 🛠️ Fixes: TV power, YouTube in Photo mode, chair, backpack, audio crackle
-
-</td>
-</tr>
-</table>
-
-## 🔜 Coming soon in 1.4
-
-Already working on the [`beta`](../../tree/beta) branch. Try it early: grab the **[1.4 beta](../../releases/tag/v1.4-beta)** pre-release.
-
-- ✅ 📅 A working wall calendar, with a little pixel-art design for every month
-- ✅ 🕰️ A big LED clock on the nightstand you can read from the default view
-- ✅ 🌌 A brand new seamless sky dome around the whole world
-- ✅ 👆 Tap the top bar to switch time, weather, season and the new location button
-- ✅ 🏆 Achievements unlock with their own animation and fanfare
-- ✅ 📺 PS1 look on YouTube: the video wobbles with the TV and gets the room's chunky pixels
-- ✅ 🔊 A new default sound mix (your TV louder than the one down the hall, softer rain peaks)
-- ✅ 🪚 Fixes: ceiling fan brackets, game shelf in front of the games, box fan in the wall, wall art and distant textures flickering, jagged YouTube edges, achievement card peeking on the title screen
-- 🔧 🔋 A big performance pass: smoother, cooler phones, no more audio crackle (first pass done, testing)
-- 🚪 Later: the hallway comes back
-
-Follow along on the **[1.4 milestone](../../milestone/1)**.
-
-## New in 1.2
-
-<div align="center">
-<img src="docs/images/window-places.gif" alt="All 15 places outside the window" width="88%">
-<br><sub><b>15 places outside the window</b>, each with its own sounds, climate and temperature</sub>
 </div>
 
 <br>
 
+## 🆕 New in 1.3.5 — Clear Skies
+
 <table>
 <tr>
-<td width="50%"><img src="docs/images/v12-skyscraper.png" alt="Skyscraper apartment at night"><br><sub><b>Skyscraper, 40th floor</b>: rooftop billboards at eye level, the city grid far below</sub></td>
-<td width="50%"><img src="docs/images/v12-arizona.png" alt="Arizona at dusk"><br><sub><b>Arizona</b>: block walls, fan palms, saguaros, monsoon dust storms, coyotes at night</sub></td>
+<td width="50%" valign="top"><img src="docs/images/v135-sky.png" alt="Sunset over the mountains through the window"><br><b>🌌 A whole new sky</b><br><sub>One seamless dome around the world, with the sun, moon, stars and clouds drifting all the way round. No more seams or corners.</sub></td>
+<td width="50%" valign="top"><img src="docs/images/v135-calendar.png" alt="The wall calendar beside the game shelf"><br><b>📅 A calendar that works</b><br><sub>The real month, today circled, past days crossed off, and a little pixel-art picture for every month.</sub></td>
 </tr>
 <tr>
-<td width="50%"><img src="docs/images/v12-snow.png" alt="Snowy suburbs"><br><sub><b>Suburbs</b> in a snowfall, porch lights on</sub></td>
-<td width="50%"><img src="docs/images/v12-beach.png" alt="Beach boardwalk"><br><sub><b>Beach Boardwalk</b>: Ferris wheel, lighthouse, surf you can hear</sub></td>
-</tr>
-<tr>
-<td width="50%"><img src="docs/images/v12-forest.png" alt="Forest"><br><sub><b>Forest</b> in the morning mist</sub></td>
-<td width="50%"><img src="docs/images/v12-rain.png" alt="Neon City in the rain"><br><sub><b>Neon City</b> on a rainy night</sub></td>
+<td width="50%" valign="top"><img src="docs/images/v135-achievement.jpg" alt="An achievement unlocking over the room"><br><b>🏆 Achievements you can feel</b><br><sub>A trophy card, pixel confetti and a fanfare, with a different colour, move and tune for each one. Tap the top bar to flip time, weather, season and place.</sub></td>
+<td width="50%" valign="top"><img src="docs/images/v135-night.png" alt="The room at midnight with the clock radio glowing"><br><b>🕰️ A clock you can read</b><br><sub>A jumbo LED clock radio on the nightstand. Tap it for the sleep timer, focus timer and sunrise alarm.</sub></td>
 </tr>
 </table>
 
-| | |
-|---|---|
-| 🏙️ **15 places outside** | Downtown · Skyscraper · Neon City · Neighborhood · Suburbs · Backyard · Trailer Park · Arizona · Desert Canyon · Tropical Island · Beach Boardwalk · Lakeside · Forest · Mountains · Countryside Farm |
-| 🐕 **A German Shepherd** | Naps in the sunbeam, watches TV with you, sleeps on the bed. Blue eyes, his left one half brown. |
-| 📻 **A real boombox player** | Your own albums with their cover art (it even shows on a CD case on the dresser), shuffle, repeat, FM stations |
-| 📺 **YouTube on the CRT** | Paste a link, or Share a video to PS1 Bedroom on Android |
-| 🖥️ **A working 2001 PC** | Instant messenger, WinBeats, Minesweeper, dial-up screech |
-| 📼 **VCR, phone, decorations** | Tapes on channel 3, an answering machine, holiday decorations by date |
-| ✨ **Better looking** | Per-pixel lighting, ambient occlusion, sharper shadows, a sky box with no edge of the world |
-| 🔋 **Made for all night** | Stays smooth for hours: automatic quality, a 30/60/120 fps setting, eco idle, silent sounds switch off |
+<details>
+<summary><b>Everything else in 1.3.5</b></summary>
+<br>
 
----
+- ✨ **Flicker fixed for good**: layered things (the TV border, posters, the album cover, the rug, windows on the houses outside) no longer fight, and small far-away things no longer vanish
+- 📺 **PS1 look on YouTube**: the video wobbles with the TV and gets the room's chunky pixels (Menu → Display)
+- 🔊 **New default sound mix**: your TV louder than the one down the hall, softer rain peaks
+- 🔋 **Cooler phones**: 20 fps after 2 minutes untouched, fewer redraws, lighter audio
+- 🐕 Jasper's neck, the ceiling fan brackets, the game shelf, the box fan and lots more fixed
+
+</details>
+
+<br>
+
+## 🌙 The room
+
+<table>
+<tr>
+<td width="33%" align="center" valign="top"><h3>🕰️</h3><b>Real time, real weather</b><br><sub>The sun and moon follow your clock on real paths. It rains when it rains in your city. 15 weathers and 5 skies.</sub></td>
+<td width="33%" align="center" valign="top"><h3>🎮</h3><b>A PlayStation full of games</b><br><sub>Put any game from the shelf in the PS1, including every GTA as a hand-drawn tribute.</sub></td>
+<td width="33%" align="center" valign="top"><h3>📻</h3><b>Your music on the boombox</b><br><sub>Your own albums with their cover art, shuffle, repeat and FM stations. Your music never leaves your device.</sub></td>
+</tr>
+<tr>
+<td width="33%" align="center" valign="top"><h3>📺</h3><b>YouTube on the CRT</b><br><sub>Paste a link, or Share a video to PS1 Bedroom on Android, and it plays on the old TV.</sub></td>
+<td width="33%" align="center" valign="top"><h3>🐕</h3><b>Jasper the German Shepherd</b><br><sub>Naps in the sunbeam, watches TV with you, sleeps on the bed. Pick his coat colours.</sub></td>
+<td width="33%" align="center" valign="top"><h3>🖥️</h3><b>A working 2001 PC</b><br><sub>Instant messenger, WinBeats, Minesweeper and the dial-up screech.</sub></td>
+</tr>
+<tr>
+<td width="33%" align="center" valign="top"><h3>😴</h3><b>Made for falling asleep</b><br><sub>Sleep mode, a sleep timer that fades everything out, and a sunrise alarm.</sub></td>
+<td width="33%" align="center" valign="top"><h3>🔊</h3><b>Sound all around you</b><br><sub>Rain on the glass, the CRT hum, the fan, crickets, a train going by. Every sound placed in 3D.</sub></td>
+<td width="33%" align="center" valign="top"><h3>📷</h3><b>Photo mode and share cards</b><br><sub>Hide the UI, pick a look (Raw PS1, Warm VHS, Neon Dream, Noir…) and make a postcard of your room.</sub></td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td width="50%"><img src="docs/images/weather-thunderstorm.gif" alt="Thunderstorm"><br><sub><b>15 weathers</b>, or live weather for your city</sub></td>
+<td width="50%"><img src="docs/images/timelapse-day-night.gif" alt="A day passing"><br><sub><b>Real sun and moon</b> paths and tonight's moon phase</sub></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/images/gta6-gameplay.gif" alt="GTA VI tribute on the CRT"><br><sub><b>Games on the CRT</b>, from the classics to GTA VI</sub></td>
+<td width="50%"><img src="docs/images/sky-styles.gif" alt="Sky styles"><br><sub><b>Five skies</b>: Natural, Northern Lights, Meteor Shower, Blood Moon, Vaporwave</sub></td>
+</tr>
+</table>
+
+<br>
+
+## 🏙️ 15 places outside
+
+<div align="center">
+<img src="docs/images/window-places.gif" alt="All 15 places outside the window" width="100%">
+</div>
+
+<table>
+<tr>
+<td width="33%"><img src="docs/images/v12-skyscraper.png" alt="Skyscraper"><br><sub><b>Skyscraper</b>, 40th floor</sub></td>
+<td width="33%"><img src="docs/images/v12-arizona.png" alt="Arizona"><br><sub><b>Arizona</b> at dusk</sub></td>
+<td width="33%"><img src="docs/images/v12-snow.png" alt="Snowy suburbs"><br><sub><b>Suburbs</b> in the snow</sub></td>
+</tr>
+<tr>
+<td width="33%"><img src="docs/images/v12-beach.png" alt="Beach boardwalk"><br><sub><b>Beach Boardwalk</b></sub></td>
+<td width="33%"><img src="docs/images/v12-forest.png" alt="Forest"><br><sub><b>Forest</b> in the mist</sub></td>
+<td width="33%"><img src="docs/images/v12-rain.png" alt="Neon City"><br><sub><b>Neon City</b> in the rain</sub></td>
+</tr>
+</table>
+
+<p align="center"><sub>Downtown · Skyscraper · Neon City · Neighborhood · Suburbs · Backyard · Trailer Park · Arizona · Desert Canyon · Tropical Island · Beach Boardwalk · Lakeside · Forest · Mountains · Countryside Farm</sub></p>
+
+<br>
 
 ## ⬇️ Get it
 
@@ -116,53 +121,71 @@ Follow along on the **[1.4 milestone](../../milestone/1)**.
 <td width="50%" valign="top">
 
 ### 📱 Android
-1. Download **`PS1-Bedroom-v1.3.apk`** from the **[latest release](../../releases/latest)**.
-2. Open it and tap **Install** (allow installs from your browser if asked).
-3. If Play Protect warns you, tap **Install anyway**. It's just not from the Play Store.
 
-Works great on a TV with **Samsung DeX**.
+[![Download APK](https://img.shields.io/badge/⬇%20PS1--Bedroom--v1.3.5.apk-7ff3ff?style=for-the-badge&logo=android&logoColor=white&labelColor=1a1033)](../../releases/latest)
+
+1. Download the APK from the **[latest release](../../releases/latest)**
+2. Open it and tap **Install** (allow installs from your browser if asked)
+3. If Play Protect warns you, tap **Install anyway**. It's just not from the Play Store
+
+Installs over your current version and keeps your settings.
 
 </td>
 <td width="50%" valign="top">
 
 ### 💻 Browser
-**[Play it right now](https://jenzimibruh.github.io/ps1-bedroom/play/)**, or download **`PS1-Bedroom-web-v1.3.zip`** from the release and open `index.html`.
 
-Drag to look, scroll to zoom, WASD to walk.
+[![Play now](https://img.shields.io/badge/▶%20Play%20right%20now-ff3ea5?style=for-the-badge&logo=googlechrome&logoColor=white&labelColor=1a1033)](https://jenzimibruh.github.io/ps1-bedroom/play/)
+
+Nothing to install. Or download **`PS1-Bedroom-web-v1.3.5.zip`** from the release and open `index.html`.
+
+**Drag** to look · **scroll** to zoom · **WASD** to walk · tap anything
+
+Also on **[itch.io](https://galloade.itch.io/ps1-bedroom)**.
 
 </td>
 </tr>
 </table>
 
----
+<br>
 
-## ✨ Everything else
+## 📱 Made for Android
 
-<table>
-<tr>
-<td width="50%"><img src="docs/images/weather-thunderstorm.gif" alt="Thunderstorm"><br><sub><b>15 weathers</b>, or live weather for your city</sub></td>
-<td width="50%"><img src="docs/images/timelapse-day-night.gif" alt="Day passing"><br><sub><b>Real sun and moon</b> paths and tonight's moon phase</sub></td>
-</tr>
-<tr>
-<td width="50%"><img src="docs/images/gta6-gameplay.gif" alt="GTA VI on the CRT"><br><sub><b>A PlayStation full of games</b>, including every GTA as a tribute</sub></td>
-<td width="50%"><img src="docs/images/sky-styles.gif" alt="Sky styles"><br><sub><b>Five skies</b>: Natural, Northern Lights, Meteor Shower, Blood Moon, Vaporwave</sub></td>
-</tr>
-</table>
+| | |
+|---|---|
+| 🔒 **Background play** | Keeps playing with the screen off, with song, artist and cover on the lock screen |
+| 🧩 **Widgets** | "My Window" and "Controls" widgets for your home and lock screen |
+| 📺 **Samsung DeX** | Turns your TV into a rainy 2001 window |
+| 📤 **Share to play** | Share a YouTube video to PS1 Bedroom and it plays on the CRT |
+| 🔋 **All-night battery** | Automatic quality, a 30 / 60 / 120 fps setting and an eco idle mode, so it stays cool for hours |
+| 🎵 **Your albums** | Add album folders and it reads the track order and cover art. Your music stays on your device |
 
-- 🚶 Walk around, sit in the rolling chair, or lie in bed
-- ⏾ Sleep timer that fades everything out · focus timer on the bedside clock
-- 🔒 Android: background play, lock-screen controls, home-screen widgets
-- 📷 Photo mode · 🎨 Looks (Raw PS1, Warm VHS, Neon Dream, Noir…) · 💾 remembers everything
+<br>
 
----
+## 🔜 Coming next
+
+- 🔋 More performance work: smoother, cooler phones, no more audio crackle
+- 🚪 The hallway comes back
+- 💡 And more from the ideas list: real games on the TV and PC, more animals, your own photos on the posters, more holidays
+
+Follow along on the **[milestones](../../milestones)** and the **[`beta`](../../tree/beta)** branch.
+
+<br>
 
 ## 📜 Changelog
 
 Full history in **[CHANGELOG.md](CHANGELOG.md)** and in the app under **Menu → About**.
 
 <details>
-<summary><b>v1.3 — Goodnight, Jasper</b> (latest)</summary>
+<summary><b>v1.3.5 — Clear Skies</b> (latest)</summary>
+<br>
 
+New seamless sky dome · working wall calendar · LED clock radio by the bed · tap the top bar to switch time, weather, season and place · achievement unlock animations and fanfares · PS1 look on YouTube · new sound mix · cooler on phones · flicker and vanishing fixed for good · Jasper's neck, ceiling fan, game shelf, box fan and more
+
+</details>
+
+<details>
+<summary><b>v1.3 — Goodnight, Jasper</b></summary>
 <br>
 
 Sleep mode · sunrise alarm · share cards · 18 achievements · daily surprises · Jasper rebuilt with coat colours · muffled living room TV · screen sleeps after the timer · fixes for the TV, YouTube in Photo mode, chair, backpack and audio crackle
@@ -171,7 +194,6 @@ Sleep mode · sunrise alarm · share cards · 18 achievements · daily surprises
 
 <details>
 <summary><b>v1.2 — Stuff from 2001</b></summary>
-
 <br>
 
 15 places outside the window · German Shepherd · boombox player with albums and cover art · YouTube on the TV · working PC desktop · VCR tapes · phone and answering machine · traffic and billboards that follow the clock · decorations by date · focus timer · ambient occlusion · per-pixel lighting · sky box · 120 fps option · long-session performance fixes · audio clipping fix
@@ -180,9 +202,9 @@ Sleep mode · sunrise alarm · share cards · 18 achievements · daily surprises
 
 <details>
 <summary>Older versions</summary>
-
 <br>
 
+- **v1.2.1 — TV power** · a big red power button
 - **v1.1.4 — Temperature** · °F / °C in the top bar
 - **v1.1.3 — Dust in the light** · dust follows the light beam
 - **v1.1.2 — Little touches** · live bedside clock
@@ -193,13 +215,12 @@ Sleep mode · sunrise alarm · share cards · 18 achievements · daily surprises
 
 </details>
 
----
+<br>
 
 ## 🔧 Build it yourself
 
 <details>
 <summary>Project layout and builds (Windows)</summary>
-
 <br>
 
 ```
@@ -207,11 +228,14 @@ src/ps1_bedroom.html   ← the whole app (3D, sound, UI) in one file
 android/               ← small WebView wrapper: service, widgets, bridge
 Build APK.bat          ← builds releases/PS1-Bedroom-vX.Y.apk
 tools/build-web.ps1    ← builds the browser zip and docs/play
+tools/qa-flicker.js    ← flicker / z-fighting detector, run before every release
 ```
 
 No Gradle: the APK script runs `aapt2 → javac → d8 → zipalign → apksigner` directly. Bring your own keystore in `android/signing/`.
 
 </details>
+
+<br>
 
 ---
 
@@ -219,10 +243,12 @@ No Gradle: the APK script runs `aapt2 → javac → d8 → zipalign → apksigne
 
 <sub>Some props from <a href="https://kenney.nl/assets/furniture-kit">Kenney's Furniture Kit</a> (CC0) · Built with <a href="https://threejs.org/">three.js</a> and <a href="https://tonejs.github.io/">Tone.js</a> · Live weather by <a href="https://open-meteo.com/">Open-Meteo</a></sub>
 
-<sub>Made by Daymion Gallo (Galloade / JenZiMiBruh). An unofficial fan project, not affiliated with Sony Interactive Entertainment, Rockstar Games or anyone else. Game boxes and covers are hand-drawn tributes. Your music stays on your device.</sub>
+<sub>An unofficial fan project, not affiliated with Sony Interactive Entertainment, Rockstar Games or anyone else. Game boxes and covers are hand-drawn tributes. Your music stays on your device.</sub>
 
 <br>
 
-**🌙 Sweet dreams. 🎮**
+**Made by Daymion Gallo** · aka **Galloade** · aka **JenZiMiBruh**
+
+🌙 *Sweet dreams.* 🎮
 
 </div>

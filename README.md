@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/images/banner.png" alt="PS1 Bedroom: a cozy 2001 bedroom that lives on your real clock and weather" width="100%">
+<img src="docs/images/banner-135.png" alt="PS1 Bedroom: a cozy 2001 bedroom that lives on your real clock and weather" width="100%">
 
 <br>
 

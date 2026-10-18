@@ -166,9 +166,36 @@ Also on **[itch.io](https://galloade.itch.io/ps1-bedroom)**.
 
 - 🔋 More performance work: smoother, cooler phones, no more audio crackle
 - 🚪 The hallway comes back
-- 💡 And more from the ideas list: real games on the TV and PC, more animals, your own photos on the posters, more holidays
 
-Follow along on the **[milestones](../../milestones)** and the **[`beta`](../../tree/beta)** branch.
+**💡 On the ideas list**
+
+<table>
+<tr>
+<td width="50%" valign="top">
+
+- 🎮 [Real games to play on the TV and the PC](../../issues/16)
+- 🕹️ [PS1 to PS5 consoles with their own boot-ups](../../issues/23)
+- ✨ [A start screen that matches your PlayStation](../../issues/24)
+- 🐾 [More animals and dog breeds](../../issues/17)
+- 🖼️ [Your own photos on the posters](../../issues/18)
+- 📻 [Poster options above the boombox](../../issues/19)
+- 🫧 [Turn the lava lamp on and off](../../issues/20)
+
+</td>
+<td width="50%" valign="top">
+
+- 📺 [Move and hide the YouTube buttons](../../issues/21)
+- 🛋️ [Change and move the furniture](../../issues/22)
+- 🪟 [Room layout presets](../../issues/25)
+- 🎉 [Better decorations and more holidays](../../issues/26)
+- 🌧️ [Better raindrops on the glass](../../issues/27)
+- 🧱 [Better wall textures](../../issues/28)
+
+</td>
+</tr>
+</table>
+
+Got an idea? **[Open an issue](../../issues/new)**. Follow along on the **[ideas list](../../issues?q=is%3Aissue+is%3Aopen+label%3Aidea)**, the **[milestones](../../milestones)** and the **[`beta`](../../tree/beta)** branch.
 
 <br>
 

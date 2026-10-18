@@ -62,14 +62,14 @@
 
 <table>
 <tr>
-<td width="33%" align="center" valign="top"><h3>🕰️</h3><b>Real time, real weather</b><br><sub>The sun and moon follow your clock on real paths. It rains when it rains in your city. 15 weathers and 5 skies.</sub></td>
+<td width="33%" align="center" valign="top">🕰️<br><b>Real time, real weather</b><br><sub>The sun and moon follow your clock on real paths. It rains when it rains in your city. 15 weathers and 5 skies.</sub></td>
 <td width="33%" align="center" valign="top">🎮<br><b>A PlayStation full of games</b><br><sub>Put any game from the shelf in the PS1, including every GTA as a hand-drawn tribute.</sub></td>
 <td width="33%" align="center" valign="top">📻<br><b>Your music on the boombox</b><br><sub>Your own albums with their cover art, shuffle, repeat and FM stations. Your music never leaves your device.</sub></td>
 </tr>
 <tr>
 <td width="33%" align="center" valign="top">📺<br><b>YouTube on the CRT</b><br><sub>Paste a link, or Share a video to PS1 Bedroom on Android, and it plays on the old TV.</sub></td>
 <td width="33%" align="center" valign="top">🐕<br><b>Jasper the German Shepherd</b><br><sub>Naps in the sunbeam, watches TV with you, sleeps on the bed. Pick his coat colours.</sub></td>
-<td width="33%" align="center" valign="top"><h3>🖥️</h3><b>A working 2001 PC</b><br><sub>Instant messenger, WinBeats, Minesweeper and the dial-up screech.</sub></td>
+<td width="33%" align="center" valign="top">🖥️<br><b>A working 2001 PC</b><br><sub>Instant messenger, WinBeats, Minesweeper and the dial-up screech.</sub></td>
 </tr>
 <tr>
 <td width="33%" align="center" valign="top">😴<br><b>Made for falling asleep</b><br><sub>Sleep mode, a sleep timer that fades everything out, and a sunrise alarm.</sub></td>

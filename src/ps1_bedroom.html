@@ -642,13 +642,30 @@
           gl_Position = projectionMatrix * mvPosition;
 
           // PS1 GTE Integer Screen-Space Vertex Snapping (skipped for vertices behind the camera,
-          // where dividing by w flips them and tears nearby walls/floors apart)
+          // where dividing by w flips them and tears nearby walls/floors apart).
+          // The vertex jumps sideways to the grid exactly like before (that's the wobble), but it's then slid back
+          // onto its own surface's plane along the view ray. Plain snapping also dragged its depth sideways, so two
+          // layers lying on each other (poster on a wall, window on a house, rug on the floor, a disc on the rug,
+          // the TV glass in its bezel) were each dragged by a different amount and kept swapping which was in front.
           if (gl_Position.w > 0.0) {
-            vec4 snapped = gl_Position;
-            snapped.xyz = gl_Position.xyz / gl_Position.w;
-            snapped.xy = floor(uJitterGrid * snapped.xy + 0.5) / uJitterGrid;
-            snapped.xyz *= gl_Position.w;
-            gl_Position = snapped;
+            // Up close the grid is as coarse as ever; beyond 2 m it gets finer with distance so the wobble stays the same
+            // size in the world. A fixed screen grid collapsed small far things (a controller across the room, the
+            // windows on the houses outside) to nothing, because all their corners snapped onto the same grid line.
+            vec2 snapGrid = uJitterGrid * max(1.0, gl_Position.w * 0.5);
+            vec2 snapNdc = floor(snapGrid * (gl_Position.xy / gl_Position.w) + 0.5) / snapGrid;
+            vec3 snapDir = vec3((snapNdc.x + projectionMatrix[2][0]) / projectionMatrix[0][0],
+                                (snapNdc.y + projectionMatrix[2][1]) / projectionMatrix[1][1], -1.0);
+            vec3 snapN = normalize(transformedNormal);
+            float snapDen = dot(snapDir, snapN);
+            float snapT = snapDen != 0.0 ? dot(mvPosition.xyz, snapN) / snapDen : -1.0;
+            // Grazing or degenerate cases (and anything that would move far) fall back to the plain snap
+            if (abs(snapDen) > 0.02 && snapT > 0.0 && abs(snapT + mvPosition.z) < 0.25 * abs(mvPosition.z) + 0.05) {
+              gl_Position = projectionMatrix * vec4(snapDir * snapT, 1.0);
+            } else {
+              vec4 snapped = gl_Position;
+              snapped.xy = snapNdc * gl_Position.w;
+              gl_Position = snapped;
+            }
           }
 
           // Cancel perspective division for PS1 Affine Texture Warping
@@ -2462,10 +2479,11 @@
     ceiling.castShadow = true;
     scene.add(ceiling);
 
-    // Rug sits 3 cm up with a light polygonOffset: enough to beat the floor, not so much that it swallows thin objects lying on it
+    // Rug sits 3 cm up and needs no polygonOffset now that the vertex snap keeps depth on each surface's plane (any
+    // offset scales with the viewing angle and, from far away, pulled the rug over the controller and games lying on it)
     const areaRug = new THREE.Mesh(
       new THREE.PlaneGeometry(4.2, 3.2, 8, 8),
-      makePS1Material({ map: rugTex, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 })
+      makePS1Material({ map: rugTex })
     );
     areaRug.rotation.x = -Math.PI / 2;
     areaRug.position.set(-0.2, 0.03, 0.5);
@@ -2530,7 +2548,7 @@
     addSolidWall(1.2, 1.9, 0.24, DOOR_X, 4.55, 7.4);
     const hallRunner = new THREE.Mesh(
       new THREE.PlaneGeometry(0.9, 3.4),
-      makePS1Material({ color: 0x7f1d1d, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 })
+      makePS1Material({ color: 0x7f1d1d })
     );
     hallRunner.rotation.x = -Math.PI / 2;
     hallRunner.position.set(DOOR_X, 0.012, 5.55);
@@ -17133,9 +17151,9 @@
           tmp.project(camera);
           if (ytPs1) {
             // Snap the corners exactly like the PS1 vertex shader snaps the TV around it, so they wobble together
-            const jg = ps1Uniforms.uJitterGrid.value;
-            tmp.x = Math.floor(jg.x * tmp.x + 0.5) / jg.x;
-            tmp.y = Math.floor(jg.y * tmp.y + 0.5) / jg.y;
+            const jg = ps1Uniforms.uJitterGrid.value, jk = Math.max(1, -vw.z * 0.5); // same distance scaling as the shader
+            tmp.x = Math.floor(jg.x * jk * tmp.x + 0.5) / (jg.x * jk);
+            tmp.y = Math.floor(jg.y * jk * tmp.y + 0.5) / (jg.y * jk);
           }
           pts.push(rect.left + (tmp.x + 1) / 2 * rect.width, rect.top + (1 - tmp.y) / 2 * rect.height);
         }

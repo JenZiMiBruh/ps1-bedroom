@@ -26,6 +26,8 @@ The in-app version of this list lives in `src/ps1_bedroom.html` (search for `con
 - YouTube on the TV: jagged black bits around the picture and the video overlapping the TV's frame
 - The TV border, the album cover on the dresser, the cassette window and the boombox display flickered: they were flat sheets stacked a millimetre apart, so they now get real depth or are part of the object itself
 - The summer box fan was standing inside the front wall
+- **Flicker, for real this time:** the PS1 wobble used to drag each corner’s depth sideways, so anything layered (posters, the TV, the rug, house windows outside) kept swapping which was in front. Corners now stay on their own surface, and far-away things wobble finer so they no longer collapse and vanish (the controller and games on the floor, windows on the houses)
+- The rug no longer swallows the controller and games lying on it when you zoom out
 
 ## v1.3 — Goodnight, Jasper
 **Added**

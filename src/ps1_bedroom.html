@@ -224,12 +224,12 @@
     }
     #easter-egg-toast {
       position: fixed; top: calc(58px + var(--safe-t)); left: 50%;
-      transform: translateX(-50%) translateY(-140px);
+      transform: translateX(-50%) translateY(calc(-100% - 90px)); opacity: 0; visibility: hidden; /* fully off screen, however many lines it wraps to */
       background: var(--panel); border: 2px solid #c084fc; box-shadow: 4px 4px 0 #000; color: #f5d0fe;
       padding: 9px 14px; font-size: 12px; max-width: min(560px, 92vw); text-align: center; z-index: 25;
-      border-radius: 8px; transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); pointer-events: none;
+      border-radius: 8px; transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s, visibility 0s linear 0.25s; pointer-events: none;
     }
-    #easter-egg-toast.visible { transform: translateX(-50%) translateY(0); }
+    #easter-egg-toast.visible { transform: translateX(-50%) translateY(0); opacity: 1; visibility: visible; transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.15s, visibility 0s; }
     #touch-stick {
       position: fixed; left: calc(22px + var(--safe-l)); bottom: calc(96px + var(--safe-b));
       width: 120px; height: 120px; border-radius: 50%;
@@ -451,6 +451,9 @@
         <div class="chips" id="chips-sheets"></div>
         <h4>Decorations</h4>
         <div class="chips" id="chips-decor"></div>
+        <h4>Jasper's coat</h4>
+        <div class="chips" id="chips-jasper"></div>
+        <div class="row" style="display:flex; gap:10px; flex-wrap:wrap; margin-top:6px;"><label class="note">Coat <input type="color" id="jasper-coat"></label><label class="note">Saddle &amp; mask <input type="color" id="jasper-dark"></label><label class="note">Chest &amp; paws <input type="color" id="jasper-light"></label></div>
         <div class="note">Auto puts up decorations for the time of year: Halloween in October, a little tree in December, hearts for Valentine's and a box fan in summer.</div>
         <div class="note">Almost everything in the room can be tapped directly too: the TV, the PlayStation and its buttons, the games on the shelves, the lamp, the boombox, the door and the light switch.</div>
       </section>
@@ -9400,15 +9403,18 @@
       // ---- Master: gentle bus compression + limiter so stacked layers glue instead of clipping
       SND.master = new Tone.Gain(0);
       SND.comp = new Tone.Compressor({ threshold: -22, ratio: 2.5, attack: 0.03, release: 0.3, knee: 12 });
-      SND.limiter = new Tone.Limiter(-4);
-      // The browser limiter lets fast peaks through, so a soft clipper sits last: clean below -3 dB,
-      // rounding off anything above so nothing ever hits the hard 0 dB wall (that's the crackly "clip")
+      SND.limiter = new Tone.Limiter(-6);
+      // Soft clipper last: clean below -3 dB, rounding off anything louder. 4x oversampled (without it the
+      // rounding itself aliases into a gritty crackle) and it reads input up to +6 dB (fed at half level and
+      // mapped back), so even a peak that slips past the limiter is rounded, never squared off
+      SND.clipIn = new Tone.Gain(0.5);
       SND.softClip = new Tone.WaveShaper((x) => {
-        const a = Math.abs(x), knee = 0.7;
-        return a <= knee ? x : Math.sign(x) * (knee + (1 - knee) * Math.tanh((a - knee) / (1 - knee)));
-      }, 2048);
+        const v = x * 2, a = Math.abs(v), knee = 0.7;
+        return a <= knee ? v : Math.sign(v) * (knee + (1 - knee) * Math.tanh((a - knee) / (1 - knee)));
+      }, 4096);
+      SND.softClip.oversample = '4x';
       SND.trim = new Tone.Gain(0.85);
-      SND.master.chain(SND.comp, SND.limiter, SND.trim, SND.softClip, Tone.getDestination());
+      SND.master.chain(SND.comp, SND.limiter, SND.trim, SND.clipIn, SND.softClip, Tone.getDestination());
 
       // Small bedroom reverb (high-passed send keeps the low end clean)
       SND.roomVerb = new Tone.Reverb({ decay: 0.9, preDelay: 0.008, wet: 1 });
@@ -12287,10 +12293,10 @@
     applyJasperColors(jasperColors);
     // Pose joint angles (radians): front = [shoulder, knee], back = [hip, hock]; +x swings a leg backward
     const JDOG = {
-      front: { lie: [-1.4, 0.2], sit: [0.5, 0.0] }, // measured so every paw rests on the floor
-      back: { lie: [-2.0, 2.8], sit: [-1.3, 1.8] },
+      front: { lie: [-1.4, 0.2], sit: [0.8, 0.0] }, // measured so every paw (and his rump when sitting) rests on the floor
+      back: { lie: [-2.0, 2.8], sit: [-1.0, 3.1] },
       tail: { stand: -1.15, lie: -0.6, sit: -1.6, lie2: 0, sit2: -0.4 }, // - points it down (measured: tip at hock height / on the floor)
-      headSleep: 0.25
+      headSleep: 0.25, sitDrop: 0.24, sitTilt: 0.85
     };
 
     // ---- Behaviour: favourite spots, chosen by the time, the weather and what you're doing
@@ -12377,8 +12383,8 @@
       dogGroup.position.set(d.pos.x, d.y, d.pos.z);
       dogGroup.rotation.y = d.heading;
       const breathe = Math.sin(t * (pose === 'sleep' ? 1.4 : 3)) * (pose === 'sleep' ? 0.012 : 0.005);
-      dogBody.position.y = 0.6 - d.poseK * 0.38 - d.sitK * 0.12 + breathe;
-      dogBody.rotation.x = -d.sitK * 0.4;
+      dogBody.position.y = 0.6 - d.poseK * 0.38 - d.sitK * JDOG.sitDrop + breathe;
+      dogBody.rotation.x = -d.sitK * JDOG.sitTilt;
       const walkSwing = pose === 'walk' ? Math.sin(t * 9) * 0.55 : 0;
       // Joint angles per pose [shoulder/hip, knee/hock]; blended by how far into the pose he is
       const lieK = d.poseK, sitK = d.sitK, standK = Math.max(0, 1 - lieK - sitK);
@@ -15773,6 +15779,7 @@
       if (fpsChoice === '120') showToast('⚡ 120 FPS: buttery smooth on 120 Hz screens. Uses more battery.');
     }));
     $('chk-eco-idle').addEventListener('change', (e) => { ecoIdle = e.target.checked; saveSettingsSoon(); });
+    ['coat', 'dark', 'light'].forEach((p) => $('jasper-' + p).addEventListener('input', (e) => { applyJasperColors({ [p]: e.target.value, preset: 'custom' }); refreshMenu(); saveSettingsSoon(); }));
     $('ctrl-hour').addEventListener('input', (e) => setPresetHour(parseFloat(e.target.value), true));
     $('city-go').addEventListener('click', () => { ENV.weatherMode = 'live'; fetchLiveWeather($('city-input').value); refreshMenu(); });
     $('city-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('city-go').click(); });
@@ -15812,6 +15819,8 @@
         fillChips('chips-poster', Object.keys(POSTER_NAMES).map((k) => chip(POSTER_NAMES[k], posterChoice === k, () => { setPoster(k); refreshMenu(); saveSettingsSoon(); })));
         ['walls', 'carpet', 'sheets'].forEach((part) => fillChips(`chips-${part}`, Object.keys(RECOLOR[part].opts).map((k) => chip(RECOLOR[part].opts[k][0], roomColors[part] === k, () => { setRoomColor(part, k); refreshMenu(); saveSettingsSoon(); }))));
         fillChips('chips-outside', Object.keys(OUTSIDE_ENVS).map((k) => chip(`${OUTSIDE_ENVS[k].icon} ${OUTSIDE_ENVS[k].name}`, outsideEnv === k, () => { setOutsideEnv(k); saveSettingsSoon(); })));
+        fillChips('chips-jasper', Object.keys(JASPER_PRESETS).map((k) => chip(JASPER_PRESETS[k].name, jasperColors.preset === k, () => { applyJasperColors({ ...JASPER_PRESETS[k], preset: k }); refreshMenu(); playSfx('ui'); saveSettingsSoon(); })));
+        ['coat', 'dark', 'light'].forEach((p) => { const el = $('jasper-' + p); if (el && document.activeElement !== el) el.value = jasperColors[p]; });
         fillChips('chips-decor', [['auto', 'Auto (by date)'], ['off', 'None'], ['halloween', 'Halloween'], ['winter', 'Winter holidays'], ['valentine', "Valentine's"], ['summer', 'Summer']].map(([k, label]) => chip(label + (k === 'auto' && decorMode === 'auto' ? ` · ${activeDecor()}` : ''), decorMode === k, () => { decorMode = k; applyDecor(); playSfx('ui'); refreshMenu(); saveSettingsSoon(); })));
         fillChips('chips-vibe', Object.keys(VIBES).map((k) => chip(VIBES[k].label, vibeMode === k, () => { setVibe(k); saveSettingsSoon(); })));
         fillChips('chips-focus', [['off', 'Off'], ['short', '25 min + 5 break'], ['long', '50 min + 10 break']].map(([k, label]) => chip(label, focus.mode === k, () => setFocus(k))));
@@ -15876,7 +15885,7 @@
         jitter: jitterBase, affine: ps1Uniforms.uAffineStrength.value, dither: postMaterial.uniforms.uDitherStrength.value,
         volumetric: userVolumetricSetting, sway: swayAmount, ao: aoBase,
         tempUnit, fpsChoice, ecoIdle,
-        poster: posterChoice, colors: { ...roomColors }, decor: decorMode, heater: heaterMode, outside: outsideEnv,
+        poster: posterChoice, colors: { ...roomColors }, decor: decorMode, heater: heaterMode, outside: outsideEnv, jasper: { ...jasperColors },
         audioOn: audioReady ? isAudioPlaying : wantAudio, startScreen: startScreenEnabled, tutorialSeen, sleepDim
       };
     }
@@ -15945,6 +15954,7 @@
         if (s.colors) Object.keys(s.colors).forEach((part) => { if (RECOLOR[part]) setRoomColor(part, s.colors[part], true); });
         if (s.decor) { decorMode = s.decor; applyDecor(); }
         if (s.outside && s.outside !== "city") setOutsideEnv(s.outside, true);
+        if (s.jasper && s.jasper.coat) applyJasperColors(s.jasper);
         if (s.heater && s.heater !== 'auto') { while (heaterMode !== s.heater) cycleHeater(true); }
         startScreenEnabled = s.startScreen !== false;
         tutorialSeen = !!s.tutorialSeen;

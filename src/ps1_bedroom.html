@@ -11137,8 +11137,28 @@
     });
 
     // ---------------- CHANGELOG (newest first; add a new entry at the top for every release) ----------------
-    const APP_VERSION = '1.3';
+    const APP_VERSION = '1.4';
     const CHANGELOG = [
+      { v: '1.4', name: 'Beta', sections: {
+        Added: [
+          'WALL CALENDAR: the real month with today circled, past days crossed off, and its own pixel-art picture every month',
+          'TAP THE TOP BAR: time, temperature, season and weather step to the next option, plus a new location button. Hold any of them for the World menu',
+          'ACHIEVEMENTS unlock with a trophy card, pixel confetti and a fanfare, different for each one',
+          "PS1 LOOK ON YOUTUBE (Menu > Display): the video wobbles with the TV and gets the room's chunky pixels"
+        ],
+        Changed: [
+          'NEW SKY: one seamless dome around the whole world, with the sun, moon, stars and clouds all the way round',
+          'A big LED clock radio on the nightstand, readable from the default view (tap it for the timers and alarm)',
+          'New default sound mix: your TV louder than the one down the hall, softer rain peaks. Layer volumes reset once',
+          'Performance: 20 fps after 2 minutes untouched, fewer window redraws, lighter audio on phones'
+        ],
+        Fixed: [
+          'Ceiling fan brackets, game shelf covering the games, box fan inside the wall, handheld clipping the clock',
+          'Achievement card peeking out on the title screen',
+          'Wall art and distant textures flickering',
+          'Jagged edges around YouTube on the TV'
+        ]
+      } },
       { v: '1.3', name: 'Goodnight, Jasper', sections: {
         Added: [
           'SLEEP MODE: one tap turns the lights down, starts the fan, puts you in bed with Jasper curled up beside you, and fades everything out in 45 minutes',

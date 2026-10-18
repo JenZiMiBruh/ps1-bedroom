@@ -75,9 +75,15 @@
     #status-chip {
       display: flex; gap: 6px; align-items: center;
       font-size: 11px; color: var(--muted);
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      white-space: nowrap; overflow-x: auto; overflow-y: hidden; scrollbar-width: none;
       max-width: calc(100vw - 150px);
     }
+    #status-chip::-webkit-scrollbar { display: none; }
+    /* Each part of the status bar is a button: tap to step through its options, hold for the World menu */
+    #status-chip .sb { all: unset; cursor: pointer; padding: 2px 3px; margin: -2px -1px; border-radius: 6px; color: inherit; white-space: nowrap; -webkit-tap-highlight-color: transparent; }
+    #status-chip .sb:hover { background: rgba(127, 243, 255, 0.08); color: #dfe6ff; }
+    #status-chip .sb:active, #status-chip .sb.flash { background: rgba(255, 62, 165, 0.25); color: #fff; }
+    #status-chip .sb:focus-visible { outline: 1px solid var(--cyan); }
     #status-chip b { color: var(--cyan); }
     #status-chip .sep { color: #4a5799; }
     #timer-chip { color: var(--gold); display: none; }
@@ -251,8 +257,9 @@
       .dock-btn { min-width: 0; flex: 1; padding: 4px 1px 3px; font-size: 9px; }
       .dock-btn i { font-size: 18px; }
       .dock-sep { display: none; }
-      #status-chip .sep:nth-of-type(2), #val-posture { display: none; }
-      #status-chip { max-width: calc(100vw - 120px); }
+      #status-chip .sep-posture, #val-posture { display: none; }
+      /* Narrow phones: every button stays visible, wrapping onto a second line if needed */
+      #status-chip { max-width: calc(100vw - 120px); flex-wrap: wrap; row-gap: 3px; column-gap: 4px; white-space: normal; overflow: visible; }
     }
     @media (max-height: 460px) {
       #dock { bottom: calc(6px + var(--safe-b)); padding: 4px; }
@@ -325,7 +332,7 @@
 
   <div id="topbar">
     <button id="btn-menu" class="pill">&#9776; MENU</button>
-    <div id="status-chip" class="pill"><b id="status-time">--:--</b><span class="sep">&middot;</span><span id="status-weather">Clear</span><span class="sep">&middot;</span><span id="val-posture">FREE CAM</span></div>
+    <div id="status-chip" class="pill"><button class="sb" id="sb-time" title="Tap: next time · hold: World menu"><b id="status-time">--:--</b></button><span class="sep">&middot;</span><button class="sb" id="sb-temp" title="Tap: °F / °C">--</button><span class="sep">&middot;</span><button class="sb" id="sb-season" title="Tap: next season">--</button><span class="sep">&middot;</span><button class="sb" id="sb-weather" title="Tap: next weather">--</button><span class="sep">&middot;</span><button class="sb" id="sb-place" title="Tap: next place outside the window">--</button><span class="sep sep-posture">&middot;</span><span id="val-posture">FREE CAM</span></div>
     <div id="timer-chip" class="pill">&#9790; --:--</div>
     <div id="focus-chip" class="pill">--:--</div>
   </div>
@@ -412,15 +419,15 @@
         <details>
           <summary>Mixer</summary>
           <label class="slider"><span><em>PC tower fan &amp; HDD</em><em id="val-vol-pc">75%</em></span><input type="range" id="ctrl-vol-pc" min="0" max="150" step="5" value="75" /></label>
-          <label class="slider"><span><em>Ceiling fan</em><em id="val-vol-fan">80%</em></span><input type="range" id="ctrl-vol-fan" min="0" max="150" step="5" value="80" /></label>
-          <label class="slider"><span><em>Wall AC</em><em id="val-vol-ac">75%</em></span><input type="range" id="ctrl-vol-ac" min="0" max="150" step="5" value="75" /></label>
-          <label class="slider"><span><em>Living room TV (muffled)</em><em id="val-vol-livtv">85%</em></span><input type="range" id="ctrl-vol-livtv" min="0" max="150" step="5" value="85" /></label>
-          <label class="slider"><span><em>Bedroom TV &amp; PS1</em><em id="val-vol-bedtv">75%</em></span><input type="range" id="ctrl-vol-bedtv" min="0" max="150" step="5" value="75" /></label>
-          <label class="slider"><span><em>Rain, wind &amp; storms</em><em id="val-vol-weather">100%</em></span><input type="range" id="ctrl-vol-weather" min="0" max="150" step="5" value="100" /></label>
-          <label class="slider"><span><em>Outdoors: city, birds, crickets</em><em id="val-vol-nature">75%</em></span><input type="range" id="ctrl-vol-nature" min="0" max="150" step="5" value="75" /></label>
+          <label class="slider"><span><em>Ceiling fan</em><em id="val-vol-fan">70%</em></span><input type="range" id="ctrl-vol-fan" min="0" max="150" step="5" value="70" /></label>
+          <label class="slider"><span><em>Wall AC</em><em id="val-vol-ac">65%</em></span><input type="range" id="ctrl-vol-ac" min="0" max="150" step="5" value="65" /></label>
+          <label class="slider"><span><em>Living room TV (muffled)</em><em id="val-vol-livtv">35%</em></span><input type="range" id="ctrl-vol-livtv" min="0" max="150" step="5" value="35" /></label>
+          <label class="slider"><span><em>Bedroom TV &amp; PS1</em><em id="val-vol-bedtv">100%</em></span><input type="range" id="ctrl-vol-bedtv" min="0" max="150" step="5" value="100" /></label>
+          <label class="slider"><span><em>Rain, wind &amp; storms</em><em id="val-vol-weather">90%</em></span><input type="range" id="ctrl-vol-weather" min="0" max="150" step="5" value="90" /></label>
+          <label class="slider"><span><em>Outdoors: city, birds, crickets</em><em id="val-vol-nature">80%</em></span><input type="range" id="ctrl-vol-nature" min="0" max="150" step="5" value="80" /></label>
           <label class="slider"><span><em>PC speakers</em><em id="val-vol-pcspk">75%</em></span><input type="range" id="ctrl-vol-pcspk" min="0" max="150" step="5" value="75" /></label>
-          <label class="slider"><span><em>Clicks, PS1 drive, lava lamp</em><em id="val-vol-sfx">85%</em></span><input type="range" id="ctrl-vol-sfx" min="0" max="150" step="5" value="85" /></label>
-          <label class="slider"><span><em>Boombox radio</em><em id="val-vol-radio">80%</em></span><input type="range" id="ctrl-vol-radio" min="0" max="150" step="5" value="80" /></label>
+          <label class="slider"><span><em>Clicks, PS1 drive, lava lamp</em><em id="val-vol-sfx">80%</em></span><input type="range" id="ctrl-vol-sfx" min="0" max="150" step="5" value="80" /></label>
+          <label class="slider"><span><em>Boombox radio</em><em id="val-vol-radio">90%</em></span><input type="range" id="ctrl-vol-radio" min="0" max="150" step="5" value="90" /></label>
         </details>
       </section>
 
@@ -468,7 +475,8 @@
         <div class="note" id="quality-note"></div>
         <h4>Frame rate</h4>
         <div class="seg" id="seg-fps"><button data-v="auto">Auto</button><button data-v="30">30</button><button data-v="60">60</button><button data-v="120">120 Hz</button></div>
-        <label class="check"><input type="checkbox" id="chk-eco-idle" checked /> Eco idle: drop to 30 fps when you haven't touched anything for a bit</label>
+        <label class="check"><input type="checkbox" id="chk-eco-idle" checked /> Eco idle: drop to 30 fps when you haven't touched anything for a bit, then 20 fps after 2 minutes</label>
+        <label class="check"><input type="checkbox" id="chk-yt-ps1" checked /> PS1 look on YouTube: the video wobbles with the TV and gets the room's chunky pixels</label>
         <h4>Look</h4>
         <div class="chips" id="chips-vibe"></div>
         <details>
@@ -634,13 +642,30 @@
           gl_Position = projectionMatrix * mvPosition;
 
           // PS1 GTE Integer Screen-Space Vertex Snapping (skipped for vertices behind the camera,
-          // where dividing by w flips them and tears nearby walls/floors apart)
+          // where dividing by w flips them and tears nearby walls/floors apart).
+          // The vertex jumps sideways to the grid exactly like before (that's the wobble), but it's then slid back
+          // onto its own surface's plane along the view ray. Plain snapping also dragged its depth sideways, so two
+          // layers lying on each other (poster on a wall, window on a house, rug on the floor, a disc on the rug,
+          // the TV glass in its bezel) were each dragged by a different amount and kept swapping which was in front.
           if (gl_Position.w > 0.0) {
-            vec4 snapped = gl_Position;
-            snapped.xyz = gl_Position.xyz / gl_Position.w;
-            snapped.xy = floor(uJitterGrid * snapped.xy + 0.5) / uJitterGrid;
-            snapped.xyz *= gl_Position.w;
-            gl_Position = snapped;
+            // Up close the grid is as coarse as ever; beyond 2 m it gets finer with distance so the wobble stays the same
+            // size in the world. A fixed screen grid collapsed small far things (a controller across the room, the
+            // windows on the houses outside) to nothing, because all their corners snapped onto the same grid line.
+            vec2 snapGrid = uJitterGrid * max(1.0, gl_Position.w * 0.5);
+            vec2 snapNdc = floor(snapGrid * (gl_Position.xy / gl_Position.w) + 0.5) / snapGrid;
+            vec3 snapDir = vec3((snapNdc.x + projectionMatrix[2][0]) / projectionMatrix[0][0],
+                                (snapNdc.y + projectionMatrix[2][1]) / projectionMatrix[1][1], -1.0);
+            vec3 snapN = normalize(transformedNormal);
+            float snapDen = dot(snapDir, snapN);
+            float snapT = snapDen != 0.0 ? dot(mvPosition.xyz, snapN) / snapDen : -1.0;
+            // Grazing or degenerate cases (and anything that would move far) fall back to the plain snap
+            if (abs(snapDen) > 0.02 && snapT > 0.0 && abs(snapT + mvPosition.z) < 0.25 * abs(mvPosition.z) + 0.05) {
+              gl_Position = projectionMatrix * vec4(snapDir * snapT, 1.0);
+            } else {
+              vec4 snapped = gl_Position;
+              snapped.xy = snapNdc * gl_Position.w;
+              gl_Position = snapped;
+            }
           }
 
           // Cancel perspective division for PS1 Affine Texture Warping
@@ -1908,71 +1933,9 @@
     function rebuildCityStaticCache() {
       const ctx = cityStaticCache.getContext('2d');
       const w = SKY_W, h = SKY_H;
-      const [top, mid, hor] = skyColorsAt(ENV.sunDeg);
-      const sky = ctx.createLinearGradient(0, 0, 0, h * 0.82);
-      sky.addColorStop(0, top); sky.addColorStop(0.6, mid); sky.addColorStop(1, hor);
-      ctx.fillStyle = sky;
-      ctx.fillRect(0, 0, w, h);
-      // Sunrise / sunset glow pooled around the sun's side of the horizon
-      if (ENV.twilight > 0.02 && ENV.skyStyle !== 'vapor') {
-        const gx = Math.max(-80, Math.min(w + 80, skyBodies.sunX > -90 ? skyBodies.sunX : (ENV.morning ? 40 : w - 40)));
-        const glow = ctx.createRadialGradient(gx, h * 0.72, 10, gx, h * 0.72, w * 0.55);
-        glow.addColorStop(0, `rgba(255, 140, 70, ${0.55 * ENV.twilight * (1 - W.cloud * 0.6)})`);
-        glow.addColorStop(1, 'rgba(255, 140, 70, 0)');
-        ctx.fillStyle = glow;
-        ctx.fillRect(0, 0, w, h);
-      }
+      ctx.clearRect(0, 0, w, h);
+      // The sky itself (colours, glow, stars, sun and moon) lives on the dome behind; this canvas keeps it clear
       const night = 1 - ENV.daylight;
-      const clearSky = Math.max(0, 1 - W.cloud * 1.15);
-      // Faint Milky Way on very dark, clear nights
-      if (night > 0.85 && clearSky > 0.5) {
-        ctx.save();
-        ctx.globalAlpha = 0.09 * clearSky * (ENV.skyStyle === 'meteor' ? 1.8 : 1);
-        ctx.translate(w * 0.5, 40); ctx.rotate(-0.35);
-        const mw = ctx.createLinearGradient(0, -22, 0, 22);
-        mw.addColorStop(0, 'rgba(200,210,255,0)'); mw.addColorStop(0.5, 'rgba(220,225,255,1)'); mw.addColorStop(1, 'rgba(200,210,255,0)');
-        ctx.fillStyle = mw; ctx.fillRect(-w, -22, w * 2, 44);
-        ctx.restore();
-      }
-      // Sun (only when up) and moon, drawn before the skyline so buildings occlude them
-      if (ENV.sunDeg > -2 && skyBodies.sunY > -30) {
-        const sx = skyBodies.sunX, sy = skyBodies.sunY;
-        const low = 1 - smooth(0, 20, ENV.sunDeg);
-        const vis = Math.max(0.15, 1 - W.cloud * 0.9);
-        const halo = ctx.createRadialGradient(sx, sy, 4, sx, sy, 70);
-        halo.addColorStop(0, `rgba(255, ${210 - low * 90}, ${150 - low * 100}, ${0.7 * vis})`);
-        halo.addColorStop(1, 'rgba(255, 180, 90, 0)');
-        ctx.fillStyle = halo;
-        ctx.fillRect(sx - 70, sy - 70, 140, 140);
-        ctx.globalAlpha = vis;
-        if (ENV.skyStyle === 'vapor') {
-          // Striped synthwave sun
-          const sg = ctx.createLinearGradient(0, sy - 22, 0, sy + 22);
-          sg.addColorStop(0, '#ffe66d'); sg.addColorStop(1, '#ff4fa3');
-          ctx.fillStyle = sg;
-          ctx.beginPath(); ctx.arc(sx, sy, 22, 0, Math.PI * 2); ctx.fill();
-          ctx.fillStyle = mid;
-          for (let i = 0; i < 6; i++) ctx.fillRect(sx - 24, sy + 2 + i * 4, 48, 1 + i * 0.5);
-        } else {
-          ctx.fillStyle = `rgb(255, ${245 - low * 110}, ${215 - low * 160})`;
-          ctx.beginPath(); ctx.ellipse(sx, sy, 12 + low * 4, 12 + low * 2, 0, 0, Math.PI * 2); ctx.fill();
-        }
-        ctx.globalAlpha = 1;
-      }
-      if (skyBodies.moonY > -30 && ENV.moonEl > -0.05) {
-        const mx = skyBodies.moonX, my = skyBodies.moonY;
-        const vis = Math.max(0.12, 1 - W.cloud * 0.85) * (1 - ENV.daylight * 0.75);
-        const blood = ENV.skyStyle === 'blood';
-        const mr = blood ? 15 : 11;
-        const halo = ctx.createRadialGradient(mx, my, 4, mx, my, 46);
-        halo.addColorStop(0, blood ? `rgba(255, 70, 40, ${0.55 * vis})` : `rgba(200, 220, 255, ${0.45 * vis * (0.3 + ENV.moonIllum * 0.7)})`);
-        halo.addColorStop(1, 'rgba(200, 220, 255, 0)');
-        ctx.fillStyle = halo;
-        ctx.fillRect(mx - 46, my - 46, 92, 92);
-        ctx.globalAlpha = vis;
-        drawMoonDisc(ctx, mx, my, mr, blood ? 0.5 : ENV.moonPhase, blood ? '#d9472b' : '#e8eefc', 'rgba(40, 50, 80, 0.55)');
-        ctx.globalAlpha = 1;
-      }
       // Tinted cloud strip for the moving layer (drawn in updateCitySkyline)
       const cctx = cloudLayer.getContext('2d');
       cctx.clearRect(0, 0, cloudLayer.width, cloudLayer.height);
@@ -1983,7 +1946,8 @@
           const spr = cloudSprites[i % 4];
           const s = 0.7 + cr() * 1.6;
           cctx.globalAlpha = Math.min(1, 0.35 + W.cloud * 0.8) * (0.6 + cr() * 0.4);
-          cctx.drawImage(spr, cr() * cloudLayer.width - 64, cr() * 110 - 10, 128 * s, 40 * s);
+          const cx0 = cr() * cloudLayer.width - 64, cy0 = cr() * 110 - 10;
+          [-cloudLayer.width, 0, cloudLayer.width].forEach((wrap) => cctx.drawImage(spr, cx0 + wrap, cy0, 128 * s, 40 * s)); // wraps seamlessly round the dome
         }
         cctx.globalAlpha = 1;
         // Tint: bright white by day, orange-pink at sunset, dull blue-grey lit by the city at night
@@ -2048,20 +2012,12 @@
       }
       const ctx = cityCanvasObj.ctx;
       const w = SKY_W, h = SKY_H;
+      ctx.clearRect(0, 0, w, h);
       ctx.drawImage(cityStaticCache, 0, 0);
       if (outsideEnv !== "city") paintLandscapeLive(ctx, t);
+      skyDomeU.time.value = t;
       const night = 1 - ENV.daylight;
       const clearSky = Math.max(0, 1 - W.cloud * 1.15);
-      // Twinkling stars (behind clouds, above the skyline)
-      if (night > 0.35 && clearSky > 0.05) {
-        const many = ENV.skyStyle === 'meteor' ? 1 : 0.75;
-        stars.forEach((s, i) => {
-          if (i / stars.length > many) return;
-          const tw = 0.55 + 0.45 * Math.sin(t * (1.2 + (i % 5) * 0.4) + s.tw);
-          ctx.fillStyle = `rgba(230, 236, 255, ${s.b * tw * night * clearSky})`;
-          ctx.fillRect(s.x | 0, s.y | 0, s.big ? 2 : 1, s.big ? 2 : 1);
-        });
-      }
       // Aurora ribbons
       if (ENV.skyStyle === 'aurora' && night > 0.5) {
         for (let r = 0; r < 3; r++) {
@@ -2078,13 +2034,8 @@
           ctx.fill();
         }
       }
-      // Drifting clouds (two parallax copies of the cloud strip)
-      if (W.cloud > 0.04) {
-        const speed = 3 + W.wind * 14;
-        const off = (t * speed) % (w * 2);
-        ctx.drawImage(cloudLayer, -off, 0);
-        ctx.drawImage(cloudLayer, w * 2 - off, 0);
-      }
+      // Clouds drift round the dome with the wind
+      skyCloudU.cloudOff.value = (t * (3 + W.wind * 14) / cloudLayer.width) % 1;
       // Shooting stars (lots in the meteor-shower sky)
       if (night > 0.6 && clearSky > 0.4) {
         const rate = ENV.skyStyle === 'meteor' ? 0.12 : 0.008;
@@ -2138,8 +2089,10 @@
       }
       // Lightning: whole-sky flash plus a forked bolt
       if (lightningFlash > 0.15) {
+        ctx.globalCompositeOperation = 'source-atop'; // the flash lights the skyline here and the whole sky on the dome
         ctx.fillStyle = `rgba(203, 213, 225, ${0.5 * lightningFlash})`;
         ctx.fillRect(0, 0, w, h);
+        ctx.globalCompositeOperation = 'source-over';
         if (!skyFx.bolt) {
           const pts = [[60 + Math.random() * (w - 120), 0]];
           while (pts[pts.length - 1][1] < 170) { const [lx, ly] = pts[pts.length - 1]; pts.push([lx + (Math.random() - 0.5) * 26, ly + 10 + Math.random() * 14]); }
@@ -2148,6 +2101,7 @@
         ctx.strokeStyle = `rgba(240, 245, 255, ${lightningFlash})`; ctx.lineWidth = 2;
         ctx.beginPath(); skyFx.bolt.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.stroke();
       } else skyFx.bolt = null;
+      skyDomeU.flash.value = lightningFlash > 0.15 ? 0.5 * lightningFlash : 0;
       // Beacons on the tallest roofs
       if (Math.sin(t * 4.5) > 0) {
         ctx.fillStyle = '#ff2222';
@@ -2171,10 +2125,20 @@
           ctx.fillRect(rx | 0, ry | 0, 1, 12);
         }
       }
-      if (W.fog > 0.05 || W.base === 'storm') {
-        ctx.fillStyle = `rgba(${(120 + ENV.daylight * 60) | 0}, ${(130 + ENV.daylight * 60) | 0}, ${(150 + ENV.daylight * 55) | 0}, ${Math.min(0.6, W.fog * 0.45 + (W.base === 'storm' ? 0.15 : 0))})`;
+      // Haze: over the skyline here, and the same colour over the dome
+      const hazeA = W.fog > 0.05 || W.base === 'storm' ? Math.min(0.6, W.fog * 0.45 + (W.base === 'storm' ? 0.15 : 0)) : 0;
+      skyDomeU.fogAmt.value = hazeA;
+      if (hazeA > 0) {
+        skyDomeU.fogCol.value.setRGB((120 + ENV.daylight * 60) / 255, (130 + ENV.daylight * 60) / 255, (150 + ENV.daylight * 55) / 255);
+        ctx.globalCompositeOperation = 'source-atop';
+        ctx.fillStyle = `rgba(${(120 + ENV.daylight * 60) | 0}, ${(130 + ENV.daylight * 60) | 0}, ${(150 + ENV.daylight * 55) | 0}, ${hazeA})`;
         ctx.fillRect(0, 0, w, h);
+        ctx.globalCompositeOperation = 'source-over';
       }
+      // Fade the backdrop's edges so it melts into the horizon ring and the dome
+      ctx.globalCompositeOperation = 'destination-in';
+      ctx.drawImage(backdropMask, 0, 0);
+      ctx.globalCompositeOperation = 'source-over';
       cityTex.needsUpdate = true;
     }
 
@@ -2515,10 +2479,11 @@
     ceiling.castShadow = true;
     scene.add(ceiling);
 
-    // Rug sits 3 cm up with a light polygonOffset: enough to beat the floor, not so much that it swallows thin objects lying on it
+    // Rug sits 3 cm up and needs no polygonOffset now that the vertex snap keeps depth on each surface's plane (any
+    // offset scales with the viewing angle and, from far away, pulled the rug over the controller and games lying on it)
     const areaRug = new THREE.Mesh(
       new THREE.PlaneGeometry(4.2, 3.2, 8, 8),
-      makePS1Material({ map: rugTex, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 })
+      makePS1Material({ map: rugTex })
     );
     areaRug.rotation.x = -Math.PI / 2;
     areaRug.position.set(-0.2, 0.03, 0.5);
@@ -2583,7 +2548,7 @@
     addSolidWall(1.2, 1.9, 0.24, DOOR_X, 4.55, 7.4);
     const hallRunner = new THREE.Mesh(
       new THREE.PlaneGeometry(0.9, 3.4),
-      makePS1Material({ color: 0x7f1d1d, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 })
+      makePS1Material({ color: 0x7f1d1d })
     );
     hallRunner.rotation.x = -Math.PI / 2;
     hallRunner.position.set(DOOR_X, 0.012, 5.55);
@@ -3432,15 +3397,17 @@
     }
     tvScreenGeo.computeVertexNormals();
     const tvScreenMesh = new THREE.Mesh(tvScreenGeo, tvScreenMat);
-    tvScreenMesh.position.set(0, 1.36, 0.341);
+    // Layered with real depth, never flat sheets stacked a millimetre apart: the PS1 vertex wobble moves a surface's
+    // depth by a centimetre or more at an angle, so stacked sheets took turns winning and the border flickered.
+    // The black tube face is a solid block standing 2.2 cm proud of the bezel, and the picture floats 1.5 cm in
+    // front of that (recessed like a real CRT), so no two surfaces ever share a plane.
+    tvScreenMesh.position.set(0, 1.36, 0.377);
     tvStandGroup.add(tvScreenMesh);
     registerInteractable(tvScreenMesh, 'tv');
-    const tvGlassMask = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.79, 0.60),
-      makePS1Material({ color: 0x07080c, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 })
-    );
-    tvGlassMask.position.set(0, 1.36, 0.3405);
+    const tvGlassMask = new THREE.Mesh(new THREE.BoxGeometry(0.79, 0.60, 0.022), makePS1Material({ color: 0x07080c }));
+    tvGlassMask.position.set(0, 1.36, 0.351); // front face at 0.362, back face hidden inside the bezel
     tvStandGroup.add(tvGlassMask);
+    registerInteractable(tvGlassMask, 'tv');
 
     // Control strip under the screen: speaker slots, brand badge, channel / power buttons, LED, A/V jacks
     for (let i = 0; i < 6; i++) {
@@ -3539,23 +3506,129 @@
     cityBackdrop.receiveShadow = false;
     exteriorWorldGroup.add(cityBackdrop);
 
-    // ---- Sky box: the painted backdrop is the far wall of a closed box. Side walls (painted with the same sky
-    //      and a continuation of the horizon), a sky ceiling and a floor far below close the world in, so no
-    //      angle through the window shows the black void past the edge of the world.
+    // ---- Sky dome: one seamless sphere around the whole world (no flat walls, corners or seams). Back to front:
+    //      the dome (sky colours, sunset glow, stars, Milky Way, lightning, fog) → the sun and moon → a cloud shell
+    //      that drifts → a horizon ring that carries the place's skyline all the way round → the painted backdrop
+    //      out front, which now only holds the skyline / land (its sky is see-through) and fades out at its edges.
     const skyBoxGroup = new THREE.Group();
     scene.add(skyBoxGroup);
-    const sideSkyObj = createCanvasTex(256, 256, () => {});
-    const sideSkyMat = makePS1Material({ map: sideSkyObj.tex, emissive: 0xffffff, emissiveMap: sideSkyObj.tex, emissiveIntensity: 0.75, side: THREE.DoubleSide });
-    [[-11.2], [12.8]].forEach(([x]) => {
-      const wall = new THREE.Mesh(new THREE.PlaneGeometry(13.2, 12, 4, 4), sideSkyMat);
-      wall.position.set(x, 3.6, -9.2);
-      wall.rotation.y = Math.PI / 2;
-      skyBoxGroup.add(wall);
+    const SKY_C = new THREE.Vector3(0.8, 1.0, -4.0);
+    const SKY_R = 26;
+    const SKY_VERT = 'varying vec3 vDir; void main() { vDir = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }';
+    const SKY_AZEL = 'vec3 d = normalize(vDir); float el = asin(clamp(d.y, -1.0, 1.0)); float u = atan(d.x, -d.z) / 6.2831853 + 0.5;';
+    // Stars (red channel) and the Milky Way (green channel) on an equirectangular strip, made once
+    const skyStarObj = createCanvasTex(512, 256, (ctx, w, h) => {
+      ctx.fillStyle = '#000'; ctx.fillRect(0, 0, w, h);
+      const r = makeRng(4242);
+      const vOf = (el) => h - ((el + 0.1) / (Math.PI / 2 + 0.1)) * h;
+      for (let i = 0; i < 900; i++) {
+        const el = Math.asin(0.03 + r() * 0.97), x = r() * w, y = vOf(el), b = 90 + r() * 165;
+        ctx.fillStyle = `rgb(${b | 0},0,0)`; ctx.fillRect(x | 0, y | 0, r() > 0.94 ? 2 : 1, 1);
+      }
+      ctx.globalCompositeOperation = 'lighter';
+      for (let x = 0; x < w; x++) {
+        const c = vOf(0.75 + 0.45 * Math.sin((x / w) * Math.PI * 2 + 1.2));
+        const g = ctx.createLinearGradient(0, c - 14, 0, c + 14);
+        g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(0.5, 'rgba(0,160,0,1)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = g; ctx.fillRect(x, c - 14, 1, 28);
+      }
+      ctx.globalCompositeOperation = 'source-over';
     });
-    const skyCeilMat = new THREE.MeshBasicMaterial({ color: 0x0b1030, side: THREE.DoubleSide });
-    const skyCeil = new THREE.Mesh(new THREE.PlaneGeometry(24.2, 13.2), skyCeilMat);
-    skyCeil.rotation.x = Math.PI / 2; skyCeil.position.set(0.8, 9.58, -9.2);
-    skyBoxGroup.add(skyCeil);
+    const skyDomeU = {
+      top: { value: new THREE.Color(0x0b1030) }, mid: { value: new THREE.Color(0x1a2050) }, hor: { value: new THREE.Color(0x303860) },
+      starTex: { value: skyStarObj.tex }, starAmt: { value: 0 }, milkyAmt: { value: 0 }, time: { value: 0 },
+      glowDir: { value: new THREE.Vector2(0, -1) }, glowAmt: { value: 0 },
+      flash: { value: 0 }, fogAmt: { value: 0 }, fogCol: { value: new THREE.Color(0x8890a0) }, gain: { value: 0.85 }
+    };
+    const skyDome = new THREE.Mesh(new THREE.SphereGeometry(SKY_R, 32, 16), new THREE.ShaderMaterial({
+      uniforms: skyDomeU, vertexShader: SKY_VERT, side: THREE.BackSide, depthWrite: false, fog: false, transparent: true,
+      fragmentShader: `
+        uniform vec3 top, mid, hor, fogCol; uniform sampler2D starTex; uniform vec2 glowDir;
+        uniform float starAmt, milkyAmt, time, glowAmt, flash, fogAmt, gain;
+        varying vec3 vDir;
+        void main() {
+          ${SKY_AZEL}
+          vec3 c = el < 0.03 ? mix(hor, mid, smoothstep(-0.16, 0.03, el)) : mix(mid, top, smoothstep(0.03, 0.36, el));
+          vec2 hz = normalize(d.xz + 1e-5);
+          c = mix(c, vec3(1.0, 0.55, 0.27), glowAmt * pow(max(0.0, dot(hz, glowDir)), 3.0) * (1.0 - smoothstep(-0.05, 0.45, el)));
+          vec4 s = texture2D(starTex, vec2(u, (el + 0.1) / 1.6708));
+          float tw = 0.6 + 0.4 * sin(time * 1.7 + u * 913.0 + el * 377.0);
+          c += vec3(0.9, 0.93, 1.0) * (s.r * starAmt * tw + s.g * milkyAmt);
+          c = mix(c, vec3(0.80, 0.84, 0.88), flash);
+          c = mix(c, fogCol, fogAmt);
+          gl_FragColor = vec4(c * gain, 1.0);
+        }`
+    }));
+    skyDome.position.copy(SKY_C);
+    skyDome.renderOrder = -6;
+    skyBoxGroup.add(skyDome);
+    // Sun and moon: little painted cards stuck to the inside of the dome where the sky puts them
+    const sunCard = createCanvasTex(128, 128, () => {}), moonCard = createCanvasTex(128, 128, () => {});
+    const skyCard = (obj) => {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: obj.tex, transparent: true, depthWrite: false, fog: false }));
+      m.renderOrder = -5; m.visible = false; skyBoxGroup.add(m); return m;
+    };
+    const sunMesh = skyCard(sunCard), moonMesh = skyCard(moonCard);
+    // Clouds: a slightly smaller shell that wraps the shared cloud strip around the sky and slides it with the wind
+    const cloudTex = new THREE.CanvasTexture(cloudLayer);
+    cloudTex.magFilter = THREE.NearestFilter; cloudTex.minFilter = THREE.LinearFilter; cloudTex.generateMipmaps = false;
+    const skyCloudU = { cloudTex: { value: cloudTex }, cloudOff: { value: 0 }, cloudAmt: { value: 0 }, gain: skyDomeU.gain };
+    const skyClouds = new THREE.Mesh(new THREE.SphereGeometry(SKY_R - 1.5, 32, 12, 0, Math.PI * 2, 0, Math.PI * 0.5), new THREE.ShaderMaterial({
+      uniforms: skyCloudU, vertexShader: SKY_VERT, side: THREE.BackSide, depthWrite: false, fog: false, transparent: true,
+      fragmentShader: `
+        uniform sampler2D cloudTex; uniform float cloudOff, cloudAmt, gain; varying vec3 vDir;
+        void main() {
+          ${SKY_AZEL}
+          float v = (el - 0.02) / 0.46;
+          if (v < 0.0 || v > 1.0) discard;
+          vec4 cl = texture2D(cloudTex, vec2(fract(u * 2.0 + cloudOff), v));
+          float a = cl.a * smoothstep(0.0, 0.1, v) * (1.0 - smoothstep(0.8, 1.0, v)) * cloudAmt;
+          gl_FragColor = vec4(cl.rgb * gain, a);
+        }`
+    }));
+    skyClouds.position.copy(SKY_C);
+    skyClouds.renderOrder = -4;
+    skyBoxGroup.add(skyClouds);
+    // Horizon ring: each place's generic skyline, repeated all the way round (sky above it is see-through)
+    const ringObj = createCanvasTex(256, 256, () => {});
+    ringObj.tex.wrapS = THREE.RepeatWrapping; ringObj.tex.repeat.set(8, 1);
+    const sideSkyMat = new THREE.MeshBasicMaterial({ map: ringObj.tex, transparent: true, depthWrite: false, fog: false, side: THREE.BackSide, color: 0xd9d9d9 });
+    const skyRing = new THREE.Mesh(new THREE.CylinderGeometry(SKY_R - 5, SKY_R - 5, 12, 48, 1, true), sideSkyMat);
+    skyRing.position.set(SKY_C.x, 3.6, SKY_C.z);
+    skyRing.renderOrder = -3;
+    skyBoxGroup.add(skyRing);
+    // The painted backdrop now blends over all of that
+    cityBackdrop.material.transparent = true;
+    cityBackdrop.material.depthWrite = false;
+    cityBackdrop.renderOrder = -2;
+    const backdropMask = document.createElement('canvas');
+    backdropMask.width = SKY_W; backdropMask.height = SKY_H;
+    {
+      const mctx = backdropMask.getContext('2d');
+      const img = mctx.createImageData(SKY_W, SKY_H);
+      for (let y = 0; y < SKY_H; y++) for (let x = 0; x < SKY_W; x++) {
+        const fx = Math.min(1, Math.min(x, SKY_W - 1 - x) / (SKY_W * 0.13));
+        const fy = Math.min(1, y / (SKY_H * 0.22));
+        const a = fx * fx * (3 - 2 * fx) * fy * fy * (3 - 2 * fy);
+        img.data[(y * SKY_W + x) * 4 + 3] = (a * 255) | 0;
+      }
+      mctx.putImageData(img, 0, 0);
+    }
+    // Backdrop pixel → where that spot sits on a sphere of radius rr around the dome centre, seen from the default
+    // view (so the sun and moon line up with the window exactly as before). Returns how much to scale sizes by.
+    const skyTmpP = new THREE.Vector3(), skyTmpD = new THREE.Vector3(), skyGlowP = new THREE.Vector3();
+    function backdropToSky(px, py, rr, out) {
+      skyTmpP.set(cityBackdrop.position.x - 12 + (px / SKY_W) * 24, cityBackdrop.position.y + 6 - (py / SKY_H) * 12, cityBackdrop.position.z);
+      const eye = defaultCamPos;
+      const near = skyTmpP.distanceTo(eye);
+      skyTmpD.copy(skyTmpP).sub(eye).normalize();
+      const ox = eye.x - SKY_C.x, oy = eye.y - SKY_C.y, oz = eye.z - SKY_C.z;
+      const b = ox * skyTmpD.x + oy * skyTmpD.y + oz * skyTmpD.z, c = ox * ox + oy * oy + oz * oz - rr * rr;
+      const t = -b + Math.sqrt(Math.max(0, b * b - c));
+      out.copy(eye).addScaledVector(skyTmpD, t);
+      return t / near;
+    }
+    const BACKDROP_PX = 24 / SKY_W; // metres per backdrop pixel
     // Far below (only seen from the skyscraper): the city from above. Drawn without the PS1 wobble (a huge
     // plane seen at a steep angle swims badly with it): streets, blocks of rooftops, parks, moving-car dots
     const abyssObj = createCanvasTex(256, 256, (ctx, w, h) => {
@@ -3578,18 +3651,74 @@
     const abyss = new THREE.Mesh(new THREE.PlaneGeometry(26, 14, 12, 8), abyssMat);
     abyss.rotation.x = -Math.PI / 2; abyss.position.set(0.8, -2.38, -9.6);
     skyBoxGroup.add(abyss);
-    // The side walls get the same sky and a generic stretch of the place's horizon (no sun or moon on them)
+    // The dome, sun, moon and horizon ring follow the time, weather and place (called when the backdrop rebuilds)
     function paintSideSky() {
-      const ctx = sideSkyObj.ctx, w = 256, h = 256;
       const [top, mid, hor] = skyColorsAt(ENV.sunDeg);
-      const sky = ctx.createLinearGradient(0, 0, 0, h * 0.82);
-      sky.addColorStop(0, top); sky.addColorStop(0.6, mid); sky.addColorStop(1, hor);
-      ctx.fillStyle = sky; ctx.fillRect(0, 0, w, h);
-      skyCeilMat.color.set(top);
-      if (W.cloud > 0.04) { ctx.globalAlpha = 0.9; ctx.drawImage(cloudLayer, 0, 0, cloudLayer.width / 2, cloudLayer.height, 0, 0, w, cloudLayer.height); ctx.globalAlpha = 1; }
-      if (typeof paintSideHorizon === 'function') paintSideHorizon(ctx, w, h);
-      sideSkyObj.tex.needsUpdate = true;
+      skyDomeU.top.value.set(top); skyDomeU.mid.value.set(mid); skyDomeU.hor.value.set(hor);
       const night = 1 - ENV.daylight;
+      const clearSky = Math.max(0, 1 - W.cloud * 1.15);
+      skyDomeU.starAmt.value = night > 0.35 ? night * clearSky * (ENV.skyStyle === 'meteor' ? 1 : 0.75) : 0;
+      skyDomeU.milkyAmt.value = night > 0.85 && clearSky > 0.5 ? 0.09 * clearSky * (ENV.skyStyle === 'meteor' ? 1.8 : 1) : 0;
+      // Sunrise / sunset glow pooled on the sun's side of the horizon
+      skyDomeU.glowAmt.value = ENV.twilight > 0.02 && ENV.skyStyle !== 'vapor' ? 0.55 * ENV.twilight * (1 - W.cloud * 0.6) : 0;
+      const gx = skyBodies.sunX > -90 ? skyBodies.sunX : (ENV.morning ? 40 : SKY_W - 40);
+      backdropToSky(gx, SKY_H * 0.72, SKY_R, skyGlowP);
+      skyDomeU.glowDir.value.set(skyGlowP.x - SKY_C.x, skyGlowP.z - SKY_C.z).normalize();
+      skyCloudU.cloudAmt.value = W.cloud > 0.04 ? 1 : 0;
+      cloudTex.needsUpdate = true;
+      // Sun
+      sunMesh.visible = ENV.sunDeg > -2 && skyBodies.sunY > -30;
+      if (sunMesh.visible) {
+        const ctx = sunCard.ctx, k = 64 / 70;
+        const low = 1 - smooth(0, 20, ENV.sunDeg);
+        const vis = Math.max(0.15, 1 - W.cloud * 0.9);
+        ctx.clearRect(0, 0, 128, 128);
+        const halo = ctx.createRadialGradient(64, 64, 4 * k, 64, 64, 64);
+        halo.addColorStop(0, `rgba(255, ${(210 - low * 90) | 0}, ${(150 - low * 100) | 0}, ${0.7 * vis})`);
+        halo.addColorStop(1, 'rgba(255, 180, 90, 0)');
+        ctx.fillStyle = halo; ctx.fillRect(0, 0, 128, 128);
+        ctx.globalAlpha = vis;
+        if (ENV.skyStyle === 'vapor') {
+          const sg = ctx.createLinearGradient(0, 64 - 22 * k, 0, 64 + 22 * k);
+          sg.addColorStop(0, '#ffe66d'); sg.addColorStop(1, '#ff4fa3');
+          ctx.fillStyle = sg; ctx.beginPath(); ctx.arc(64, 64, 22 * k, 0, Math.PI * 2); ctx.fill();
+          ctx.globalCompositeOperation = 'destination-out';
+          for (let i = 0; i < 6; i++) ctx.fillRect(64 - 24 * k, 64 + (2 + i * 4) * k, 48 * k, (1 + i * 0.5) * k);
+          ctx.globalCompositeOperation = 'source-over';
+        } else {
+          ctx.fillStyle = `rgb(255, ${(245 - low * 110) | 0}, ${(215 - low * 160) | 0})`;
+          ctx.beginPath(); ctx.ellipse(64, 64, (12 + low * 4) * k, (12 + low * 2) * k, 0, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+        sunCard.tex.needsUpdate = true;
+        const s = backdropToSky(skyBodies.sunX, skyBodies.sunY, SKY_R - 0.8, sunMesh.position);
+        sunMesh.scale.setScalar(140 * BACKDROP_PX * s);
+        sunMesh.lookAt(SKY_C);
+      }
+      // Moon (with tonight's phase)
+      moonMesh.visible = skyBodies.moonY > -30 && ENV.moonEl > -0.05;
+      if (moonMesh.visible) {
+        const ctx = moonCard.ctx, k = 64 / 46;
+        const vis = Math.max(0.12, 1 - W.cloud * 0.85) * (1 - ENV.daylight * 0.75);
+        const blood = ENV.skyStyle === 'blood';
+        ctx.clearRect(0, 0, 128, 128);
+        const halo = ctx.createRadialGradient(64, 64, 4 * k, 64, 64, 64);
+        halo.addColorStop(0, blood ? `rgba(255, 70, 40, ${0.55 * vis})` : `rgba(200, 220, 255, ${0.45 * vis * (0.3 + ENV.moonIllum * 0.7)})`);
+        halo.addColorStop(1, 'rgba(200, 220, 255, 0)');
+        ctx.fillStyle = halo; ctx.fillRect(0, 0, 128, 128);
+        ctx.globalAlpha = vis;
+        drawMoonDisc(ctx, 64, 64, (blood ? 15 : 11) * k, blood ? 0.5 : ENV.moonPhase, blood ? '#d9472b' : '#e8eefc', 'rgba(40, 50, 80, 0.55)');
+        ctx.globalAlpha = 1;
+        moonCard.tex.needsUpdate = true;
+        const s = backdropToSky(skyBodies.moonX, skyBodies.moonY, SKY_R - 0.9, moonMesh.position);
+        moonMesh.scale.setScalar(92 * BACKDROP_PX * s);
+        moonMesh.lookAt(SKY_C);
+      }
+      // Horizon ring: the place's generic skyline
+      const rctx = ringObj.ctx;
+      rctx.clearRect(0, 0, 256, 256);
+      if (typeof paintSideHorizon === 'function') paintSideHorizon(rctx, 256, 256);
+      ringObj.tex.needsUpdate = true;
       abyssMat.color.setRGB(0.25 + 0.6 * ENV.daylight, 0.27 + 0.6 * ENV.daylight, 0.32 + 0.6 * ENV.daylight); // darker at night (the car lights stay)
     }
 
@@ -6117,17 +6246,20 @@
     scene.add(gtaShelf);
     const shelfWood = makePS1Material({ map: woodTex, color: 0x9a7a62 });
     const SHELF_Y = [3.12, 2.62, 2.12];
+    // Shallow boards with a low lip and the brackets out at the very ends, so nothing sits in front of the cases
+    const SHELF_DEPTH = 0.13;
+    const matShelfBracket = makePS1Material({ color: 0x2b2b30 });
     SHELF_Y.forEach((y) => {
-      const board = new THREE.Mesh(new THREE.BoxGeometry(1.34, 0.035, 0.2, 4, 1, 1), shelfWood);
-      board.position.set(0, y, 0.1);
+      const board = new THREE.Mesh(new THREE.BoxGeometry(1.34, 0.035, SHELF_DEPTH, 4, 1, 1), shelfWood);
+      board.position.set(0, y, SHELF_DEPTH / 2);
       board.castShadow = true; board.receiveShadow = true;
       gtaShelf.add(board);
-      const lip = new THREE.Mesh(new THREE.BoxGeometry(1.34, 0.05, 0.012), shelfWood);
-      lip.position.set(0, y + 0.03, 0.195);
+      const lip = new THREE.Mesh(new THREE.BoxGeometry(1.34, 0.016, 0.01), shelfWood);
+      lip.position.set(0, y + 0.025, SHELF_DEPTH - 0.005);
       gtaShelf.add(lip);
-      [-0.55, 0.55].forEach((bx) => {
-        const bracket = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.12, 0.16), makePS1Material({ color: 0x2b2b30 }));
-        bracket.position.set(bx, y - 0.075, 0.08);
+      [-0.655, 0.655].forEach((bx) => {
+        const bracket = new THREE.Mesh(new THREE.BoxGeometry(0.022, 0.1, SHELF_DEPTH - 0.02), matShelfBracket);
+        bracket.position.set(bx, y - 0.0675, (SHELF_DEPTH - 0.02) / 2);
         gtaShelf.add(bracket);
       });
     });
@@ -6139,7 +6271,7 @@
         ctx.fillText('THE COLLECTION', w / 2, 12);
       }).tex
     }));
-    plaque.position.set(0, SHELF_Y[0] - 0.045, 0.2);
+    plaque.position.set(0, SHELF_Y[0] - 0.045, SHELF_DEPTH - 0.01);
     gtaShelf.add(plaque);
     const GTA_FIRST_INDEX = PS1_GAMES.length + 1; // after the PS1 shelf games and the case beside the console
     GTA_GAMES.forEach((game, j) => {
@@ -6147,8 +6279,8 @@
       const row = Math.floor(j / 4), col = j % 4;
       const mesh = game.platform === 'ps1' ? buildPs1JewelCase(game, `gamebox:${gi}`) : buildKeepCase(game, `gamebox:${gi}`);
       const hgt = game.platform === 'ps1' ? 0.24 : mesh.userData.caseHeight;
-      const lean = 0.1;
-      mesh.position.set(-0.48 + col * 0.32, SHELF_Y[row] + 0.018 + (hgt / 2) * Math.cos(lean), 0.03 + (hgt / 2) * Math.sin(lean));
+      const lean = 0.08;
+      mesh.position.set(-0.48 + col * 0.32, SHELF_Y[row] + 0.018 + (hgt / 2) * Math.cos(lean), 0.022 + (hgt / 2) * Math.sin(lean));
       mesh.rotation.set(-lean, (col % 2 ? 0.03 : -0.025), 0);
       gtaShelf.add(mesh);
       GAME_CASE_MESHES[gi] = mesh;
@@ -7561,44 +7693,60 @@
       bedGroup.add(finialBall);
     });
 
-    // 90s Digital LED Alarm Clock ("03:14") & Hardcover Book inside the Headboard Cubby
-    const clockBody = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.10, 0.12, 2, 1, 1), matDarkPlastic);
-    clockBody.position.set(-0.78, 1.56, -2.12);
-    clockBody.rotation.y = 0.15;
+    // 90s jumbo LED clock radio on the nightstand, turned toward the default view so it's readable from there.
+    // Chunky 7-segment digits drawn pixel by pixel so they stay sharp at PS1 resolution.
+    const CLOCK_NS = new THREE.Vector3(1.2 - 2.85, 0.62, -2.47 + 0.45); // nightstand top, in bedGroup space
+    const clockBody = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.18, 0.14, 2, 1, 1), matDarkPlastic);
+    clockBody.position.set(CLOCK_NS.x, CLOCK_NS.y + 0.09, CLOCK_NS.z);
+    clockBody.rotation.y = -0.11;
     clockBody.castShadow = true;
     bedGroup.add(clockBody);
+    registerInteractable(clockBody, 'clock');
 
     // The alarm clock shows the room's time (redrawn once a minute from the app heartbeat)
-    const alarmClockObj = createCanvasTex(64, 32, () => {});
+    const alarmClockObj = createCanvasTex(64, 24, () => {});
     const alarmClockTex = alarmClockObj.tex;
     let alarmClockShown = '';
+    const SEG = { 0: 'abcdef', 1: 'bc', 2: 'abged', 3: 'abgcd', 4: 'fgbc', 5: 'afgcd', 6: 'afgedc', 7: 'abc', 8: 'abcdefg', 9: 'abcdfg' };
+    function drawSegDigit(ctx, ch, x, y, on, off) {
+      const w = 11, h = 18, t = 3, segs = ch === ' ' ? '' : SEG[ch];
+      const rects = { a: [t, 0, w - 2 * t, t], b: [w - t, t, t, h / 2 - t], c: [w - t, h / 2 + 1, t, h / 2 - t - 1], d: [t, h - t, w - 2 * t, t], e: [0, h / 2 + 1, t, h / 2 - t - 1], f: [0, t, t, h / 2 - t], g: [t, h / 2 - 1, w - 2 * t, t] };
+      Object.entries(rects).forEach(([k, [rx, ry, rw, rh]]) => { ctx.fillStyle = segs.includes(k) ? on : off; ctx.fillRect(x + rx, y + ry, rw, rh); });
+    }
     function drawAlarmClock(hour) {
       const hh = Math.floor(hour) % 24, mm = Math.floor((hour % 1) * 60);
       let focusing = false;
       try { focusing = focus.mode !== 'off'; } catch (err) { /* the focus timer isn't set up on the very first draw */ }
       const text = focusing ? focusLeftText() : `${String(((hh + 11) % 12) + 1).padStart(2, ' ')}:${String(mm).padStart(2, '0')}`;
-      if (text === alarmClockShown) return;
-      alarmClockShown = text;
+      let alarmSet = false;
+      try { alarmSet = alarm.on; } catch (err) { /* the alarm isn't set up on the very first draw */ }
+      const key = text + (hh >= 12 ? 'p' : 'a') + (alarmSet ? '!' : '');
+      if (key === alarmClockShown) return;
+      alarmClockShown = key;
       const ctx = alarmClockObj.ctx;
-      ctx.fillStyle = '#090406';
-      ctx.fillRect(0, 0, 64, 32);
-      ctx.fillStyle = focusing ? (focus.phase === 'work' ? '#4ade80' : '#60a5fa') : '#ef4444';
-      ctx.font = 'bold 18px "Courier New", monospace';
-      ctx.fillText(text, 6, 22);
-      if (hh >= 12) ctx.fillRect(3, 8, 3, 3); // PM indicator dot
+      const on = focusing ? (focus.phase === 'work' ? '#4ade80' : '#60a5fa') : '#ff3b30';
+      const off = '#1c0a0a';
+      ctx.fillStyle = '#080304';
+      ctx.fillRect(0, 0, 64, 24);
+      const digits = text.replace(':', '');
+      [6, 19, 35, 48].forEach((x, i) => drawSegDigit(ctx, digits[i], x, 3, on, off));
+      ctx.fillStyle = on; ctx.fillRect(31, 7, 2, 2); ctx.fillRect(31, 15, 2, 2); // colon
+      ctx.fillStyle = hh >= 12 && !focusing ? on : off; ctx.fillRect(1, 3, 3, 3);  // PM dot
+      ctx.fillStyle = alarmSet && !focusing ? on : off; ctx.fillRect(1, 15, 3, 3);   // alarm dot
       alarmClockTex.needsUpdate = true;
     }
     drawAlarmClock(3 + 14 / 60);
     const clockFace = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.19, 0.068),
+      new THREE.PlaneGeometry(0.4, 0.15),
       makePS1Material({
-        map: alarmClockTex, emissive: 0xef4444, emissiveMap: alarmClockTex, emissiveIntensity: 0.95,
+        map: alarmClockTex, emissive: 0xffffff, emissiveMap: alarmClockTex, emissiveIntensity: 1.0,
         polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2
       })
     );
-    clockFace.position.set(-0.77, 1.565, -2.058);
-    clockFace.rotation.y = 0.15;
+    clockFace.position.set(CLOCK_NS.x + Math.sin(-0.11) * 0.071, CLOCK_NS.y + 0.095, CLOCK_NS.z + Math.cos(-0.11) * 0.071);
+    clockFace.rotation.y = -0.11;
     bedGroup.add(clockFace);
+    registerInteractable(clockFace, 'clock');
 
     // Bedtime Novel & Walkman Cassette Player on Headboard Ledge
     const bedBook = new THREE.Mesh(
@@ -7876,13 +8024,18 @@
 
     for (let b = 0; b < 4; b++) {
       const angle = (b * Math.PI) / 2;
-      const iron = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.018, 0.07), matFanBrass);
-      iron.position.set(Math.cos(angle) * 0.24, 0.0, Math.sin(angle) * 0.24);
+      // Blade iron: a short arm out of the motor that bends up into the blade
+      const iron = new THREE.Group();
+      iron.position.set(Math.cos(angle) * 0.2, 0, Math.sin(angle) * 0.2);
       iron.rotation.y = -angle;
       fanBladesGroup.add(iron);
+      const ironPart = (w, h, d, x, y, z, mat = matFanBrass) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); m.castShadow = true; iron.add(m); registerInteractable(m, 'fanspin'); };
+      ironPart(0.16, 0.02, 0.06, 0.08, -0.03, 0);        // arm out of the motor
+      ironPart(0.03, 0.04, 0.06, 0.16, -0.03, 0);        // bend up under the blade
 
       const blade = new THREE.Mesh(new THREE.BoxGeometry(1.12, 0.024, 0.23, 3, 1, 1), matWood);
-      blade.position.set(Math.cos(angle) * 0.68, 0.01, Math.sin(angle) * 0.68);
+      blade.position.set(Math.cos(angle) * 0.68, 0.0, Math.sin(angle) * 0.68);
+      blade.rotation.order = 'YXZ'; // pitch around the blade's own length, so all four blades sit the same way on their irons
       blade.rotation.y = -angle;
       blade.rotation.x = 0.08;
       blade.castShadow = true;
@@ -8530,17 +8683,20 @@
     let audioBuilding = false;
 
     // User volume multipliers (0.0 to 1.5) from the Soundscape Mixer
+    // Default mix (1.4, measured from the default view): the room's own TV now sits clearly above the muffled one
+    // down the hall, the fan and AC sit under the rain, and music on the boombox is the loudest thing in the room
+    const MIX_VERSION = 2;
     const volMultipliers = {
       pc: 0.75,
-      fan: 0.80,
-      ac: 0.75,
-      livtv: 0.85,
-      bedtv: 0.75,
+      fan: 0.70,
+      ac: 0.65,
+      livtv: 0.35,
+      bedtv: 1.00,
       pcspk: 0.75,
-      weather: 1.00,
-      nature: 0.75,
-      sfx: 0.85,
-      radio: 0.8
+      weather: 0.90,
+      nature: 0.80,
+      sfx: 0.80,
+      radio: 0.90
     };
 
     const SND = { spots: [], birdNext: 0, lastFanRev: 0, nextFoghorn: 0, lastSpatial: 0, pcActive: null, tvActive: null };
@@ -9426,7 +9582,7 @@
         const v = x * 2, a = Math.abs(v), knee = 0.7;
         return a <= knee ? v : Math.sign(v) * (knee + (1 - knee) * Math.tanh((a - knee) / (1 - knee)));
       }, 4096);
-      SND.softClip.oversample = '4x';
+      SND.softClip.oversample = IS_TOUCH ? '2x' : '4x'; // 2x is plenty on phones and halves the clipper's cost
       SND.trim = new Tone.Gain(0.85);
       SND.master.chain(SND.comp, SND.limiter, SND.trim, SND.clipIn, SND.softClip, Tone.getDestination());
 
@@ -9448,7 +9604,7 @@
       SND.windowLevel.connect(winSend);
       winSend.connect(SND.verbIn);
       // Long outdoor reverb for distant horns, owls and thunder
-      SND.farVerb = new Tone.Reverb({ decay: 3.2, preDelay: 0.03, wet: 1 });
+      SND.farVerb = new Tone.Reverb({ decay: IS_TOUCH ? 2.2 : 3.2, preDelay: 0.03, wet: 1 }); // shorter tail = much cheaper convolution on phones
       await SND.farVerb.generate();
       SND.farIn = new Tone.Gain(1);
       SND.farIn.chain(SND.farVerb, new Tone.Gain(0.55), SND.outdoor);
@@ -9567,9 +9723,10 @@
       SND.rain = new Tone.Gain(0);
       SND.rain.connect(SND.weatherBus);
       gate(new Tone.Noise('pink'), SND.rain).chain(filt({ frequency: 500, type: 'highpass' }), filt({ frequency: 7500, type: 'lowpass' }), new Tone.Gain(1.0), SND.rain);
-      const drops = new Tone.Player(makeTickBuffer(4, 160, 0.002, 0.008, 2.2));
+      // More, quieter drops: the same patter with far lower peaks (the old loud ticks hit 0 dBFS and slammed the limiter)
+      const drops = new Tone.Player(makeTickBuffer(4, 260, 0.002, 0.008, 2.2));
       drops.loop = true;
-      drops.chain(filt({ frequency: 3200, type: 'bandpass', Q: 0.5 }), new Tone.Gain(1.8), SND.rain);
+      drops.chain(filt({ frequency: 3200, type: 'bandpass', Q: 0.5 }), new Tone.Gain(0.85), SND.rain);
       gate(drops, SND.rain);
       // Rain on the window glass: a close, soft patter right at the window (inside the room, not muffled by it)
       SND.glassSpot = makeSpot(new THREE.Vector3(0.8, 2.6, -2.9), { ref: 1.8, verb: 0.12, level: volMultipliers.weather });
@@ -10872,6 +11029,9 @@
         cycleStringLights();
       } else if (tag === 'lamp') {
         toggleLamp();
+      } else if (tag === 'clock') {
+        playSfx('ui');
+        openMenu('timer'); // sleep timer, focus timer and the sunrise alarm live here
       } else if (tag === 'boombox' || tag === 'bbscreen') {
         cycleRadio();
       } else if (tag === 'dresser') {
@@ -10997,8 +11157,29 @@
     });
 
     // ---------------- CHANGELOG (newest first; add a new entry at the top for every release) ----------------
-    const APP_VERSION = '1.3';
+    const APP_VERSION = '1.3.5';
     const CHANGELOG = [
+      { v: '1.3.5', name: 'Clear Skies', sections: {
+        Added: [
+          'WALL CALENDAR: the real month with today circled, past days crossed off, and its own pixel-art picture every month',
+          'TAP THE TOP BAR: time, temperature, season and weather step to the next option, plus a new location button. Hold any of them for the World menu',
+          'ACHIEVEMENTS unlock with a trophy card, pixel confetti and a fanfare, different for each one',
+          "PS1 LOOK ON YOUTUBE (Menu > Display): the video wobbles with the TV and gets the room's chunky pixels"
+        ],
+        Changed: [
+          'NEW SKY: one seamless dome around the whole world, with the sun, moon, stars and clouds all the way round',
+          'A big LED clock radio on the nightstand, readable from the default view (tap it for the timers and alarm)',
+          'New default sound mix: your TV louder than the one down the hall, softer rain peaks. Layer volumes reset once',
+          'Performance: 20 fps after 2 minutes untouched, fewer window redraws, lighter audio on phones'
+        ],
+        Fixed: [
+          'Ceiling fan brackets, game shelf covering the games, box fan inside the wall, handheld clipping the clock',
+          'Achievement card peeking out on the title screen',
+          "FLICKER: the PS1 wobble no longer makes layered things fight (TV border, posters, album cover, the rug, house windows outside), and small far-away things (the controller, games on the floor, windows) no longer vanish",
+          'Distant textures shimmering',
+          'Jagged edges around YouTube on the TV'
+        ]
+      } },
       { v: '1.3', name: 'Goodnight, Jasper', sections: {
         Added: [
           'SLEEP MODE: one tap turns the lights down, starts the fan, puts you in bed with Jasper curled up beside you, and fades everything out in 45 minutes',
@@ -11494,8 +11675,10 @@
     function currentFpsCap(nowMs) {
       if (fpsCap <= 10) return fpsCap; // sleeping
       const base = fpsChoice === 'auto' ? fpsCap : +fpsChoice;
-      const idle = ecoIdle && nowMs - lastInteractAt > 12000 && playerMode !== 'walk' && !photoModeActive();
-      return idle ? Math.min(base, qualityMode === 'saver' ? 20 : 30) : base;
+      const idleFor = ecoIdle && playerMode !== 'walk' && !photoModeActive() ? nowMs - lastInteractAt : 0;
+      // Idle ambience doesn't need 60 fps: 30 after 12 s untouched, then a PS1-like 20 after 2 minutes (keeps phones cool)
+      if (idleFor > 120000) return Math.min(base, qualityMode === 'saver' ? 15 : 20);
+      return idleFor > 12000 ? Math.min(base, qualityMode === 'saver' ? 20 : 30) : base;
     }
     // ---- Automatic quality: this app runs for hours, so it must never just get slower and stay slow.
     // If the real frame rate sits well under the target for 20 s (heat throttling on a phone that's been
@@ -11577,7 +11760,7 @@
         updateBedroomTvScreen(t);
         lastTvUpdate = t;
       }
-      if (t - lastSkylineUpdate > (inView(SPHERE_WINDOW) ? 0.22 : 2.5)) {
+      if (t - lastSkylineUpdate > (inView(SPHERE_WINDOW) ? 0.33 : 2.5)) {
         updateCitySkyline(t);
         lastSkylineUpdate = t;
       }
@@ -11836,9 +12019,12 @@
     };
     const wallPicture = (drawFn, w, h, x, y, z, rotY, weather) => {
       const tex = createCanvasTex(64, Math.round(64 * h / w), drawFn, 1, 1, weather).tex;
-      const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), makePS1Material({ map: tex, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 }));
+      // A strong slope-scaled offset plus 1 cm off the wall: the PS1 vertex snap shifts the wall's depth by more than a
+      // couple of centimetres at grazing angles, which made far-away art flicker and clip into the wall
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), makePS1Material({ map: tex, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }));
       m.position.set(x, y, z);
       m.rotation.y = rotY;
+      m.translateZ(0.01);
       scene.add(m);
       return m;
     };
@@ -11866,13 +12052,15 @@
       propPart(boomboxGroup, new THREE.CylinderGeometry(0.1, 0.1, 0.02, 14), makePS1Material({ color: 0x111317 }), 0.1, 0.14, sz, 'boombox').rotation.z = Math.PI / 2;
       propPart(boomboxGroup, new THREE.CylinderGeometry(0.035, 0.035, 0.025, 10), makePS1Material({ color: 0x6b7280 }), 0.105, 0.14, sz).rotation.z = Math.PI / 2;
     });
-    propPart(boomboxGroup, new THREE.BoxGeometry(0.02, 0.1, 0.18), makePS1Material({ color: 0x4b5563 }), 0.1, 0.13, 0, 'boombox');
+    // Cassette deck: its own front face shows the album cover when there is one (no separate sheet in front to flicker)
+    const cassetteDeckMat = makePS1Material({ color: 0x4b5563 });
+    const cassetteDeck = propPart(boomboxGroup, new THREE.BoxGeometry(0.03, 0.1, 0.18), [cassetteDeckMat, cassetteDeckMat, cassetteDeckMat, cassetteDeckMat, cassetteDeckMat, cassetteDeckMat], 0.1, 0.13, 0, 'bbscreen'); // front at 0.115: clear of the speaker rings (their faces are at 0.11)
     propPart(boomboxGroup, new THREE.BoxGeometry(0.04, 0.04, 0.5), matBoombox, 0, 0.34, 0);
     [-0.24, 0.24].forEach((hz) => propPart(boomboxGroup, new THREE.BoxGeometry(0.04, 0.06, 0.03), matBoombox, 0, 0.31, hz));
     const boomAntenna = propPart(boomboxGroup, new THREE.CylinderGeometry(0.005, 0.005, 0.5, 4), makePS1Material({ color: 0xd1d5db }), -0.05, 0.5, 0.26);
     boomAntenna.rotation.x = -0.4;
     const radioDisplayMat = makePS1Material({ color: 0x1e3a2a, emissive: 0x22c55e, emissiveIntensity: 0.05 });
-    propPart(boomboxGroup, new THREE.BoxGeometry(0.012, 0.035, 0.14), radioDisplayMat, 0.105, 0.245, 0);
+    const radioDisplay = propPart(boomboxGroup, new THREE.BoxGeometry(0.012, 0.035, 0.14), [radioDisplayMat, radioDisplayMat, radioDisplayMat, radioDisplayMat, radioDisplayMat, radioDisplayMat], 0.105, 0.245, 0, 'bbscreen');
     // Photo frame, trophy, and a band poster above the dresser
     const photo = propPart(dresserGroup, new THREE.BoxGeometry(0.03, 0.22, 0.17), makePS1Material({ color: 0x1f2937 }), -0.1, 1.54, 0.5);
     photo.rotation.z = 0.12;
@@ -11924,7 +12112,7 @@
     lampLight.position.set(1.07, 1.02, -2.65);
     scene.add(lampLight);
     let lampOn = false;
-    const water = propPart(nightstandGroup, new THREE.CylinderGeometry(0.035, 0.03, 0.11, 8), makePS1Material({ color: 0xbfdbfe, transparent: true, opacity: 0.55 }), 0.14, 0.675, 0.08);
+    const water = propPart(nightstandGroup, new THREE.CylinderGeometry(0.035, 0.03, 0.11, 8), makePS1Material({ color: 0xbfdbfe, transparent: true, opacity: 0.55 }), -0.21, 0.675, 0.17); // beside the lamp, clear of the clock
     water.castShadow = false;
     propPart(nightstandGroup, new THREE.BoxGeometry(0.16, 0.035, 0.22), makePS1Material({ color: 0x1d4ed8 }), 0.1, 0.638, -0.1).rotation.y = 0.3;
 
@@ -11972,20 +12160,128 @@
     [-0.1, 0.1].forEach((sx) => propPart(backpack, new THREE.BoxGeometry(0.04, 0.4, 0.025), makePS1Material({ color: 0x0b1f1e }), sx, 0.26, -0.1)); // shoulder straps flat against its back
     propPart(backpack, new THREE.BoxGeometry(0.12, 0.03, 0.03), makePS1Material({ color: 0x0b1f1e }), 0, 0.5, 0); // carry handle
 
-    // ---- Calendar (October 2001) on the left wall by the desk, movie poster over the bed
-    wallPicture((ctx, w, h) => {
-      ctx.fillStyle = '#f5f5f4'; ctx.fillRect(0, 0, w, h);
-      ctx.fillStyle = '#1d4ed8'; ctx.fillRect(0, 0, w, h * 0.45);
-      ctx.fillStyle = '#dc2626'; ctx.fillRect(10, 18, 40, 10);
-      ctx.fillStyle = '#111827'; ctx.fillRect(14, 28, 8, 5); ctx.fillRect(38, 28, 8, 5);
-      ctx.fillStyle = '#111827'; ctx.font = 'bold 6px sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText('OCTOBER 2001', w / 2, h * 0.45 + 8);
-      for (let r = 0; r < 5; r++) for (let c = 0; c < 7; c++) {
-        const x = 3 + c * 8.4, y = h * 0.45 + 12 + r * 7;
-        ctx.strokeStyle = '#9ca3af'; ctx.strokeRect(x, y, 8, 6);
-        if (r * 7 + c < 15) { ctx.strokeStyle = '#dc2626'; ctx.beginPath(); ctx.moveTo(x + 1, y + 1); ctx.lineTo(x + 7, y + 5); ctx.moveTo(x + 7, y + 1); ctx.lineTo(x + 1, y + 5); ctx.stroke(); }
+    // ---- Wall calendar on the left wall by the desk: today's month (laid out like 2001), days crossed off up to
+    // today, and a little pixel-art picture for every month. Redraws itself when the date changes.
+    const CAL_MONTHS = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'];
+    const calPx = (ctx, c, x, y, w = 1, h = 1) => { ctx.fillStyle = c; ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h)); };
+    const CAL_ART = [
+      (ctx, w, h) => { // January: snowman in the snow
+        calPx(ctx, '#1e3a8a', 0, 0, w, h); calPx(ctx, '#e0f2fe', 0, h - 18, w, 18);
+        for (let i = 0; i < 40; i++) calPx(ctx, '#ffffff', (i * 37) % w, (i * 23) % (h - 18), 2, 2);
+        calPx(ctx, '#f8fafc', 50, 44, 28, 26); calPx(ctx, '#f8fafc', 54, 26, 20, 19);
+        calPx(ctx, '#0f172a', 58, 32, 3, 3); calPx(ctx, '#0f172a', 67, 32, 3, 3); calPx(ctx, '#f97316', 63, 36, 6, 2);
+        calPx(ctx, '#dc2626', 52, 44, 24, 4); calPx(ctx, '#111827', 52, 23, 24, 3); calPx(ctx, '#111827', 56, 10, 16, 13);
+      },
+      (ctx, w, h) => { // February: hearts
+        calPx(ctx, '#fbcfe8', 0, 0, w, h);
+        const heart = (x, y, s, c) => { calPx(ctx, c, x, y, 2 * s, 2 * s); calPx(ctx, c, x + 3 * s, y, 2 * s, 2 * s); calPx(ctx, c, x - s, y + s, 7 * s, 2 * s); calPx(ctx, c, x, y + 3 * s, 5 * s, s); calPx(ctx, c, x + s, y + 4 * s, 3 * s, s); calPx(ctx, c, x + 2 * s, y + 5 * s, s, s); };
+        heart(46, 18, 7, '#dc2626'); heart(12, 12, 3, '#ec4899'); heart(98, 50, 3, '#ec4899'); heart(18, 58, 2, '#be185d'); heart(104, 10, 2, '#be185d');
+      },
+      (ctx, w, h) => { // March: kite over green hills
+        calPx(ctx, '#7dd3fc', 0, 0, w, h); calPx(ctx, '#4ade80', 0, h - 22, w, 22); calPx(ctx, '#16a34a', 0, h - 12, w, 12);
+        for (let i = 0; i < 14; i++) { calPx(ctx, '#facc15', 70 - i, 8 + i, 2 * i + 1, 1); calPx(ctx, '#ef4444', 70 - (14 - i), 22 + i, 2 * (14 - i) + 1, 1); }
+        for (let i = 0; i < 30; i++) calPx(ctx, '#334155', 70 - i * 0.6, 36 + i, 1, 1);
+        [[64, 44], [59, 54], [55, 62]].forEach(([x, y]) => calPx(ctx, '#2563eb', x, y, 4, 2));
+      },
+      (ctx, w, h) => { // April: umbrella in the rain
+        calPx(ctx, '#64748b', 0, 0, w, h);
+        for (let i = 0; i < 50; i++) calPx(ctx, '#bfdbfe', (i * 29) % w, (i * 17) % h, 1, 4);
+        for (let r = 0; r < 14; r++) calPx(ctx, r % 2 ? '#facc15' : '#f97316', 64 - r * 2.2, 16 + r, r * 4.4 + 1, 1);
+        calPx(ctx, '#1f2937', 63, 30, 2, 34); calPx(ctx, '#1f2937', 58, 62, 7, 2); calPx(ctx, '#1f2937', 57, 58, 2, 5);
+      },
+      (ctx, w, h) => { // May: flowers
+        calPx(ctx, '#bae6fd', 0, 0, w, h); calPx(ctx, '#22c55e', 0, h - 16, w, 16);
+        [[20, '#f472b6'], [48, '#facc15'], [76, '#a78bfa'], [104, '#fb923c']].forEach(([x, c], i) => {
+          const y = 22 + (i % 2) * 10; calPx(ctx, '#15803d', x, y + 6, 2, h - y - 6);
+          calPx(ctx, c, x - 5, y, 12, 6); calPx(ctx, c, x - 2, y - 4, 6, 14); calPx(ctx, '#fef08a', x - 1, y + 1, 4, 4);
+        });
+      },
+      (ctx, w, h) => { // June: sun over the beach
+        calPx(ctx, '#38bdf8', 0, 0, w, h); calPx(ctx, '#2563eb', 0, h - 28, w, 10); calPx(ctx, '#fde68a', 0, h - 18, w, 18);
+        calPx(ctx, '#facc15', 50, 8, 28, 28); calPx(ctx, '#fde047', 46, 14, 36, 16);
+        for (let i = 0; i < 8; i++) calPx(ctx, '#ffffff', i * 16 + 4, h - 27, 6, 1);
+        calPx(ctx, '#7c2d12', 96, h - 34, 2, 22); for (let r = 0; r < 7; r++) calPx(ctx, r % 2 ? '#ffffff' : '#ef4444', 97 - r * 3, h - 40 + r, r * 6 + 1, 1);
+      },
+      (ctx, w, h) => { // July: fireworks
+        calPx(ctx, '#0b1026', 0, 0, w, h);
+        [[34, 26, '#ef4444'], [90, 22, '#60a5fa'], [62, 50, '#facc15']].forEach(([cx, cy, c]) => {
+          for (let a = 0; a < 12; a++) { const an = a / 12 * Math.PI * 2; for (let r = 4; r < 16; r += 3) calPx(ctx, c, cx + Math.cos(an) * r, cy + Math.sin(an) * r, 2, 2); }
+          calPx(ctx, '#ffffff', cx - 1, cy - 1, 3, 3);
+        });
+      },
+      (ctx, w, h) => { // August: ice cream cone
+        calPx(ctx, '#fde68a', 0, 0, w, h);
+        for (let i = 0; i < 30; i++) calPx(ctx, (i >> 2) % 2 ? '#b45309' : '#d97706', 50 + i * 0.47, 40 + i, 28 - i * 0.94, 1);
+        calPx(ctx, '#f9a8d4', 46, 22, 36, 20); calPx(ctx, '#fbcfe8', 50, 12, 28, 12); calPx(ctx, '#dc2626', 62, 5, 5, 7);
+        calPx(ctx, '#60a5fa', 54, 24, 2, 2); calPx(ctx, '#34d399', 72, 28, 2, 2); calPx(ctx, '#facc15', 62, 34, 2, 2); calPx(ctx, '#a78bfa', 58, 16, 2, 2);
+      },
+      (ctx, w, h) => { // September: apple and pencil, back to school
+        calPx(ctx, '#166534', 0, 0, w, h); calPx(ctx, '#78350f', 0, h - 10, w, 10);
+        calPx(ctx, '#dc2626', 22, 26, 30, 30); calPx(ctx, '#dc2626', 18, 32, 38, 18); calPx(ctx, '#7c2d12', 36, 18, 3, 9); calPx(ctx, '#22c55e', 39, 18, 8, 4);
+        calPx(ctx, '#facc15', 70, 34, 40, 10); calPx(ctx, '#fca5a5', 110, 34, 6, 10); calPx(ctx, '#fde68a', 62, 36, 8, 6); calPx(ctx, '#111827', 58, 38, 4, 2);
+        ctx.fillStyle = '#f8fafc'; ctx.font = 'bold 10px monospace'; ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.fillText('ABC', 74, 12);
+      },
+      (ctx, w, h) => { // October: jack-o'-lantern under the moon
+        calPx(ctx, '#1e1b4b', 0, 0, w, h); calPx(ctx, '#fef3c7', 98, 8, 14, 14); calPx(ctx, '#1e1b4b', 104, 6, 10, 12);
+        calPx(ctx, '#ea580c', 40, 28, 48, 34); calPx(ctx, '#f97316', 46, 24, 36, 42); calPx(ctx, '#166534', 62, 16, 5, 9);
+        calPx(ctx, '#facc15', 50, 34, 8, 6); calPx(ctx, '#facc15', 70, 34, 8, 6); calPx(ctx, '#facc15', 52, 48, 24, 5); calPx(ctx, '#f97316', 58, 48, 4, 2); calPx(ctx, '#f97316', 68, 51, 4, 2);
+        [[14, 14], [26, 24]].forEach(([x, y]) => { calPx(ctx, '#0b0b0f', x, y, 8, 2); calPx(ctx, '#0b0b0f', x - 3, y - 2, 3, 2); calPx(ctx, '#0b0b0f', x + 8, y - 2, 3, 2); });
+      },
+      (ctx, w, h) => { // November: falling leaves
+        calPx(ctx, '#fef3c7', 0, 0, w, h); calPx(ctx, '#92400e', 0, h - 8, w, 8);
+        [[18, 14, '#dc2626'], [52, 30, '#f59e0b'], [88, 12, '#ea580c'], [100, 46, '#b45309'], [30, 50, '#ca8a04'], [70, 56, '#dc2626']].forEach(([x, y, c]) => {
+          calPx(ctx, c, x, y, 10, 6); calPx(ctx, c, x + 3, y - 3, 4, 12); calPx(ctx, '#78350f', x + 4, y + 9, 2, 4);
+        });
+      },
+      (ctx, w, h) => { // December: tree with lights
+        calPx(ctx, '#0f172a', 0, 0, w, h); for (let i = 0; i < 30; i++) calPx(ctx, '#ffffff', (i * 41) % w, (i * 19) % h, 1, 1);
+        for (let r = 0; r < 45; r++) { const half = (r % 15) * 1.6 + Math.floor(r / 15) * 4 + 1; calPx(ctx, r % 15 < 2 ? '#14532d' : '#16a34a', 64 - half, 14 + r, half * 2, 1); }
+        calPx(ctx, '#78350f', 60, 59, 8, 9); calPx(ctx, '#facc15', 61, 7, 6, 6);
+        [[56, 26, '#ef4444'], [70, 34, '#60a5fa'], [50, 46, '#facc15'], [76, 52, '#ef4444'], [64, 40, '#f472b6'], [58, 54, '#60a5fa']].forEach(([x, y, c]) => calPx(ctx, c, x, y, 3, 3));
       }
-    }, 0.55, 0.85, -3.715, 2.55, -0.15, Math.PI / 2, { seed: 103, blotch: 0.15, warm: 0.2, creases: 1 });
+    ];
+    const calendarDay = () => { const d = new Date(); return { m: d.getMonth(), day: d.getDate() }; };
+    function drawCalendar(ctx, w, h) {
+      const { m, day } = calendarDay();
+      const artH = Math.round(h * 0.4);
+      ctx.fillStyle = '#f5f5f4'; ctx.fillRect(0, 0, w, h);
+      ctx.save(); ctx.beginPath(); ctx.rect(4, 5, w - 8, artH - 5); ctx.clip(); ctx.translate(4, 5); ctx.scale((w - 8) / 128, (artH - 5) / 76);
+      CAL_ART[m](ctx, 128, 76); ctx.restore();
+      [w * 0.3, w * 0.7].forEach((x) => { ctx.fillStyle = '#6b7280'; ctx.fillRect(x - 2, 0, 4, 4); }); // binding holes
+      ctx.fillStyle = '#b91c1c'; ctx.font = 'bold 13px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(CAL_MONTHS[m] + ' 2001', w / 2, artH + 11);
+      const first = new Date(2001, m, 1).getDay(), days = new Date(2001, m + 1, 0).getDate();
+      const gx = 4, gy = artH + 22, cw = (w - 8) / 7, chh = (h - gy - 4) / 7;
+      ctx.font = 'bold 8px monospace'; ctx.fillStyle = '#374151';
+      'SMTWTFS'.split('').forEach((l, c) => ctx.fillText(l, gx + c * cw + cw / 2, gy + chh / 2));
+      ctx.font = 'bold 9px monospace';
+      for (let i = 0; i < 42; i++) {
+        const r = Math.floor(i / 7) + 1, c = i % 7, x = gx + c * cw, y = gy + r * chh, dn = i - first + 1;
+        ctx.strokeStyle = '#d1d5db'; ctx.lineWidth = 1; ctx.strokeRect(Math.round(x) + 0.5, Math.round(y) + 0.5, Math.round(cw) - 1, Math.round(chh) - 1);
+        if (dn < 1 || dn > days) continue;
+        ctx.fillStyle = dn === day ? '#b91c1c' : '#1f2937'; ctx.fillText(String(dn), x + cw / 2, y + chh / 2 + 1);
+        if (dn < day) { ctx.strokeStyle = 'rgba(220,38,38,0.8)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x + 2, y + 2); ctx.lineTo(x + cw - 2, y + chh - 2); ctx.moveTo(x + cw - 2, y + 2); ctx.lineTo(x + 2, y + chh - 2); ctx.stroke(); }
+        if (dn === day) { ctx.strokeStyle = '#dc2626'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(x + cw / 2, y + chh / 2, cw / 2 - 1, chh / 2 - 1, 0, 0, Math.PI * 2); ctx.stroke(); }
+      }
+    }
+    const CAL_WEATHER = { seed: 103, blotch: 0.12, warm: 0.15, creases: 1 };
+    const calendarTex = createCanvasTex(128, 198, drawCalendar, 1, 1, CAL_WEATHER);
+    const calendarMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.55, 0.85), makePS1Material({ map: calendarTex.tex, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }));
+    calendarMesh.position.set(-3.715, 2.55, -0.15);
+    calendarMesh.rotation.y = Math.PI / 2;
+    calendarMesh.translateZ(0.01);
+    scene.add(calendarMesh);
+    let calendarKey = '';
+    function refreshCalendar() {
+      const { m, day } = calendarDay(), k = m + '/' + day;
+      if (k === calendarKey) return;
+      calendarKey = k;
+      drawCalendar(calendarTex.ctx, 128, 198); weatherCanvas(calendarTex.ctx, 128, 198, CAL_WEATHER); calendarTex.tex.needsUpdate = true;
+    }
+    calendarKey = calendarDay().m + '/' + calendarDay().day;
+    setInterval(refreshCalendar, 60000);
+
+    // ---- Movie poster over the bed
     wallPicture((ctx, w, h) => {
       ctx.fillStyle = '#020617'; ctx.fillRect(0, 0, w, h);
       ctx.fillStyle = '#22c55e';
@@ -12160,8 +12456,8 @@
 
     // Handheld game console (purple, horizontal) on the nightstand
     const gba = new THREE.Group();
-    gba.position.set(1.32, 0.64, -2.42);
-    gba.rotation.y = -0.4;
+    gba.position.set(1.25, 0.656, -2.73); // resting on the book behind the clock radio
+    gba.rotation.y = 0.15;
     scene.add(gba);
     const gbaTex = createCanvasTex(64, 32, (ctx, w, h) => {
       ctx.fillStyle = '#5b3fa8'; ctx.fillRect(0, 0, w, h);
@@ -12256,11 +12552,13 @@
     dogPart(dogBody, 0.3, 0.09, 0.5, dogDark, 0, 0.135, -0.07);          // black saddle
     dogPart(dogBody, 0.22, 0.2, 0.06, dogCream, 0, -0.03, 0.43);         // chest bib
     dogPart(dogBody, 0.2, 0.05, 0.46, dogCream, 0, -0.14, 0.0);          // belly
-    dogPart(dogBody, 0.18, 0.28, 0.18, dogTan, 0, 0.2, 0.42, -0.42);    // neck
-    dogPart(dogBody, 0.2, 0.04, 0.2, makePS1Material({ color: 0xb91c1c }), 0, 0.12, 0.47, -0.42); // collar
+    // Neck leans forward from the shoulders into the head, both ends buried (inside the chest and the skull).
+    // It used to lean back, so its top corner stuck out behind his head and cut through the back of his skull.
+    dogPart(dogBody, 0.17, 0.34, 0.17, dogTan, 0, 0.245, 0.43, 0.72);   // neck
+    dogPart(dogBody, 0.2, 0.04, 0.2, makePS1Material({ color: 0xb91c1c }), 0, 0.2, 0.39, 0.72); // collar
     const tagTex = createCanvasTex(8, 8, (ctx) => { ctx.fillStyle = '#d4a017'; ctx.fillRect(1, 1, 6, 6); ctx.fillStyle = '#8a6a10'; ctx.fillRect(3, 3, 2, 2); }).tex;
     tagTex.magFilter = THREE.NearestFilter;
-    dogPart(dogBody, 0.05, 0.05, 0.012, makePS1Material({ map: tagTex, color: 0xffffff }), 0, 0.06, 0.53);
+    dogPart(dogBody, 0.05, 0.05, 0.012, makePS1Material({ map: tagTex, color: 0xffffff }), 0, 0.105, 0.485); // tag hanging from the collar
     // Head: block skull, cheeks, snout with a black mask and nose, upright ears
     const dogHead = new THREE.Group();
     dogHead.position.set(0, 0.33, 0.52);
@@ -12957,7 +13255,8 @@
     const card = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.18, 0.01), makePS1Material({ color: 0xff8fab }));
     card.position.set(-1.0, 1.58, -1.25); card.rotation.set(-0.15, 0.5, 0); decor.valentine.add(card);
     // Summer: a box fan on the floor, blades spinning
-    const boxFan = new THREE.Group(); boxFan.position.set(-0.9, 0, 2.95); boxFan.rotation.y = Math.PI * 0.9; decor.summer.add(boxFan);
+    const boxFan = new THREE.Group(); boxFan.position.set(-0.9, 0, 2.6); // clear of the front wall (its face is at z 2.9)
+    boxFan.rotation.y = Math.PI * 0.9; decor.summer.add(boxFan);
     const frame = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.55, 0.12), makePS1Material({ color: 0xe5e7eb })); frame.position.y = 0.3; boxFan.add(frame);
     const grille = new THREE.Mesh(new THREE.CircleGeometry(0.24, 16), makePS1Material({ color: 0x374151 })); grille.position.set(0, 0.3, 0.062); boxFan.add(grille);
     const fanBlades = new THREE.Group(); fanBlades.position.set(0, 0.3, 0.07); boxFan.add(fanBlades);
@@ -13492,12 +13791,7 @@
     const cassetteTex = new THREE.CanvasTexture(cassetteCanvas);
     cassetteTex.magFilter = THREE.NearestFilter; cassetteTex.minFilter = THREE.NearestFilter;
     const cassetteMat = makePS1Material({ color: 0xffffff, map: cassetteTex, emissive: 0xffffff, emissiveMap: cassetteTex, emissiveIntensity: 0.25 });
-    const cassetteWin = new THREE.Mesh(new THREE.PlaneGeometry(0.15, 0.085), cassetteMat);
-    cassetteWin.position.set(0.112, 0.13, 0);
-    cassetteWin.rotation.y = Math.PI / 2;
-    cassetteWin.visible = false;
-    boomboxGroup.add(cassetteWin);
-    registerInteractable(cassetteWin, 'bbscreen'); // own tag: keeps it out of static batching so it can change
+    const setCassetteArt = (on) => { cassetteDeck.material[0] = on ? cassetteMat : cassetteDeckMat; }; // +X face = front of the deck
     // A CD jewel case stands on the dresser with the cover of whatever's playing, big enough to see from bed
     const jewelCanvas = document.createElement('canvas');
     jewelCanvas.width = 128; jewelCanvas.height = 128;
@@ -13511,23 +13805,20 @@
     const jewelTilt = new THREE.Group();
     jewelTilt.rotation.x = -0.22; // leaning back on its little stand
     jewelCase.add(jewelTilt);
-    const jewelBack = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.18, 0.014), makePS1Material({ color: 0x1b1d22 }));
+    // The cover is the case's own front face (one solid box), not a picture and a gloss sheet stacked a millimetre
+    // in front of it, which flickered with the PS1 vertex wobble. The spine stands a little proud as the hinge.
+    const jewelDark = makePS1Material({ color: 0x1b1d22 });
+    const jewelCover = makePS1Material({ color: 0xffffff, map: jewelTex, emissive: 0xffffff, emissiveMap: jewelTex, emissiveIntensity: 0.12 });
+    const jewelBack = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.18, 0.014), [jewelDark, jewelDark, jewelDark, jewelDark, jewelCover, jewelDark]);
     jewelBack.position.set(0, 0.09, -0.008);
     jewelTilt.add(jewelBack);
-    const jewelSpine = new THREE.Mesh(new THREE.BoxGeometry(0.014, 0.18, 0.016), makePS1Material({ color: 0x0b0c0f }));
-    jewelSpine.position.set(-0.1, 0.09, -0.007);
+    const jewelSpine = new THREE.Mesh(new THREE.BoxGeometry(0.016, 0.18, 0.026), makePS1Material({ color: 0x0b0c0f }));
+    jewelSpine.position.set(-0.104, 0.09, -0.006);
     jewelTilt.add(jewelSpine);
-    const jewelCover = new THREE.Mesh(new THREE.PlaneGeometry(0.18, 0.17),
-      makePS1Material({ color: 0xffffff, map: jewelTex, emissive: 0xffffff, emissiveMap: jewelTex, emissiveIntensity: 0.12 }));
-    jewelCover.position.set(0.006, 0.09, 0.0);
-    jewelTilt.add(jewelCover);
-    const jewelGloss = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.18), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.07, depthWrite: false }));
-    jewelGloss.position.set(0, 0.09, 0.002);
-    jewelTilt.add(jewelGloss);
     const jewelFoot = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.012, 0.05), makePS1Material({ color: 0x1b1d22 }));
     jewelFoot.position.set(0, 0.006, -0.02);
     jewelCase.add(jewelFoot);
-    [jewelBack, jewelSpine, jewelCover, jewelFoot].forEach((m) => { m.castShadow = true; m.receiveShadow = true; registerInteractable(m, 'bbscreen'); });
+    [jewelBack, jewelSpine, jewelFoot].forEach((m) => { m.castShadow = true; m.receiveShadow = true; registerInteractable(m, 'bbscreen'); });
     jewelCase.visible = false;
 
     // Every place the cover shows up in the room: the jewel case, the cassette window and (if picked) the poster
@@ -13545,7 +13836,7 @@
     function updateCassetteArt() {
       const t = MP.current;
       if (!t || !nowArtUrl) {
-        cassetteWin.visible = false;
+        setCassetteArt(false);
         jewelCase.visible = false;
         worldArtImg = null;
         if (posterChoice === 'album') setPoster('album', true);
@@ -13561,7 +13852,7 @@
         const s = Math.min(img.width, img.height);
         ctx.drawImage(img, (img.width - s) / 2, (img.height - s * 0.57) / 2, s, s * 0.57, 0, 0, 64, 64);
         cassetteTex.needsUpdate = true;
-        cassetteWin.visible = true;
+        setCassetteArt(true);
         const jc = jewelCanvas.getContext('2d');
         jc.drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, 128, 128);
         jewelTex.needsUpdate = true;
@@ -13576,11 +13867,7 @@
     const lcdTex = new THREE.CanvasTexture(lcdCanvas);
     lcdTex.magFilter = THREE.NearestFilter; lcdTex.minFilter = THREE.NearestFilter;
     const lcdMat = makePS1Material({ color: 0x0b1a10, map: lcdTex, emissive: 0xffffff, emissiveMap: lcdTex, emissiveIntensity: 0.9 });
-    const lcdMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.135, 0.032), lcdMat);
-    lcdMesh.position.set(0.112, 0.245, 0);
-    lcdMesh.rotation.y = Math.PI / 2;
-    boomboxGroup.add(lcdMesh);
-    registerInteractable(lcdMesh, 'bbscreen');
+    radioDisplay.material[0] = lcdMat; // the scrolling song name is the display's own front face (no sheet in front to flicker)
     let lcdScroll = 0;
     let lastLcdText = '';
     function drawBoomboxLcd() {
@@ -15817,7 +16104,7 @@
       if (fpsChoice === '120') showToast('⚡ 120 FPS: buttery smooth on 120 Hz screens. Uses more battery.');
     }));
     $('chk-eco-idle').addEventListener('change', (e) => { ecoIdle = e.target.checked; saveSettingsSoon(); });
-    $('alarm-on').addEventListener('change', (e) => { alarm.on = e.target.checked; store13.set('alarm', alarm); showToast(alarm.on ? `⏰ Sunrise alarm set for ${alarm.time}` : '⏰ Alarm off'); });
+    $('alarm-on').addEventListener('change', (e) => { alarm.on = e.target.checked; store13.set('alarm', alarm); drawAlarmClock(ENV.hour); showToast(alarm.on ? `⏰ Sunrise alarm set for ${alarm.time}` : '⏰ Alarm off'); });
     $('alarm-time').addEventListener('change', (e) => { alarm.time = e.target.value || '07:00'; store13.set('alarm', alarm); });
     $('alarm-music').addEventListener('change', (e) => { alarm.music = e.target.checked; store13.set('alarm', alarm); });
     ['coat', 'dark', 'light'].forEach((p) => $('jasper-' + p).addEventListener('input', (e) => { applyJasperColors({ [p]: e.target.value, preset: 'custom' }); refreshMenu(); saveSettingsSoon(); }));
@@ -15907,8 +16194,51 @@
     function updateStatusChip() {
       const icon = ENV.daylight > 0.5 ? (W.cloud > 0.6 ? '☁️' : '☀️') : (ENV.daylight > 0.05 ? '🌅' : '🌙');
       $('status-time').textContent = `${icon} ${formatHour(ENV.hour)}`;
-      $('status-weather').textContent = `${formatTemp(currentTempC())} · ${currentSeason[0].toUpperCase()}${currentSeason.slice(1)} · ${W.label}`;
+      $('sb-temp').textContent = formatTemp(currentTempC());
+      $('sb-season').textContent = currentSeason[0].toUpperCase() + currentSeason.slice(1);
+      $('sb-weather').textContent = W.label;
+      const place = OUTSIDE_ENVS[outsideEnv] || OUTSIDE_ENVS.city;
+      $('sb-place').textContent = `${place.icon} ${place.name.replace(/ \(.*\)$/, '')}`;
     }
+    // Status bar buttons: each tap steps to the next option (with a toast); holding one opens the World menu
+    const nextOf = (list, cur) => list[(list.indexOf(cur) + 1) % list.length];
+    const STATUS_STEPS = {
+      'sb-time': () => {
+        const cur = ENV.timeMode === 'preset' ? (TIME_PRESETS.find(([, fn]) => Math.abs(((fn() % 24) + 24) % 24 - ENV.presetHour) < 0.02) || [''])[0] : 'live';
+        const next = nextOf(['live', ...TIME_PRESETS.map(([n]) => n)], cur);
+        if (next === 'live') { setTimeMode('live'); playSfx('ui'); showToast(`🕰 LIVE CLOCK · ${formatHour(ENV.hour)}`); } else setTimePreset(next);
+      },
+      'sb-temp': () => { tempUnit = tempUnit === 'F' ? 'C' : 'F'; refreshMenu(); playSfx('ui'); pushAndroidState(); showToast(`🌡 ${formatTemp(currentTempC())}`); },
+      'sb-season': () => {
+        const next = nextOf(['live', 'spring', 'summer', 'fall', 'winter'], ENV.seasonMode === 'live' ? 'live' : currentSeason);
+        setSeasonChoice(next);
+        showToast(next === 'live' ? `🍂 SEASON: AUTO (${currentSeason.toUpperCase()})` : `🍂 SEASON: ${next.toUpperCase()}`);
+      },
+      'sb-weather': () => {
+        const kinds = Object.keys(WEATHER_KINDS);
+        const list = ENV.cityName ? [...kinds, 'live'] : kinds;
+        const next = nextOf(list, ENV.weatherMode === 'live' ? 'live' : ENV.weatherKind);
+        if (next === 'live') { setWeatherMode('live'); playSfx('ui'); showToast(`🌦 LIVE WEATHER · ${ENV.cityName}`); return; }
+        ENV.weatherMode = 'manual';
+        setWeatherKind(next);
+      },
+      'sb-place': () => setOutsideEnv(nextOf(Object.keys(OUTSIDE_ENVS), outsideEnv))
+    };
+    Object.keys(STATUS_STEPS).forEach((id) => {
+      const el = $(id);
+      let holdTimer = null, held = false;
+      el.addEventListener('pointerdown', () => { held = false; holdTimer = setTimeout(() => { held = true; playSfx('ui'); openMenu('world'); }, 550); });
+      ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => el.addEventListener(ev, () => clearTimeout(holdTimer)));
+      el.addEventListener('contextmenu', (e) => e.preventDefault());
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (held) return;
+        STATUS_STEPS[id]();
+        saveSettingsSoon();
+        updateStatusChip();
+        el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 180);
+      });
+    });
 
     // ---------- Saved settings ----------
     const SETTINGS_KEY = 'ps1bedroom.settings.v1';
@@ -15923,7 +16253,7 @@
         blinds: blindsOpenState, fanLight: fanLightOn, fanSpin: fanSpinning, ac: acUnitOn, lamp: lampOn, string: stringLightsMode,
         tv: bedroomTvOn, tvCh: bedroomTvChannel === PS1_TV_CHANNEL ? 0 : bedroomTvChannel, pcCh: currentChannel, radio: radioStation,
         livingTv: livingRoomTvOn, door: doorOpen, lava: currentLavaIdx,
-        vol: { ...volMultipliers }, master: masterVolume, quality: qualityMode, vibe: vibeMode, res: resShort,
+        vol: { ...volMultipliers }, mixVer: MIX_VERSION, master: masterVolume, quality: qualityMode, vibe: vibeMode, res: resShort,
         jitter: jitterBase, affine: ps1Uniforms.uAffineStrength.value, dither: postMaterial.uniforms.uDitherStrength.value,
         volumetric: userVolumetricSetting, sway: swayAmount, ao: aoBase,
         tempUnit, fpsChoice, ecoIdle,
@@ -15971,7 +16301,8 @@
         for (let i = 0; i < (s.radio || 0); i++) cycleRadio();
         if (s.livingTv === false && livingRoomTvOn) toggleLivingRoomTv();
         if (s.door && !doorOpen && HALLWAY_ENABLED) toggleDoor();
-        if (s.vol) Object.keys(volMultipliers).forEach((k) => {
+        // Layer volumes saved before the 1.4 mix start fresh on the new defaults (master volume is kept)
+        if (s.vol && s.mixVer === MIX_VERSION) Object.keys(volMultipliers).forEach((k) => {
           if (typeof s.vol[k] !== 'number') return;
           volMultipliers[k] = s.vol[k];
           const el = $(`ctrl-vol-${k}`), lab = $(`val-vol-${k}`);
@@ -16609,11 +16940,22 @@
       const css = document.createElement('style');
       css.textContent = `
         #yt-layer { position: fixed; inset: 0; pointer-events: none; z-index: 6; overflow: hidden; }
-        #yt-screen { position: absolute; left: 0; top: 0; width: 640px; height: 480px; transform-origin: 0 0; pointer-events: auto; background: #000;
-          display: none; border-radius: 26px / 30px; overflow: hidden; }
-        #yt-screen iframe { width: 100%; height: 100%; border: 0; display: block; filter: saturate(1.12) contrast(1.05) brightness(0.96); }
-        #yt-screen .scan { position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
+        /* The layer covers the TV's whole black glass (so the low-res 3D mask never peeks out in jagged bits) and
+           draws its own smooth black rim, with the picture inset like a real CRT */
+        #yt-screen { position: absolute; left: 0; top: 0; width: 640px; height: 480px; transform-origin: 0 0; pointer-events: auto; background: #040405;
+          display: none; border-radius: 14px; overflow: hidden; }
+        #yt-screen iframe, #yt-screen .scan, #yt-screen .px { position: absolute; left: 3.6%; top: 3.6%; width: 92.8%; height: 92.8%; border-radius: 28px / 32px; }
+        #yt-screen iframe { border: 0; display: block; filter: saturate(1.12) contrast(1.05) brightness(0.96); }
+        #yt-screen .scan { pointer-events: none;
           background: repeating-linear-gradient(rgba(0,0,0,0.14) 0 2px, transparent 2px 4px); box-shadow: inset 0 0 70px rgba(0,0,0,0.7), inset 0 0 8px rgba(0,0,0,0.8); }
+        /* PS1 look (Menu > Display): a pixel grid the size of the room's own pixels, chunkier scanlines and punchier colour */
+        #yt-screen { --px: 6px; }
+        #yt-screen .px { pointer-events: none; display: none;
+          background-image: linear-gradient(90deg, rgba(0,0,0,0.2) 1px, transparent 1px), linear-gradient(rgba(0,0,0,0.2) 1px, transparent 1px);
+          background-size: var(--px) var(--px); mix-blend-mode: multiply; }
+        #yt-screen.ps1 .px { display: block; }
+        #yt-screen.ps1 iframe { filter: saturate(1.3) contrast(1.14) brightness(0.95) blur(0.35px); }
+        #yt-screen.ps1 .scan { background: repeating-linear-gradient(rgba(0,0,0,0.2) 0 calc(var(--px) / 2), transparent calc(var(--px) / 2) var(--px)); }
         #yt-layer.full { z-index: 45; background: #000; pointer-events: auto; }
         #yt-layer.full #yt-screen { transform: none !important; left: var(--safe-l); top: var(--safe-t); right: var(--safe-r); bottom: var(--safe-b);
           width: auto; height: auto; border-radius: 10px; display: block; }
@@ -16642,7 +16984,7 @@
       document.head.appendChild(css);
       const layer = document.createElement('div');
       layer.id = 'yt-layer';
-      layer.innerHTML = '<div id="yt-screen"><div class="scan"></div></div>';
+      layer.innerHTML = '<div id="yt-screen"><div class="scan"></div><div class="px"></div></div>';
       document.body.appendChild(layer);
       const bar = document.createElement('div');
       bar.id = 'yt-bar';
@@ -16781,7 +17123,17 @@
       const basis = (p) => { const m = [p[0], p[2], p[4], p[1], p[3], p[5], 1, 1, 1]; const v = mulMV(adj(m), [p[6], p[7], 1]); return mulMM(m, [v[0], 0, 0, 0, v[1], 0, 0, 0, v[2]]); };
       const SRC = basis([0, 0, 640, 0, 0, 480, 640, 480]);
       const SRC_ADJ = adj(SRC);
-      const corners = [new THREE.Vector3(-0.37, 0.28, 0.006), new THREE.Vector3(0.37, 0.28, 0.006), new THREE.Vector3(-0.37, -0.28, 0.006), new THREE.Vector3(0.37, -0.28, 0.006)];
+      // The whole black tube face (tvGlassMask's front, 0.79 x 0.60, 1.5 cm behind the picture's base)
+      const corners = [new THREE.Vector3(-0.395, 0.3, -0.015), new THREE.Vector3(0.395, 0.3, -0.015), new THREE.Vector3(-0.395, -0.3, -0.015), new THREE.Vector3(0.395, -0.3, -0.015)];
+      let ytPs1 = true; // on unless turned off in Menu > Display
+      try { const v = localStorage.getItem('ps1bedroom.ytPs1'); if (v !== null) ytPs1 = v === '1'; } catch (err) { /* private mode */ }
+      const applyYtPs1 = () => { screenEl.classList.toggle('ps1', ytPs1); const c = g('chk-yt-ps1'); if (c) c.checked = ytPs1; };
+      applyYtPs1();
+      const chkYtPs1 = g('chk-yt-ps1');
+      if (chkYtPs1) chkYtPs1.addEventListener('change', (e) => {
+        ytPs1 = e.target.checked; applyYtPs1(); playSfx('ui');
+        try { localStorage.setItem('ps1bedroom.ytPs1', ytPs1 ? '1' : '0'); } catch (err) { /* private mode */ }
+      });
       const tmp = new THREE.Vector3(), centre = new THREE.Vector3(), normal = new THREE.Vector3(), toCam = new THREE.Vector3();
       const nMat = new THREE.Matrix3();
       window.ytPlaceOverlay = function () {
@@ -16800,10 +17152,21 @@
           const vw = tmp.clone().applyMatrix4(camera.matrixWorldInverse);
           if (vw.z > -0.05) { show = false; break; } // behind the camera
           tmp.project(camera);
+          if (ytPs1) {
+            // Snap the corners exactly like the PS1 vertex shader snaps the TV around it, so they wobble together
+            const jg = ps1Uniforms.uJitterGrid.value, jk = Math.max(1, -vw.z * 0.5); // same distance scaling as the shader
+            tmp.x = Math.floor(jg.x * jk * tmp.x + 0.5) / (jg.x * jk);
+            tmp.y = Math.floor(jg.y * jk * tmp.y + 0.5) / (jg.y * jk);
+          }
           pts.push(rect.left + (tmp.x + 1) / 2 * rect.width, rect.top + (1 - tmp.y) / 2 * rect.height);
         }
         screenEl.style.display = show ? 'block' : 'none';
         if (!show) return;
+        if (ytPs1) {
+          // One grid cell per pixel of the room's low-res picture
+          const widthInRoomPx = Math.max(8, (Math.hypot(pts[2] - pts[0], pts[3] - pts[1]) / rect.width) * internalW);
+          screenEl.style.setProperty('--px', `${(640 / widthInRoomPx).toFixed(2)}px`);
+        }
         const t = mulMM(basis(pts), SRC_ADJ);
         for (let i = 0; i < 9; i++) t[i] /= t[8];
         screenEl.style.transform = `matrix3d(${t[0]},${t[3]},0,${t[6]},${t[1]},${t[4]},0,${t[7]},0,0,1,0,${t[2]},${t[5]},0,${t[8]})`;
@@ -16841,12 +17204,105 @@
       minesweeper: ['💣', 'Sweeper', 'Win a game of Minesweeper']
     };
     const unlocked = store13.get('achievements', {});
+    // Achievement unlocked: a trophy card drops in with a shine sweep and a burst of pixel confetti, and a little
+    // fanfare plays. Every achievement gets its own colour, icon move and tune (picked from its id), so each one
+    // feels like its own moment.
+    const achHash = (id) => { let h = 7; for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return h; };
+    const ACH_MOVES = ['ach-spin', 'ach-bounce', 'ach-wobble', 'ach-flip'];
+    const ACH_SCALE = ['C', 'D', 'E', 'G', 'A'];
+    (() => {
+      const st = document.createElement('style');
+      st.textContent = `
+        #ach-pop { position: fixed; left: 50%; top: calc(14px + var(--safe-t, 0px)); z-index: 60; transform: translate(-50%, calc(-100% - 140px)); visibility: hidden; opacity: 0;
+          display: flex; align-items: center; gap: 12px; padding: 10px 18px 10px 12px; min-width: 240px; max-width: calc(100vw - 32px);
+          background: linear-gradient(180deg, #1a1f45, #0c1030); border: 2px solid var(--ach, #ffd23f); border-radius: 14px;
+          box-shadow: 0 0 0 2px #05071a, 0 0 22px var(--ach, #ffd23f), inset 0 0 18px rgba(255,255,255,0.06);
+          font-family: "Courier New", monospace; color: #fff; pointer-events: none; overflow: hidden; }
+        #ach-pop.show { visibility: visible; animation: ach-drop 4.2s cubic-bezier(.2,.9,.3,1.2) forwards; }
+        #ach-pop .ic { font-size: 30px; width: 44px; height: 44px; display: grid; place-items: center; border-radius: 10px;
+          background: radial-gradient(circle, var(--ach, #ffd23f) 0%, transparent 70%); }
+        #ach-pop .tx small { display: block; font-size: 9px; letter-spacing: 3px; color: var(--ach, #ffd23f); }
+        #ach-pop .tx b { display: block; font-size: 14px; letter-spacing: 1px; margin: 2px 0; }
+        #ach-pop .tx em { display: block; font-style: normal; font-size: 10px; color: #aab3e6; }
+        #ach-pop .shine { position: absolute; top: 0; bottom: 0; width: 40%; left: -60%;
+          background: linear-gradient(100deg, transparent, rgba(255,255,255,0.35), transparent); }
+        #ach-pop.show .shine { animation: ach-shine 1.1s 0.5s ease-out; }
+        #ach-pop.show .ic.ach-spin { animation: ach-spin 0.9s 0.35s ease-out; }
+        #ach-pop.show .ic.ach-bounce { animation: ach-bounce 0.9s 0.35s ease-out; }
+        #ach-pop.show .ic.ach-wobble { animation: ach-wobble 0.9s 0.35s ease-in-out; }
+        #ach-pop.show .ic.ach-flip { animation: ach-flip 0.9s 0.35s ease-out; }
+        .ach-px { position: fixed; z-index: 61; width: 6px; height: 6px; pointer-events: none; image-rendering: pixelated;
+          animation: ach-burst 1.1s ease-out forwards; }
+        @keyframes ach-drop { 0% { transform: translate(-50%, calc(-100% - 140px)); opacity: 1; } 10% { transform: translate(-50%, 0); opacity: 1; } 85% { transform: translate(-50%, 0); opacity: 1; } 100% { transform: translate(-50%, calc(-100% - 140px)); opacity: 0; } }
+        @keyframes ach-shine { to { left: 130%; } }
+        @keyframes ach-spin { 0% { transform: scale(0.3) rotate(-200deg); } 70% { transform: scale(1.3) rotate(15deg); } 100% { transform: scale(1) rotate(0); } }
+        @keyframes ach-bounce { 0% { transform: translateY(-30px) scale(0.5); } 40% { transform: translateY(0) scale(1.25, 0.8); } 60% { transform: translateY(-10px) scale(0.95, 1.1); } 100% { transform: none; } }
+        @keyframes ach-wobble { 0%, 100% { transform: none; } 20% { transform: rotate(-18deg) scale(1.3); } 40% { transform: rotate(14deg) scale(1.2); } 60% { transform: rotate(-9deg); } 80% { transform: rotate(5deg); } }
+        @keyframes ach-flip { 0% { transform: perspective(200px) rotateY(0) scale(0.6); } 60% { transform: perspective(200px) rotateY(540deg) scale(1.3); } 100% { transform: perspective(200px) rotateY(720deg) scale(1); } }
+        @keyframes ach-burst { 0% { transform: translate(0, 0) scale(1); opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) scale(0.4) rotate(var(--r)); opacity: 0; } }
+        @media (prefers-reduced-motion: reduce) { #ach-pop.show { animation-duration: 0.01s, 4.2s; } .ach-px { display: none; } }`;
+      document.head.appendChild(st);
+      const pop = document.createElement('div');
+      pop.id = 'ach-pop';
+      pop.innerHTML = '<div class="ic"></div><div class="tx"><small>ACHIEVEMENT UNLOCKED</small><b></b><em></em></div><div class="shine"></div>';
+      document.body.appendChild(pop);
+    })();
+    let achSynth = null;
+    function playAchievementJingle(h) {
+      if (!audioReady || !SND.master) return;
+      try {
+        if (!achSynth) {
+          achSynth = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'square' }, envelope: { attack: 0.004, decay: 0.12, sustain: 0.25, release: 0.35 } });
+          achSynth.chain(new Tone.Gain(0.09), SND.master);
+          achSynth.sparkle = new Tone.Synth({ oscillator: { type: 'triangle' }, envelope: { attack: 0.002, decay: 0.08, sustain: 0, release: 0.1 } });
+          achSynth.sparkle.chain(new Tone.Gain(0.07), SND.master);
+        }
+        const now = Tone.now() + 0.05;
+        const key = ['C', 'D', 'F', 'G'][h % 4];
+        const tr = (note, oct) => Tone.Frequency(`${note}${oct}`).transpose({ C: 0, D: 2, F: 5, G: 7 }[key]).toNote();
+        // Shared rising fanfare, then a two-note tail that's different for every achievement
+        [['C', 4, 0], ['E', 4, 0.09], ['G', 4, 0.18], ['C', 5, 0.27]].forEach(([n, o, dt]) => achSynth.triggerAttackRelease(tr(n, o), 0.09, now + dt));
+        const a = ACH_SCALE[(h >>> 3) % 5], b = ACH_SCALE[(h >>> 6) % 5];
+        achSynth.triggerAttackRelease(tr(a, 5), 0.12, now + 0.42);
+        achSynth.triggerAttackRelease([tr(b, 5), tr('C', 5), tr('G', 4)], 0.5, now + 0.56);
+        for (let i = 0; i < 5; i++) achSynth.sparkle.triggerAttackRelease(tr(ACH_SCALE[(h + i * 3) % 5], 6 + (i % 2)), 0.05, now + 0.6 + i * 0.06);
+      } catch (err) { playSfx('ui'); }
+    }
+    function showAchievement(id) {
+      const [icon, name, desc] = ACHIEVEMENTS[id];
+      const h = achHash(id);
+      const hue = h % 360, col = `hsl(${hue}, 95%, 62%)`;
+      const pop = document.getElementById('ach-pop');
+      pop.style.setProperty('--ach', col);
+      const ic = pop.querySelector('.ic');
+      ic.className = 'ic ' + ACH_MOVES[(h >>> 2) % ACH_MOVES.length];
+      ic.textContent = icon;
+      pop.querySelector('b').textContent = name;
+      pop.querySelector('em').textContent = desc;
+      pop.classList.remove('show'); void pop.offsetWidth; pop.classList.add('show');
+      clearTimeout(pop.hideTimer); pop.hideTimer = setTimeout(() => pop.classList.remove('show'), 4300); // fully hidden afterwards (no glow under the notch)
+      playAchievementJingle(h);
+      // Pixel confetti from behind the icon, in the achievement's colours
+      setTimeout(() => {
+        const r = ic.getBoundingClientRect();
+        for (let i = 0; i < 18; i++) {
+          const px = document.createElement('div');
+          px.className = 'ach-px';
+          const ang = (i / 18) * Math.PI * 2 + (h % 7) * 0.1, dist = 50 + ((h >>> (i % 13)) % 60);
+          px.style.left = `${r.left + r.width / 2}px`; px.style.top = `${r.top + r.height / 2}px`;
+          px.style.background = i % 3 === 0 ? '#ffffff' : (i % 3 === 1 ? col : `hsl(${(hue + 60) % 360}, 95%, 65%)`);
+          px.style.setProperty('--dx', `${Math.cos(ang) * dist}px`); px.style.setProperty('--dy', `${Math.sin(ang) * dist + 30}px`); px.style.setProperty('--r', `${(i % 2 ? 1 : -1) * 180}deg`);
+          document.body.appendChild(px);
+          setTimeout(() => px.remove(), 1200);
+        }
+      }, 450);
+    }
     function achieve(id) {
       if (!ACHIEVEMENTS[id] || unlocked[id]) return;
+      if (bootStage !== 3) return; // nothing unlocks behind the title screen; the checks run again once the room is up
       unlocked[id] = Date.now();
       store13.set('achievements', unlocked);
-      const [icon, name] = ACHIEVEMENTS[id];
-      setTimeout(() => { showToast(`🏆 ACHIEVEMENT: ${icon} ${name}`); playSfx('ui'); }, 600);
+      setTimeout(() => showAchievement(id), 600);
       if (typeof refreshMenu === 'function') refreshMenu();
     }
     function renderAchievements() {
@@ -16975,6 +17431,50 @@
     }
     applyEnvironmentSettings();
     animate();
+
+    // ---- Distant texture flicker (1.4): every texture is nearest-filtered with no mipmaps, so far-away walls, carpet
+    // and art shimmer as the camera moves. Give the textures that rarely change mip levels (still nearest-sampled,
+    // so they stay crunchy up close). Textures that redraw all the time (TV, PC, window, sky) are left alone; a
+    // texture that later starts redrawing often loses its mipmaps again so it never costs anything.
+    (function steadyDistantTextures() {
+      const seen = new Map(); // texture -> { v: last version, changes: recent redraws, mip: has mipmaps }
+      const collect = () => {
+        const out = new Set();
+        scene.traverse((o) => {
+          if (!o.isMesh || !o.material) return;
+          (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => ['map', 'emissiveMap'].forEach((k) => { const t = m[k]; if (t && t.isTexture && t.image && t.image.width >= 16) out.add(t); }));
+        });
+        return out;
+      };
+      const setMip = (t, on) => {
+        t.generateMipmaps = on;
+        t.minFilter = on ? THREE.NearestMipmapNearestFilter : THREE.NearestFilter;
+        t.needsUpdate = true;
+      };
+      const sample = () => {
+        collect().forEach((t) => {
+          const s = seen.get(t);
+          if (!s) { seen.set(t, { v: t.version, changes: 0, mip: t.generateMipmaps && t.minFilter !== THREE.NearestFilter && t.minFilter !== THREE.LinearFilter }); return; }
+          s.changes = s.changes * 0.5 + (t.version !== s.v ? 1 : 0);
+          s.v = t.version;
+        });
+      };
+      sample();
+      setTimeout(() => {
+        sample();
+        setTimeout(() => {
+          sample();
+          seen.forEach((s, t) => {
+            if (s.changes === 0 && !s.mip && t.magFilter === THREE.NearestFilter) { setMip(t, true); s.mip = true; s.ours = true; s.v = t.version; }
+          });
+          // Keep watching: anything we gave mipmaps to that starts redrawing a lot goes back to plain sampling
+          setInterval(() => {
+            sample();
+            seen.forEach((s, t) => { if (s.ours && s.mip && s.changes > 1.2) { setMip(t, false); s.mip = false; s.v = t.version; } });
+          }, 4000);
+        }, 4000);
+      }, 6000);
+    })();
   </script>
 </body>
 </html>

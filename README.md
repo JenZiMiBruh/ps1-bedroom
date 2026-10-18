@@ -11,6 +11,7 @@
 [![Play in your browser](https://img.shields.io/badge/▶%20PLAY-in%20your%20browser-ff3ea5?style=for-the-badge&logo=googlechrome&logoColor=white&labelColor=1a1033)](https://jenzimibruh.github.io/ps1-bedroom/play/)
 [![Download APK](https://img.shields.io/badge/⬇%20DOWNLOAD-Android%20APK-7ff3ff?style=for-the-badge&logo=android&logoColor=white&labelColor=1a1033)](../../releases/latest)
 [![itch.io](https://img.shields.io/badge/ALSO%20ON-itch.io-fa5c5c?style=for-the-badge&logo=itchdotio&logoColor=white&labelColor=1a1033)](https://galloade.itch.io/ps1-bedroom)
+[![Coming soon: native Android](https://img.shields.io/badge/📣%20COMING%20SOON-native%20Android%20app-a78bfa?style=for-the-badge&logo=kotlin&logoColor=white&labelColor=1a1033)](../../issues/29)
 
 [![Version](https://img.shields.io/github/v/release/JenZiMiBruh/ps1-bedroom?style=flat-square&label=version&color=a78bfa&labelColor=1a1033)](../../releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/JenZiMiBruh/ps1-bedroom/total?style=flat-square&label=downloads&color=ffd23f&labelColor=1a1033)](../../releases)
@@ -30,6 +31,11 @@
 </div>
 
 <br>
+
+> [!IMPORTANT]
+> ### 📣 Coming soon: a true native Android app
+> PS1 Bedroom is being rebuilt from scratch in **Kotlin + OpenGL ES**: the same room 1:1, with **sleep-friendly audio** (no more crackle or clipping overnight), a **cooler, lighter renderer** and better battery life for all-night use.
+> The engine, sky, city and most of the furniture are already in. [Read the announcement →](../../issues/29) · [Follow the `native` branch →](../../tree/native)
 
 ## 🆕 New in 1.3.5 — Clear Skies
 

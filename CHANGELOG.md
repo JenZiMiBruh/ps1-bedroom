@@ -24,6 +24,7 @@ The in-app version of this list lives in `src/ps1_bedroom.html` (search for `con
 - Posters, the calendar and rugs flickered and clipped into the wall from far away
 - Textures far away shimmered and flickered (distant surfaces now use smaller mip levels; still crunchy up close)
 - YouTube on the TV: jagged black bits around the picture and the video overlapping the TV's frame
+- The TV border, the album cover on the dresser, the cassette window and the boombox display flickered: they were flat sheets stacked a millimetre apart, so they now get real depth or are part of the object itself
 - The summer box fan was standing inside the front wall
 
 ## v1.3 — Goodnight, Jasper

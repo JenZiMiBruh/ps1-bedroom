@@ -3379,15 +3379,17 @@
     }
     tvScreenGeo.computeVertexNormals();
     const tvScreenMesh = new THREE.Mesh(tvScreenGeo, tvScreenMat);
-    tvScreenMesh.position.set(0, 1.36, 0.341);
+    // Layered with real depth, never flat sheets stacked a millimetre apart: the PS1 vertex wobble moves a surface's
+    // depth by a centimetre or more at an angle, so stacked sheets took turns winning and the border flickered.
+    // The black tube face is a solid block standing 2.2 cm proud of the bezel, and the picture floats 1.5 cm in
+    // front of that (recessed like a real CRT), so no two surfaces ever share a plane.
+    tvScreenMesh.position.set(0, 1.36, 0.377);
     tvStandGroup.add(tvScreenMesh);
     registerInteractable(tvScreenMesh, 'tv');
-    const tvGlassMask = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.79, 0.60),
-      makePS1Material({ color: 0x07080c, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 })
-    );
-    tvGlassMask.position.set(0, 1.36, 0.3405);
+    const tvGlassMask = new THREE.Mesh(new THREE.BoxGeometry(0.79, 0.60, 0.022), makePS1Material({ color: 0x07080c }));
+    tvGlassMask.position.set(0, 1.36, 0.351); // front face at 0.362, back face hidden inside the bezel
     tvStandGroup.add(tvGlassMask);
+    registerInteractable(tvGlassMask, 'tv');
 
     // Control strip under the screen: speaker slots, brand badge, channel / power buttons, LED, A/V jacks
     for (let i = 0; i < 6; i++) {
@@ -12031,13 +12033,15 @@
       propPart(boomboxGroup, new THREE.CylinderGeometry(0.1, 0.1, 0.02, 14), makePS1Material({ color: 0x111317 }), 0.1, 0.14, sz, 'boombox').rotation.z = Math.PI / 2;
       propPart(boomboxGroup, new THREE.CylinderGeometry(0.035, 0.035, 0.025, 10), makePS1Material({ color: 0x6b7280 }), 0.105, 0.14, sz).rotation.z = Math.PI / 2;
     });
-    propPart(boomboxGroup, new THREE.BoxGeometry(0.02, 0.1, 0.18), makePS1Material({ color: 0x4b5563 }), 0.1, 0.13, 0, 'boombox');
+    // Cassette deck: its own front face shows the album cover when there is one (no separate sheet in front to flicker)
+    const cassetteDeckMat = makePS1Material({ color: 0x4b5563 });
+    const cassetteDeck = propPart(boomboxGroup, new THREE.BoxGeometry(0.03, 0.1, 0.18), [cassetteDeckMat, cassetteDeckMat, cassetteDeckMat, cassetteDeckMat, cassetteDeckMat, cassetteDeckMat], 0.1, 0.13, 0, 'bbscreen'); // front at 0.115: clear of the speaker rings (their faces are at 0.11)
     propPart(boomboxGroup, new THREE.BoxGeometry(0.04, 0.04, 0.5), matBoombox, 0, 0.34, 0);
     [-0.24, 0.24].forEach((hz) => propPart(boomboxGroup, new THREE.BoxGeometry(0.04, 0.06, 0.03), matBoombox, 0, 0.31, hz));
     const boomAntenna = propPart(boomboxGroup, new THREE.CylinderGeometry(0.005, 0.005, 0.5, 4), makePS1Material({ color: 0xd1d5db }), -0.05, 0.5, 0.26);
     boomAntenna.rotation.x = -0.4;
     const radioDisplayMat = makePS1Material({ color: 0x1e3a2a, emissive: 0x22c55e, emissiveIntensity: 0.05 });
-    propPart(boomboxGroup, new THREE.BoxGeometry(0.012, 0.035, 0.14), radioDisplayMat, 0.105, 0.245, 0);
+    const radioDisplay = propPart(boomboxGroup, new THREE.BoxGeometry(0.012, 0.035, 0.14), [radioDisplayMat, radioDisplayMat, radioDisplayMat, radioDisplayMat, radioDisplayMat, radioDisplayMat], 0.105, 0.245, 0, 'bbscreen');
     // Photo frame, trophy, and a band poster above the dresser
     const photo = propPart(dresserGroup, new THREE.BoxGeometry(0.03, 0.22, 0.17), makePS1Material({ color: 0x1f2937 }), -0.1, 1.54, 0.5);
     photo.rotation.z = 0.12;
@@ -13766,12 +13770,7 @@
     const cassetteTex = new THREE.CanvasTexture(cassetteCanvas);
     cassetteTex.magFilter = THREE.NearestFilter; cassetteTex.minFilter = THREE.NearestFilter;
     const cassetteMat = makePS1Material({ color: 0xffffff, map: cassetteTex, emissive: 0xffffff, emissiveMap: cassetteTex, emissiveIntensity: 0.25 });
-    const cassetteWin = new THREE.Mesh(new THREE.PlaneGeometry(0.15, 0.085), cassetteMat);
-    cassetteWin.position.set(0.112, 0.13, 0);
-    cassetteWin.rotation.y = Math.PI / 2;
-    cassetteWin.visible = false;
-    boomboxGroup.add(cassetteWin);
-    registerInteractable(cassetteWin, 'bbscreen'); // own tag: keeps it out of static batching so it can change
+    const setCassetteArt = (on) => { cassetteDeck.material[0] = on ? cassetteMat : cassetteDeckMat; }; // +X face = front of the deck
     // A CD jewel case stands on the dresser with the cover of whatever's playing, big enough to see from bed
     const jewelCanvas = document.createElement('canvas');
     jewelCanvas.width = 128; jewelCanvas.height = 128;
@@ -13785,23 +13784,20 @@
     const jewelTilt = new THREE.Group();
     jewelTilt.rotation.x = -0.22; // leaning back on its little stand
     jewelCase.add(jewelTilt);
-    const jewelBack = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.18, 0.014), makePS1Material({ color: 0x1b1d22 }));
+    // The cover is the case's own front face (one solid box), not a picture and a gloss sheet stacked a millimetre
+    // in front of it, which flickered with the PS1 vertex wobble. The spine stands a little proud as the hinge.
+    const jewelDark = makePS1Material({ color: 0x1b1d22 });
+    const jewelCover = makePS1Material({ color: 0xffffff, map: jewelTex, emissive: 0xffffff, emissiveMap: jewelTex, emissiveIntensity: 0.12 });
+    const jewelBack = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.18, 0.014), [jewelDark, jewelDark, jewelDark, jewelDark, jewelCover, jewelDark]);
     jewelBack.position.set(0, 0.09, -0.008);
     jewelTilt.add(jewelBack);
-    const jewelSpine = new THREE.Mesh(new THREE.BoxGeometry(0.014, 0.18, 0.016), makePS1Material({ color: 0x0b0c0f }));
-    jewelSpine.position.set(-0.1, 0.09, -0.007);
+    const jewelSpine = new THREE.Mesh(new THREE.BoxGeometry(0.016, 0.18, 0.026), makePS1Material({ color: 0x0b0c0f }));
+    jewelSpine.position.set(-0.104, 0.09, -0.006);
     jewelTilt.add(jewelSpine);
-    const jewelCover = new THREE.Mesh(new THREE.PlaneGeometry(0.18, 0.17),
-      makePS1Material({ color: 0xffffff, map: jewelTex, emissive: 0xffffff, emissiveMap: jewelTex, emissiveIntensity: 0.12 }));
-    jewelCover.position.set(0.006, 0.09, 0.0);
-    jewelTilt.add(jewelCover);
-    const jewelGloss = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.18), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.07, depthWrite: false }));
-    jewelGloss.position.set(0, 0.09, 0.002);
-    jewelTilt.add(jewelGloss);
     const jewelFoot = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.012, 0.05), makePS1Material({ color: 0x1b1d22 }));
     jewelFoot.position.set(0, 0.006, -0.02);
     jewelCase.add(jewelFoot);
-    [jewelBack, jewelSpine, jewelCover, jewelFoot].forEach((m) => { m.castShadow = true; m.receiveShadow = true; registerInteractable(m, 'bbscreen'); });
+    [jewelBack, jewelSpine, jewelFoot].forEach((m) => { m.castShadow = true; m.receiveShadow = true; registerInteractable(m, 'bbscreen'); });
     jewelCase.visible = false;
 
     // Every place the cover shows up in the room: the jewel case, the cassette window and (if picked) the poster
@@ -13819,7 +13815,7 @@
     function updateCassetteArt() {
       const t = MP.current;
       if (!t || !nowArtUrl) {
-        cassetteWin.visible = false;
+        setCassetteArt(false);
         jewelCase.visible = false;
         worldArtImg = null;
         if (posterChoice === 'album') setPoster('album', true);
@@ -13835,7 +13831,7 @@
         const s = Math.min(img.width, img.height);
         ctx.drawImage(img, (img.width - s) / 2, (img.height - s * 0.57) / 2, s, s * 0.57, 0, 0, 64, 64);
         cassetteTex.needsUpdate = true;
-        cassetteWin.visible = true;
+        setCassetteArt(true);
         const jc = jewelCanvas.getContext('2d');
         jc.drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, 128, 128);
         jewelTex.needsUpdate = true;
@@ -13850,11 +13846,7 @@
     const lcdTex = new THREE.CanvasTexture(lcdCanvas);
     lcdTex.magFilter = THREE.NearestFilter; lcdTex.minFilter = THREE.NearestFilter;
     const lcdMat = makePS1Material({ color: 0x0b1a10, map: lcdTex, emissive: 0xffffff, emissiveMap: lcdTex, emissiveIntensity: 0.9 });
-    const lcdMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.135, 0.032), lcdMat);
-    lcdMesh.position.set(0.112, 0.245, 0);
-    lcdMesh.rotation.y = Math.PI / 2;
-    boomboxGroup.add(lcdMesh);
-    registerInteractable(lcdMesh, 'bbscreen');
+    radioDisplay.material[0] = lcdMat; // the scrolling song name is the display's own front face (no sheet in front to flicker)
     let lcdScroll = 0;
     let lastLcdText = '';
     function drawBoomboxLcd() {
@@ -17110,8 +17102,8 @@
       const basis = (p) => { const m = [p[0], p[2], p[4], p[1], p[3], p[5], 1, 1, 1]; const v = mulMV(adj(m), [p[6], p[7], 1]); return mulMM(m, [v[0], 0, 0, 0, v[1], 0, 0, 0, v[2]]); };
       const SRC = basis([0, 0, 640, 0, 0, 480, 640, 480]);
       const SRC_ADJ = adj(SRC);
-      // The whole black glass (tvGlassMask is 0.79 x 0.60, just behind the screen)
-      const corners = [new THREE.Vector3(-0.395, 0.3, 0), new THREE.Vector3(0.395, 0.3, 0), new THREE.Vector3(-0.395, -0.3, 0), new THREE.Vector3(0.395, -0.3, 0)];
+      // The whole black tube face (tvGlassMask's front, 0.79 x 0.60, 1.5 cm behind the picture's base)
+      const corners = [new THREE.Vector3(-0.395, 0.3, -0.015), new THREE.Vector3(0.395, 0.3, -0.015), new THREE.Vector3(-0.395, -0.3, -0.015), new THREE.Vector3(0.395, -0.3, -0.015)];
       let ytPs1 = true; // on unless turned off in Menu > Display
       try { const v = localStorage.getItem('ps1bedroom.ytPs1'); if (v !== null) ytPs1 = v === '1'; } catch (err) { /* private mode */ }
       const applyYtPs1 = () => { screenEl.classList.toggle('ps1', ytPs1); const c = g('chk-yt-ps1'); if (c) c.checked = ytPs1; };

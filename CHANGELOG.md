@@ -2,9 +2,31 @@
 
 The in-app version of this list lives in `src/ps1_bedroom.html` (search for `const CHANGELOG`). Update both for each release, and bump `APP_VERSION`.
 
-## v1.3 — Beta (in development)
+## v1.3 — Goodnight, Jasper
 **Added**
-- Work in progress on the `beta` branch
+- **Sleep mode:** one tap: lights down, fan on, you in bed with Jasper beside you, everything fades out in 45 minutes
+- **Sunrise alarm:** the room glows warmer for 20 minutes before your alarm, then your music (or birdsong) plays
+- **Share cards:** a postcard of your room with place, time and weather (Photo mode → CARD)
+- **18 achievements** (Menu → About)
+- **Daily surprises:** something new in the room each day
+- **Jasper** has a name, a collar and tag, and a new chunky PS1 model with clean sit/lie poses
+- **Jasper's coat colours:** 6 presets or your own
+- An UNDER CONSTRUCTION sign on the door
+
+**Changed**
+- The living room TV is properly muffled (down the hall, behind a door) and much quieter
+- Android: after the sleep timer, the screen turns off on its normal timeout
+
+**Fixed**
+- TV hard to turn off: big red power button; flipping past the last channel turns it off (1.2.1)
+- Photo mode's HIDE no longer hides the YouTube video; the old TV picture no longer shows around it
+- Office chair post floating below the seat
+- Backpack sinking into the floor
+- Messages not fully sliding off screen
+- Audio crackle on loud moments
+
+**Removed**
+- The hallway, for now (being rebuilt)
 
 ## v1.2.1 — TV power
 **Fixed**

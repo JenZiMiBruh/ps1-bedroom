@@ -224,12 +224,12 @@
     }
     #easter-egg-toast {
       position: fixed; top: calc(58px + var(--safe-t)); left: 50%;
-      transform: translateX(-50%) translateY(-140px);
+      transform: translateX(-50%) translateY(calc(-100% - 90px)); opacity: 0; visibility: hidden; /* fully off screen, however many lines it wraps to */
       background: var(--panel); border: 2px solid #c084fc; box-shadow: 4px 4px 0 #000; color: #f5d0fe;
       padding: 9px 14px; font-size: 12px; max-width: min(560px, 92vw); text-align: center; z-index: 25;
-      border-radius: 8px; transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); pointer-events: none;
+      border-radius: 8px; transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s, visibility 0s linear 0.25s; pointer-events: none;
     }
-    #easter-egg-toast.visible { transform: translateX(-50%) translateY(0); }
+    #easter-egg-toast.visible { transform: translateX(-50%) translateY(0); opacity: 1; visibility: visible; transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.15s, visibility 0s; }
     #touch-stick {
       position: fixed; left: calc(22px + var(--safe-l)); bottom: calc(96px + var(--safe-b));
       width: 120px; height: 120px; border-radius: 50%;
@@ -288,6 +288,10 @@
       display: none; gap: 10px; z-index: 35;
     }
     body.photo-mode #photo-bar { display: flex; }
+    #ach-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+    #ach-list .ach { display: flex; gap: 8px; align-items: center; padding: 6px 8px; border: 1px solid rgba(255,255,255,0.12); border-radius: 6px; opacity: 0.5; font-size: 11px; }
+    #ach-list .ach.got { opacity: 1; border-color: #c084fc; }
+    #ach-list .ach b { font-size: 18px; } #ach-list .ach em { display: block; font-style: normal; font-weight: bold; } #ach-list .ach small { opacity: 0.75; }
     #photo-shutter { width: 64px; height: 64px; border-radius: 50%; border: 4px solid #fff; background: rgba(255, 255, 255, 0.25); box-shadow: 3px 3px 0 #000; }
     #photo-flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 36; transition: opacity 0.35s; }
     #sleep-overlay { position: fixed; inset: 0; background: #000; z-index: 45; display: none; align-items: center; justify-content: center; color: #333a5c; font-size: 12px; letter-spacing: 2px; }
@@ -451,6 +455,9 @@
         <div class="chips" id="chips-sheets"></div>
         <h4>Decorations</h4>
         <div class="chips" id="chips-decor"></div>
+        <h4>Jasper's coat</h4>
+        <div class="chips" id="chips-jasper"></div>
+        <div class="row" style="display:flex; gap:10px; flex-wrap:wrap; margin-top:6px;"><label class="note">Coat <input type="color" id="jasper-coat"></label><label class="note">Saddle &amp; mask <input type="color" id="jasper-dark"></label><label class="note">Chest &amp; paws <input type="color" id="jasper-light"></label></div>
         <div class="note">Auto puts up decorations for the time of year: Halloween in October, a little tree in December, hearts for Valentine's and a box fan in summer.</div>
         <div class="note">Almost everything in the room can be tapped directly too: the TV, the PlayStation and its buttons, the games on the shelves, the lamp, the boombox, the door and the light switch.</div>
       </section>
@@ -482,6 +489,12 @@
 
       <section data-panel="timer">
         <h4>Sleep timer <span id="timer-readout">Off</span></h4>
+        <button class="big-toggle" id="btn-sleepmode" onclick="startSleepMode()">&#128564; SLEEP MODE</button>
+        <div class="note">One tap: lights down, fan on, a soft glow, you in bed, Jasper curled up beside you, and everything fades out in 45 minutes.</div>
+        <h4>Sunrise alarm</h4>
+        <div class="row" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;"><label class="check"><input type="checkbox" id="alarm-on" /> On</label><input type="time" id="alarm-time" value="07:00" /><label class="check"><input type="checkbox" id="alarm-music" checked /> Wake to my music</label></div>
+        <div class="note">The room glows warmer for 20 minutes before your alarm, like a sunrise, then your music (or birdsong) plays. Leave the app open.</div>
+        <h4>Sleep timer</h4>
         <div class="chips" id="chips-timer"></div>
         <label class="check"><input type="checkbox" id="chk-sleep-dim" checked /> Fade the screen to black when it ends</label>
         <h4>Focus timer</h4>
@@ -498,6 +511,10 @@
           <button class="tile" id="btn-changelog">&#128220; CHANGELOG</button>
           <button class="tile" id="btn-tutorial">&#10067; HOW TO</button>
           <button class="tile" id="btn-record">REC VIDEO</button>
+        </div>
+        <h4>Achievements <span id="ach-count"></span></h4>
+        <div id="ach-list"></div>
+        <div>
         </div>
       </section>
     </div>
@@ -520,7 +537,7 @@
       <div class="tut-actions"><button class="pill" id="tut-skip">SKIP</button><button class="pill" id="tut-next" style="color:var(--pink);">NEXT &rarr;</button></div>
     </div>
   </div>
-  <div id="photo-bar"><button class="pill" id="photo-exit">&#10005; DONE</button><button id="photo-shutter" aria-label="Take photo"></button><button class="pill" id="photo-hide">HIDE</button></div>
+  <div id="photo-bar"><button class="pill" id="photo-exit">&#10005; DONE</button><button id="photo-shutter" aria-label="Take photo"></button><button class="pill" id="photo-hide">HIDE</button><button class="pill" id="photo-card" onclick="makeShareCard()">&#128140; CARD</button></div>
   <div id="photo-flash"></div>
   <div id="sleep-overlay">SLEEPING &middot; TAP TO WAKE</div>
   <div id="touch-stick"><div id="touch-knob"></div></div>
@@ -2547,6 +2564,9 @@
     addSolidWall(0.87, 5.5, 0.24, 4.185, 2.75, 3.60);
     addSolidWall(1.80, 1.8, 0.24, DOOR_X, 4.6, 3.60);
 
+    // 1.3: the hallway is unfinished, so it is built but never added to the scene (HALLWAY_ENABLED turns it back on)
+    const HALLWAY_ENABLED = false;
+    const hallwayStart = scene.children.length;
     // ---- Hallway behind the door: carpet, walls, ceiling light, picture frames, living room glowing at the end
     const hallFloor = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.2, 2.6, 2, 1, 3), makePS1Material({ map: carpetTex }));
     hallFloor.position.set(DOOR_X, -0.1, 6.1);
@@ -2594,6 +2614,7 @@
       scene.add(art);
     });
 
+    if (!HALLWAY_ENABLED) scene.children.slice(hallwayStart).forEach((o) => scene.remove(o));
     // Baseboards along the left and front walls
     const baseboardLeft = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.14, 6.46, 1, 1, 6), matWood);
     baseboardLeft.position.set(-3.70, 0.07, 0.25);
@@ -2678,6 +2699,19 @@
     doorPanel.receiveShadow = true;
     doorLeaf.add(doorPanel);
     registerInteractable(doorPanel, 'door');
+    // 1.3: an UNDER CONSTRUCTION sign taped to the door (the hallway is closed for now)
+    const constructionTex = createCanvasTex(64, 48, (ctx, w, h) => {
+      ctx.fillStyle = '#facc15'; ctx.fillRect(0, 0, w, h);
+      for (let x = -48; x < w; x += 12) { ctx.fillStyle = '#111'; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + 6, 0); ctx.lineTo(x + 6 + 10, 9); ctx.lineTo(x + 10, 9); ctx.fill(); ctx.beginPath(); ctx.moveTo(x, h - 9); ctx.lineTo(x + 6, h - 9); ctx.lineTo(x + 16, h); ctx.lineTo(x + 10, h); ctx.fill(); }
+      ctx.fillStyle = '#111'; ctx.font = 'bold 9px monospace'; ctx.textAlign = 'center';
+      ctx.fillText('UNDER', w / 2, 21); ctx.fillText('CONSTRUCTION', w / 2, 31);
+      ctx.font = '6px monospace'; ctx.fillText('KEEP OUT', w / 2, 38);
+    }).tex;
+    [-1, 1].forEach((s) => {
+      const sign = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.46), makePS1Material({ map: constructionTex, color: 0xffffff, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
+      sign.position.set(s * 0.033, 2.25, 0.76); sign.rotation.set(0, s * Math.PI / 2, s * 0.04);
+      doorLeaf.add(sign); registerInteractable(sign, 'door');
+    });
     [0.45, 1.8, 3.15].forEach((hy) => {
       const hinge = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.14, 0.03), makePS1Material({ color: 0x8a7355 }));
       hinge.position.set(0, hy, 0.01);
@@ -7409,7 +7443,7 @@
       });
     }
     // Gas lift: chrome cylinder, ribbed rubber bellows, sleeve
-    chairPart(new THREE.CylinderGeometry(0.028, 0.028, 0.34, 8), matChairChrome, 0, 0.33, 0);
+    chairPart(new THREE.CylinderGeometry(0.028, 0.028, 0.47, 8), matChairChrome, 0, 0.365, 0); // reaches up into the seat mechanism (no floating gap)
     for (let r = 0; r < 6; r++) chairPart(new THREE.CylinderGeometry(r % 2 ? 0.04 : 0.047, r % 2 ? 0.04 : 0.047, 0.03, 10), matDarkPlastic, 0, 0.2 + r * 0.03, 0);
     chairPart(new THREE.CylinderGeometry(0.045, 0.045, 0.24, 8), matChairShell, 0, 0.68, 0);
     // Seat mechanism with the height lever
@@ -8032,7 +8066,7 @@
     // Warm hallway ceiling light behind the door (its reach grows as the door opens)
     const hallwayDoorLight = new THREE.PointLight(0xffc98a, 1.6, 2.6);
     hallwayDoorLight.position.set(DOOR_X, 3.9, 5.3);
-    scene.add(hallwayDoorLight);
+    if (HALLWAY_ENABLED) scene.add(hallwayDoorLight);
 
     // =========================================================================
     // WEATHER & SEASON FX. Every particle type is one InstancedMesh (one draw call):
@@ -9383,15 +9417,18 @@
       // ---- Master: gentle bus compression + limiter so stacked layers glue instead of clipping
       SND.master = new Tone.Gain(0);
       SND.comp = new Tone.Compressor({ threshold: -22, ratio: 2.5, attack: 0.03, release: 0.3, knee: 12 });
-      SND.limiter = new Tone.Limiter(-4);
-      // The browser limiter lets fast peaks through, so a soft clipper sits last: clean below -3 dB,
-      // rounding off anything above so nothing ever hits the hard 0 dB wall (that's the crackly "clip")
+      SND.limiter = new Tone.Limiter(-6);
+      // Soft clipper last: clean below -3 dB, rounding off anything louder. 4x oversampled (without it the
+      // rounding itself aliases into a gritty crackle) and it reads input up to +6 dB (fed at half level and
+      // mapped back), so even a peak that slips past the limiter is rounded, never squared off
+      SND.clipIn = new Tone.Gain(0.5);
       SND.softClip = new Tone.WaveShaper((x) => {
-        const a = Math.abs(x), knee = 0.7;
-        return a <= knee ? x : Math.sign(x) * (knee + (1 - knee) * Math.tanh((a - knee) / (1 - knee)));
-      }, 2048);
+        const v = x * 2, a = Math.abs(v), knee = 0.7;
+        return a <= knee ? v : Math.sign(v) * (knee + (1 - knee) * Math.tanh((a - knee) / (1 - knee)));
+      }, 4096);
+      SND.softClip.oversample = '4x';
       SND.trim = new Tone.Gain(0.85);
-      SND.master.chain(SND.comp, SND.limiter, SND.trim, SND.softClip, Tone.getDestination());
+      SND.master.chain(SND.comp, SND.limiter, SND.trim, SND.clipIn, SND.softClip, Tone.getDestination());
 
       // Small bedroom reverb (high-passed send keeps the low end clean)
       SND.roomVerb = new Tone.Reverb({ decay: 0.9, preDelay: 0.008, wet: 1 });
@@ -9491,11 +9528,16 @@
       SND.staticCrackle = makeTickBuffer(3, 30, 0.001, 0.004, 3);
 
       // ---- Living-room TV through the closed door: muffled dialogue, laugh track, room tone
-      SND.hall = makeSpot(worldPos(doorGroup).add(new THREE.Vector3(0.1, 1.4, 0)), { ref: 1.8, verb: 0.25 });
+      // Living room TV, heard through the closed bedroom door from down the hall: placed out past the door,
+      // two steep low-pass stages (a wall and a door eat the highs), a little boxy resonance, and quiet
+      SND.hall = makeSpot(worldPos(doorGroup).add(new THREE.Vector3(0.1, 1.2, 2.4)), { ref: 1.0, rolloff: 1.4, verb: 0.08 });
       SND.hallPower = new Tone.Gain(livingRoomTvOn ? 1 : 0);
-      SND.hallMuffle = filt({ frequency: 520, type: 'lowpass' });
-      SND.hallBoost = new Tone.Gain(2);
-      SND.hallMuffle.chain(SND.hallBoost, SND.hallPower, SND.hall.level);
+      SND.hallMuffle = filt({ frequency: 380, type: "lowpass", Q: 0.5 });
+      SND.hallMuffle2 = filt({ frequency: 650, type: "lowpass", Q: 0.7 });
+      SND.hallBody = filt({ frequency: 240, type: "peaking", Q: 1.2 });
+      SND.hallBody.gain.value = 4;
+      SND.hallBoost = new Tone.Gain(0.55);
+      SND.hallMuffle.chain(SND.hallMuffle2, SND.hallBody, SND.hallBoost, SND.hallPower, SND.hall.level);
       SND.lrVoices = [makeVoice(SND.hallMuffle, 115, 4.0), makeVoice(SND.hallMuffle, 205, 3.2)];
       SND.lrLaugh = new Tone.Gain(0);
       const laughTrem = new Tone.Gain(1);
@@ -9641,8 +9683,9 @@
       SND.spkPower.gain.rampTo(pcPoweredOn ? 1 : 0, 0.3);
       SND.hallPower.gain.rampTo(livingRoomTvOn ? 1 : 0, 0.8);
       // An open door un-muffles the living room TV down the hall
-      SND.hallMuffle.frequency.setTargetAtTime(doorOpen ? 3600 : 520, Tone.now(), 0.3);
-      SND.hallBoost.gain.rampTo(doorOpen ? 3.4 : 2, 0.6);
+      SND.hallMuffle.frequency.setTargetAtTime(doorOpen ? 2400 : 380, Tone.now(), 0.3);
+      SND.hallMuffle2.frequency.setTargetAtTime(doorOpen ? 3800 : 650, Tone.now(), 0.3);
+      SND.hallBoost.gain.rampTo(doorOpen ? 1.2 : 0.55, 0.6); // the open door lets it through, still from down the hall
       SND.tvPower.gain.rampTo(bedroomTvOn ? 1 : 0, bedroomTvOn ? 0.4 : 0.15);
       setActiveChannel('pc', pcPoweredOn ? currentChannel : null);
       setActiveChannel('tv', bedroomTvOn && !ytActive ? bedroomTvChannel : null, bedroomTvChannel === PS1_TV_CHANNEL ? insertedGame : (bedroomTvChannel === 2 ? currentTape : 0));
@@ -10574,6 +10617,7 @@
 
     // The bedroom door on the front wall swings open into the room
     function toggleDoor() {
+      if (!HALLWAY_ENABLED) { playSfx("caseClick"); showToast("🚧 UNDER CONSTRUCTION: The rest of the house is still being built. Check back in a future update!"); return; }
       doorOpen = !doorOpen;
       playSfx(doorOpen ? 'doorOpen' : 'doorClose');
       showToast(doorOpen
@@ -10805,6 +10849,8 @@
         cycleHeater();
       } else if (tag === 'machine') {
         playMessages();
+      } else if (tag === 'surprise') {
+        findSurprise();
       } else if (tag === 'dog') {
         petDog();
       } else if (tag === 'discman') {
@@ -10951,8 +10997,34 @@
     });
 
     // ---------------- CHANGELOG (newest first; add a new entry at the top for every release) ----------------
-    const APP_VERSION = '1.2.1';
+    const APP_VERSION = '1.3';
     const CHANGELOG = [
+      { v: '1.3', name: 'Goodnight, Jasper', sections: {
+        Added: [
+          'SLEEP MODE: one tap turns the lights down, starts the fan, puts you in bed with Jasper curled up beside you, and fades everything out in 45 minutes',
+          'SUNRISE ALARM: the room glows warmer for 20 minutes before your alarm, then wakes you with your own music or birdsong',
+          'SHARE CARDS: a postcard of your room with the place, time and weather stamped on it, from Photo mode (CARD)',
+          '18 achievements to unlock, from Early bird to Seen it all (Menu, then About)',
+          'Daily surprises: something new turns up in the room each day. Find it and tap it',
+          'Jasper has a name, a collar with a tag, and a brand-new chunky PS1 model with clean sitting and lying poses',
+          'Choose Jasper's coat: black & tan, sable, black & silver, black & red, all black, white, or your own colours',
+          'An UNDER CONSTRUCTION sign on the door: the rest of the house is being built for a future update'
+        ],
+        Changed: [
+          'The living room TV really sounds like it's down the hall behind a closed door now, and it's much quieter',
+          'Android: when the sleep timer ends, your phone's screen turns off on its normal timeout instead of staying on'
+        ],
+        Fixed: [
+          'The TV was hard to turn off: a big red power button, and flipping past the last channel turns it off (1.2.1)',
+          'Hiding the interface in Photo mode no longer hides the YouTube video, and the old TV picture no longer shows around it',
+          'The office chair post no longer floats below the seat',
+          'The backpack no longer sinks into the floor',
+          'Messages now slide fully off screen when they close',
+          'Audio crackle on loud moments'
+        ],
+        Removed: [
+          'The hallway, for now (it is being rebuilt)'
+        ] } },
       { v: '1.2.1', name: 'TV power', sections: {
         Fixed: [
           'The TV was hard to turn off: its power button is now a bigger red button with a standby light (and easier to tap), and flipping channels past the last one switches the TV off'
@@ -11891,12 +11963,14 @@
     };
     // (the laundry pile in front of the bed was tidied away)
     const backpack = new THREE.Group();
-    backpack.position.set(-3.0, 0, 1.42);
-    backpack.rotation.set(0, 1.2, -0.18);
+    backpack.position.set(-3.02, 0.01, 1.42);
+    backpack.rotation.set(0, 1.2, 0); // stands upright on the carpet (the old sideways tilt sank a corner into the floor)
+
     scene.add(backpack);
     propPart(backpack, new THREE.BoxGeometry(0.36, 0.48, 0.18, 2, 2, 1), makePS1Material({ color: 0x0f766e }), 0, 0.24, 0);
     propPart(backpack, new THREE.BoxGeometry(0.28, 0.2, 0.06), makePS1Material({ color: 0x134e4a }), 0, 0.16, 0.11);
-    [-0.1, 0.1].forEach((sx) => propPart(backpack, new THREE.BoxGeometry(0.04, 0.4, 0.03), makePS1Material({ color: 0x0b1f1e }), sx, 0.26, -0.1));
+    [-0.1, 0.1].forEach((sx) => propPart(backpack, new THREE.BoxGeometry(0.04, 0.4, 0.025), makePS1Material({ color: 0x0b1f1e }), sx, 0.26, -0.1)); // shoulder straps flat against its back
+    propPart(backpack, new THREE.BoxGeometry(0.12, 0.03, 0.03), makePS1Material({ color: 0x0b1f1e }), 0, 0.5, 0); // carry handle
 
     // ---- Calendar (October 2001) on the left wall by the desk, movie poster over the bed
     wallPicture((ctx, w, h) => {
@@ -12136,91 +12210,132 @@
     registerInteractable(tamaFace, 'tama');
 
     // =========================================================================
-    // 1.2 THE DOG: a German Shepherd (tan with a black saddle) with blue eyes; his left eye is split
+    // JASPER: a German Shepherd (tan with a black saddle) with blue eyes; his left eye is split
     // horizontally, brown on top and blue below. He wanders between favourite spots on his own.
     // =========================================================================
     const dogGroup = new THREE.Group();
     scene.add(dogGroup);
-    const dogTan = makePS1Material({ color: 0xc08a4a });
-    const dogDark = makePS1Material({ color: 0x1c1510 });
-    const dogCream = makePS1Material({ color: 0xd9b27a });
-    const dogPart = (parent, geo, mat, x, y, z) => {
-      const m = new THREE.Mesh(geo, mat);
+    // Built Blockbench-style: chunky boxes with pixel-art fur, jointed like a toy, so sitting and lying down
+    // fold cleanly at the joints (nothing stretches). Coat colours are customisable (Menu > Room > Jasper).
+    const JASPER_PRESETS = {
+      classic: { name: 'Black & tan', coat: '#b97a3e', dark: '#1b1410', light: '#d9b27a' },
+      sable: { name: 'Sable', coat: '#8a6a45', dark: '#2e241a', light: '#b8996e' },
+      silver: { name: 'Black & silver', coat: '#a8a6a0', dark: '#151515', light: '#d6d4cf' },
+      red: { name: 'Black & red', coat: '#a3532a', dark: '#1a120e', light: '#d39a6a' },
+      black: { name: 'All black', coat: '#1d1b1a', dark: '#0e0d0d', light: '#3a3633' },
+      white: { name: 'White', coat: '#ece7dc', dark: '#cfc8ba', light: '#f8f5ee' }
+    };
+    let jasperColors = { ...JASPER_PRESETS.classic, preset: 'classic' };
+    // Grey pixel fur (tinted by each material's colour): little 2x1 strokes in a few shades
+    const furTex = createCanvasTex(16, 16, (ctx, w, h) => {
+      const r = makeRng(77);
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const v = 222 + Math.floor(r() * 3) * 11; ctx.fillStyle = `rgb(${v},${v},${v})`; ctx.fillRect(x, y, 1, 1); }
+      for (let i = 0; i < 26; i++) { ctx.fillStyle = "#cfcfcf"; ctx.fillRect(Math.floor(r() * w), Math.floor(r() * h), 2, 1); }
+    }).tex;
+    furTex.magFilter = THREE.NearestFilter; furTex.minFilter = THREE.NearestFilter;
+    const furMat = () => makePS1Material({ color: 0xffffff, map: furTex });
+    const dogTan = furMat(), dogDark = furMat(), dogCream = furMat();
+    const dogNose = makePS1Material({ color: 0x0a0a0a });
+    const dogPink = makePS1Material({ color: 0x8a4d48 });
+    const dogPart = (parent, w, h, d, mat, x, y, z, rx = 0, ry = 0, rz = 0) => {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
       m.position.set(x, y, z);
+      m.rotation.set(rx, ry, rz);
       m.castShadow = true;
       m.receiveShadow = true;
       parent.add(m);
       registerInteractable(m, 'dog');
       return m;
     };
-    // Body sits on a pivot so it can tilt when sitting / lie flat
+    // Body (origin at the middle of the torso; he faces +Z)
     const dogBody = new THREE.Group();
     dogBody.position.y = 0.6;
     dogGroup.add(dogBody);
-    dogPart(dogBody, new THREE.BoxGeometry(0.32, 0.3, 0.74, 2, 2, 3), dogTan, 0, 0, 0);
-    dogPart(dogBody, new THREE.BoxGeometry(0.34, 0.12, 0.56, 2, 1, 3), dogDark, 0, 0.11, -0.05);   // black saddle
-    dogPart(dogBody, new THREE.BoxGeometry(0.26, 0.1, 0.5), dogCream, 0, -0.13, 0.05);             // lighter belly
-    dogPart(dogBody, new THREE.BoxGeometry(0.3, 0.32, 0.2), dogTan, 0, 0.0, 0.38);                 // chest
-    const dogNeck = dogPart(dogBody, new THREE.BoxGeometry(0.2, 0.28, 0.2), dogTan, 0, 0.18, 0.46);
-    dogNeck.rotation.x = -0.5;
-    // Head
+    dogPart(dogBody, 0.28, 0.28, 0.66, dogTan, 0, 0, -0.04);              // torso
+    dogPart(dogBody, 0.3, 0.32, 0.2, dogTan, 0, 0.0, 0.33);              // chest
+    dogPart(dogBody, 0.3, 0.09, 0.5, dogDark, 0, 0.135, -0.07);          // black saddle
+    dogPart(dogBody, 0.22, 0.2, 0.06, dogCream, 0, -0.03, 0.43);         // chest bib
+    dogPart(dogBody, 0.2, 0.05, 0.46, dogCream, 0, -0.14, 0.0);          // belly
+    dogPart(dogBody, 0.18, 0.28, 0.18, dogTan, 0, 0.2, 0.42, -0.42);    // neck
+    dogPart(dogBody, 0.2, 0.04, 0.2, makePS1Material({ color: 0xb91c1c }), 0, 0.12, 0.47, -0.42); // collar
+    const tagTex = createCanvasTex(8, 8, (ctx) => { ctx.fillStyle = '#d4a017'; ctx.fillRect(1, 1, 6, 6); ctx.fillStyle = '#8a6a10'; ctx.fillRect(3, 3, 2, 2); }).tex;
+    tagTex.magFilter = THREE.NearestFilter;
+    dogPart(dogBody, 0.05, 0.05, 0.012, makePS1Material({ map: tagTex, color: 0xffffff }), 0, 0.06, 0.53);
+    // Head: block skull, cheeks, snout with a black mask and nose, upright ears
     const dogHead = new THREE.Group();
-    dogHead.position.set(0, 0.32, 0.56);
+    dogHead.position.set(0, 0.33, 0.52);
     dogBody.add(dogHead);
-    dogPart(dogHead, new THREE.BoxGeometry(0.22, 0.2, 0.24, 2, 2, 2), dogTan, 0, 0, 0);
-    dogPart(dogHead, new THREE.BoxGeometry(0.2, 0.06, 0.2), dogDark, 0, 0.09, -0.02);              // dark crown
-    dogPart(dogHead, new THREE.BoxGeometry(0.12, 0.1, 0.18), dogDark, 0, -0.04, 0.19);             // black muzzle
-    dogPart(dogHead, new THREE.BoxGeometry(0.05, 0.04, 0.03), makePS1Material({ color: 0x050505 }), 0, -0.01, 0.29); // nose
-    [-1, 1].forEach((side) => {
-      const ear = dogPart(dogHead, new THREE.ConeGeometry(0.06, 0.17, 4), dogDark, side * 0.07, 0.17, -0.03);
-      ear.rotation.set(-0.15, Math.PI / 4, side * -0.18);
+    dogPart(dogHead, 0.22, 0.2, 0.22, dogTan, 0, 0, 0);                  // skull
+    dogPart(dogHead, 0.2, 0.06, 0.2, dogDark, 0, 0.09, -0.01);          // dark crown
+    dogPart(dogHead, 0.13, 0.1, 0.16, dogDark, 0, -0.05, 0.18);          // snout (black mask)
+    dogPart(dogHead, 0.11, 0.035, 0.13, dogCream, 0, -0.105, 0.15);      // lower jaw
+    dogPart(dogHead, 0.06, 0.04, 0.03, dogNose, 0, -0.01, 0.265);        // nose
+    [-1, 1].forEach((s) => {
+      dogPart(dogHead, 0.08, 0.09, 0.035, dogDark, s * 0.07, 0.15, -0.04, 0, 0, s * -0.12); // ear base
+      dogPart(dogHead, 0.045, 0.07, 0.03, dogDark, s * 0.08, 0.225, -0.04, 0, 0, s * -0.12); // ear tip
+      dogPart(dogHead, 0.04, 0.07, 0.006, dogPink, s * 0.07, 0.165, -0.02, 0, 0, s * -0.12); // inner ear
+      dogPart(dogHead, 0.06, 0.06, 0.04, dogCream, s * 0.085, -0.06, 0.08); // cheeks
     });
-    // Eyes: ice blue; his LEFT eye (the +X side, since he faces +Z) is brown on the bottom half
-    function eyeTex(splitBrown) {
-      return createCanvasTex(16, 16, (ctx, w, h) => {
-        // Dark lid rim, almost all iris (dogs show very little white)
-        ctx.fillStyle = '#120c06'; ctx.fillRect(0, 0, w, h);
-        ctx.fillStyle = '#1f7fd6';
-        ctx.beginPath(); ctx.arc(8, 8, 7, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#55b6f2';
-        ctx.beginPath(); ctx.arc(8, 10, 3.5, 0, Math.PI); ctx.fill();
-        if (splitBrown) {
-          // Sectoral heterochromia: the bottom half of the iris is brown, split straight across
-          ctx.save(); ctx.beginPath(); ctx.rect(0, 8, w, 8); ctx.clip();
-          ctx.fillStyle = '#331805'; ctx.beginPath(); ctx.arc(8, 8, 7, 0, Math.PI * 2); ctx.fill();
-          ctx.fillStyle = '#4a250b'; ctx.beginPath(); ctx.arc(8, 8, 4.5, 0, Math.PI * 2); ctx.fill();
-          ctx.restore();
-        }
-        ctx.fillStyle = '#020203'; ctx.beginPath(); ctx.arc(8, 8, 2.4, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#ffffff'; ctx.fillRect(9, 4, 2, 2);
-      }).tex;
+    // Eyes: pixel-art, ice blue; his LEFT eye (the +X side) is brown on the bottom half
+    const eyeCanvases = [];
+    function drawDogEye(ctx, split) {
+      ctx.clearRect(0, 0, 8, 8);
+      ctx.fillStyle = '#120c08'; ctx.fillRect(0, 0, 8, 8);                       // dark lid rim
+      ctx.fillStyle = '#2e7fd0'; ctx.fillRect(1, 1, 6, 6);                       // iris
+      ctx.fillStyle = '#7cc4f5'; ctx.fillRect(1, 1, 6, 2);                       // lighter top
+      if (split) { ctx.fillStyle = '#5a2f12'; ctx.fillRect(1, 4, 6, 3); ctx.fillStyle = '#7a4318'; ctx.fillRect(1, 4, 6, 1); } // brown below
+      ctx.fillStyle = '#050505'; ctx.fillRect(3, 3, 2, 2);                       // pupil
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(4, 2, 1, 1);                       // catch-light
     }
-    [[-1, false], [1, true]].forEach(([side, split]) => {
-      const eye = new THREE.Mesh(new THREE.PlaneGeometry(0.056, 0.056), (() => { const et = eyeTex(split); return makePS1Material({ map: et, emissive: 0xffffff, emissiveMap: et, emissiveIntensity: 0.1, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 }); })());
-      // Flat on the face, a hair in front of it and above the muzzle so nothing cuts through the eye
-      eye.position.set(side * 0.064, 0.048, 0.131);
+    [[-1, false], [1, true]].forEach(([s, split]) => {
+      const obj = createCanvasTex(8, 8, (ctx) => drawDogEye(ctx, split));
+      obj.tex.magFilter = THREE.NearestFilter; obj.tex.minFilter = THREE.NearestFilter;
+      eyeCanvases.push(obj);
+      const eye = new THREE.Mesh(new THREE.PlaneGeometry(0.05, 0.05), makePS1Material({ map: obj.tex, color: 0xffffff, emissive: 0xffffff, emissiveMap: obj.tex, emissiveIntensity: 0.12, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 }));
+      eye.position.set(s * 0.06, 0.03, 0.111);
       dogHead.add(eye);
+      dogPart(dogHead, 0.06, 0.02, 0.02, dogCream, s * 0.06, 0.07, 0.105); // tan eyebrow spot (a friendly face)
     });
-    [-1, 1].forEach((side) => dogPart(dogHead, new THREE.BoxGeometry(0.07, 0.022, 0.03), dogDark, side * 0.064, 0.085, 0.118));
-    // Legs on hip / shoulder pivots so they can swing, fold and stretch out
-    const dogLegs = [];
-    [[0.1, 0.28], [-0.1, 0.28], [0.1, -0.28], [-0.1, -0.28]].forEach(([x, z], i) => {
+    // Legs: hip / shoulder pivots, plus a knee / hock joint in each so they fold under him
+    const dogLegs = [], dogKnees = [];
+    [[0.09, 0.3], [-0.09, 0.3], [0.09, -0.3], [-0.09, -0.3]].forEach(([x, z], i) => {
+      const back = i >= 2;
       const pivot = new THREE.Group();
-      pivot.position.set(x, -0.08, z);
+      pivot.position.set(x, -0.1, z);
       dogBody.add(pivot);
-      dogPart(pivot, new THREE.BoxGeometry(0.09, 0.26, 0.1), i < 2 ? dogTan : dogDark, 0, -0.13, 0);
-      dogPart(pivot, new THREE.BoxGeometry(0.075, 0.22, 0.075), dogTan, 0, -0.36, 0.0);
-      dogPart(pivot, new THREE.BoxGeometry(0.08, 0.04, 0.11), dogCream, 0, -0.48, 0.02);
-      dogLegs.push(pivot);
+      dogPart(pivot, back ? 0.11 : 0.085, 0.24, back ? 0.14 : 0.09, back ? dogDark : dogTan, 0, -0.12, back ? -0.01 : 0); // thighs stick 1 cm out of the body sides (no flicker)
+      const knee = new THREE.Group();
+      knee.position.set(0, -0.24, 0);
+      pivot.add(knee);
+      dogPart(knee, 0.065, 0.22, 0.07, dogTan, 0, -0.11, 0);
+      dogPart(knee, 0.08, 0.04, 0.11, dogCream, 0, -0.235, 0.02);           // paw
+      dogLegs.push(pivot); dogKnees.push(knee);
     });
-    // Bushy tail: two segments, dark on top
+    // Bushy tail: three blocks on joints so it can hang, wag and lie flat
     const dogTail = new THREE.Group();
-    dogTail.position.set(0, 0.08, -0.37);
+    dogTail.position.set(0, 0.06, -0.38);
     dogBody.add(dogTail);
-    const tail1 = dogPart(dogTail, new THREE.BoxGeometry(0.09, 0.09, 0.24), dogDark, 0, -0.04, -0.1);
-    tail1.rotation.x = 0.7;
-    const tail2 = dogPart(dogTail, new THREE.BoxGeometry(0.1, 0.1, 0.2), dogTan, 0, -0.17, -0.2);
-    tail2.rotation.x = 1.1;
+    const tailSegs = [];
+    let tailParent = dogTail;
+    [[0.075, 0.15, dogDark], [0.09, 0.15, dogTan], [0.075, 0.12, dogDark]].forEach(([s, len, mat], i) => {
+      const j = new THREE.Group();
+      if (i) j.position.set(0, 0, -[0, 0.15, 0.15][i]);
+      tailParent.add(j);
+      dogPart(j, s, s, len, mat, 0, 0, -len / 2);
+      tailSegs.push(j); tailParent = j;
+    });
+    function applyJasperColors(c) {
+      jasperColors = { ...jasperColors, ...c };
+      dogTan.color.set(jasperColors.coat); dogDark.color.set(jasperColors.dark); dogCream.color.set(jasperColors.light);
+    }
+    applyJasperColors(jasperColors);
+    // Pose joint angles (radians): front = [shoulder, knee], back = [hip, hock]; +x swings a leg backward
+    const JDOG = {
+      front: { lie: [-1.4, 0.2], sit: [0.8, 0.0] }, // measured so every paw (and his rump when sitting) rests on the floor
+      back: { lie: [-2.0, 2.8], sit: [-1.0, 3.1] },
+      tail: { stand: -1.15, lie: -0.6, sit: -1.6, lie2: 0, sit2: -0.4 }, // - points it down (measured: tip at hock height / on the floor)
+      headSleep: 0.25, sitDrop: 0.24, sitTilt: 0.85
+    };
 
     // ---- Behaviour: favourite spots, chosen by the time, the weather and what you're doing
     const DOG_HUB = new THREE.Vector3(0.45, 0, 0.85); // open floor in the middle of the room
@@ -12240,7 +12355,7 @@
       const spots = [
         { name: 'rug', pos: new THREE.Vector3(0.6, 0, 1.5), pose: night ? 'sleep' : 'lie', w: 2 },
         { name: 'door', pos: new THREE.Vector3(2.3, 0, 2.65), pose: 'sit', w: doorOpen ? 3 : 1, face: Math.PI * 0 },
-        { name: 'bed', pos: new THREE.Vector3(2.95, 0.9, -0.55), pose: 'sleep', w: night ? 6 : 1, bed: true },
+        { name: 'bed', pos: new THREE.Vector3(2.95, 0.83, -0.55), pose: 'sleep', w: night ? 6 : 1, bed: true },
         { name: 'tv', pos: new THREE.Vector3(-1.25, 0, 1.55), pose: 'lie', w: bedroomTvOn ? 2.5 : 0.5 },
         { name: 'desk', pos: new THREE.Vector3(-0.35, 0, 0.15), pose: 'sit', w: playerMode === 'chair' && chairSpot === 1 ? 5 : 0.6 }
       ];
@@ -12284,7 +12399,7 @@
         if (dist < 0.08) {
           d.path.shift();
           if (!d.path.length) {
-            if (d.spot.bed) { d.jump = { from: d.pos.clone(), to: new THREE.Vector3(d.spot.pos.x, 0, d.spot.pos.z), t: 0, fromY: 0, toY: 0.9 }; d.onBed = true; }
+            if (d.spot.bed) { d.jump = { from: d.pos.clone(), to: new THREE.Vector3(d.spot.pos.x, 0, d.spot.pos.z), t: 0, fromY: 0, toY: 0.83 }; d.onBed = true; }
             d.state = 'rest';
             d.pose = d.spot.pose;
             d.until = t + 40 + Math.random() * 80;
@@ -12296,7 +12411,7 @@
         if (d.spot && d.spot.name === 'desk' && playerMode !== 'chair') d.until = Math.min(d.until, t + 5);
         if (t > d.until) sendDog(pickDogSpot());
       }
-      if (!d.jump) d.y += ((d.onBed ? 0.9 : 0) - d.y) * Math.min(1, dt * 6);
+      if (!d.jump) d.y += ((d.onBed ? 0.83 : 0) - d.y) * Math.min(1, dt * 6);
       // Blend between poses
       const pose = d.pose;
       const lying = pose === 'lie' || pose === 'sleep' ? 1 : 0;
@@ -12306,25 +12421,29 @@
       dogGroup.position.set(d.pos.x, d.y, d.pos.z);
       dogGroup.rotation.y = d.heading;
       const breathe = Math.sin(t * (pose === 'sleep' ? 1.4 : 3)) * (pose === 'sleep' ? 0.012 : 0.005);
-      dogBody.position.y = 0.6 - d.poseK * 0.38 - d.sitK * 0.12 + breathe;
-      dogBody.rotation.x = -d.sitK * 0.4;
+      dogBody.position.y = 0.6 - d.poseK * 0.38 - d.sitK * JDOG.sitDrop + breathe;
+      dogBody.rotation.x = -d.sitK * JDOG.sitTilt;
       const walkSwing = pose === 'walk' ? Math.sin(t * 9) * 0.55 : 0;
+      // Joint angles per pose [shoulder/hip, knee/hock]; blended by how far into the pose he is
+      const lieK = d.poseK, sitK = d.sitK, standK = Math.max(0, 1 - lieK - sitK);
       dogLegs.forEach((leg, i) => {
         const front = i < 2;
         const phase = (i === 0 || i === 3) ? 1 : -1;
-        let rx = walkSwing * phase;
-        if (d.poseK > 0.01) rx = rx * (1 - d.poseK) + (front ? -1.45 : 1.45) * d.poseK; // stretched out flat
-        if (d.sitK > 0.01 && !front) rx = rx * (1 - d.sitK) + (-1.2) * d.sitK;      // haunches folded
-        if (d.sitK > 0.01 && front) rx = rx * (1 - d.sitK) + 0.5 * d.sitK;
-        leg.rotation.x = rx;
+        const walk = walkSwing * phase;
+        const P = front ? JDOG.front : JDOG.back;
+        leg.rotation.x = walk * standK + P.lie[0] * lieK + P.sit[0] * sitK;
+        dogKnees[i].rotation.x = (front ? -0.25 : 0.35) * Math.max(0, walk * phase * (front ? -1 : 1)) * standK + P.lie[1] * lieK + P.sit[1] * sitK;
       });
       // Head: looks around, rests down when asleep, tilts when you pet him
       const petting = t < d.wagUntil;
-      dogHead.rotation.x = pose === 'sleep' ? 0.55 : (Math.sin(t * 0.4) * 0.08);
+      dogHead.rotation.x = pose === 'sleep' ? JDOG.headSleep : (Math.sin(t * 0.4) * 0.08);
       dogHead.rotation.y = pose === 'sleep' ? 0.3 : Math.sin(t * 0.27) * 0.35;
       dogHead.rotation.z = petting ? Math.sin(t * 3) * 0.25 : 0;
-      dogTail.rotation.y = Math.sin(t * (petting ? 18 : (pose === 'walk' ? 7 : 2))) * (petting ? 0.7 : (pose === 'sleep' ? 0.05 : 0.3));
-      dogTail.rotation.x = pose === 'sleep' ? 0.6 : -0.1;
+      // Tail: hangs in a soft curve, wags side to side, rests on the floor when he's down
+      dogTail.rotation.x = JDOG.tail.stand * standK + JDOG.tail.lie * lieK + JDOG.tail.sit * sitK;
+      tailSegs[1].rotation.x = -0.25 * standK + JDOG.tail.lie2 * lieK + JDOG.tail.sit2 * sitK;
+      tailSegs[2].rotation.x = -0.3 * standK;
+      dogTail.rotation.y = Math.sin(t * (petting ? 16 : (pose === 'walk' ? 7 : 2))) * (petting ? 0.6 : (pose === 'sleep' ? 0.04 : 0.15));
       // Soft snores while asleep at night
       if (pose === 'sleep' && d.state === 'rest' && t > d.nextSnore) {
         d.nextSnore = t + 4.2 + Math.random() * 1.5;
@@ -12367,8 +12486,8 @@
     ];
     function petDog() {
       dog.wagUntil = clock.elapsedTime + 2.5;
-      if (dog.pose === 'sleep') { dog.pose = 'lie'; showToast('🐕 He opens one eye (the half-brown one), yawns, and thumps his tail twice.'); }
-      else showToast(`🐕 ${DOG_PETS[Math.floor(Math.random() * DOG_PETS.length)]}`);
+      if (dog.pose === 'sleep') { dog.pose = 'lie'; showToast('🐕 Jasper opens one eye (the half-brown one), yawns, and thumps his tail twice.'); }
+      else showToast(`🐕 JASPER: ${DOG_PETS[Math.floor(Math.random() * DOG_PETS.length)]}`);
       playDogSound('boof');
     }
     sendDog(pickDogSpot());
@@ -15554,9 +15673,12 @@
         if (sleepDim) {
           document.body.classList.add('sleeping');
           fpsCap = 4;
-          if (ANDROID && ANDROID.keepScreenOn) ANDROID.keepScreenOn(false); // let the phone's screen turn off
         }
         refreshMenu();
+        // The point of a sleep timer is that the phone goes to sleep too: hand the screen back to Android's
+        // normal screen timeout (it stays on while the app is in use), and stop drawing frames altogether
+        if (ANDROID && ANDROID.keepScreenOn) ANDROID.keepScreenOn(false);
+        if (ANDROID && sleepDim) renderPaused = true; // the black overlay is up; a tap wakes it
         pushAndroidState();
       }
     }
@@ -15564,6 +15686,7 @@
       document.body.classList.remove('sleeping');
       fpsCap = QUALITY[qualityMode].fps;
       if (ANDROID && ANDROID.keepScreenOn) ANDROID.keepScreenOn(true);
+      renderPaused = false;
     });
 
     // ---------- Focus timer (study / Pomodoro): work and break blocks shown on the bedside alarm clock ----------
@@ -15599,7 +15722,7 @@
         focus.phase = focus.phase === 'work' ? 'break' : 'work';
         focus.end = Date.now() + (focus.phase === 'work' ? work : rest) * 60000;
         focusChime(focus.phase === 'break');
-        showToast(focus.phase === 'break' ? `☕ BREAK TIME: ${rest} minutes. Stretch, pet the dog, look out the window.` : `🎯 BACK TO IT: ${work} minutes of focus.`);
+        showToast(focus.phase === 'break' ? `☕ BREAK TIME: ${rest} minutes. Stretch, pet Jasper, look out the window.` : `🎯 BACK TO IT: ${work} minutes of focus.`);
       }
       $('focus-chip').textContent = `${focus.phase === 'work' ? '🎯' : '☕'} ${focusLeftText()}`;
     }
@@ -15694,6 +15817,10 @@
       if (fpsChoice === '120') showToast('⚡ 120 FPS: buttery smooth on 120 Hz screens. Uses more battery.');
     }));
     $('chk-eco-idle').addEventListener('change', (e) => { ecoIdle = e.target.checked; saveSettingsSoon(); });
+    $('alarm-on').addEventListener('change', (e) => { alarm.on = e.target.checked; store13.set('alarm', alarm); showToast(alarm.on ? `⏰ Sunrise alarm set for ${alarm.time}` : '⏰ Alarm off'); });
+    $('alarm-time').addEventListener('change', (e) => { alarm.time = e.target.value || '07:00'; store13.set('alarm', alarm); });
+    $('alarm-music').addEventListener('change', (e) => { alarm.music = e.target.checked; store13.set('alarm', alarm); });
+    ['coat', 'dark', 'light'].forEach((p) => $('jasper-' + p).addEventListener('input', (e) => { applyJasperColors({ [p]: e.target.value, preset: 'custom' }); refreshMenu(); saveSettingsSoon(); }));
     $('ctrl-hour').addEventListener('input', (e) => setPresetHour(parseFloat(e.target.value), true));
     $('city-go').addEventListener('click', () => { ENV.weatherMode = 'live'; fetchLiveWeather($('city-input').value); refreshMenu(); });
     $('city-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('city-go').click(); });
@@ -15733,6 +15860,9 @@
         fillChips('chips-poster', Object.keys(POSTER_NAMES).map((k) => chip(POSTER_NAMES[k], posterChoice === k, () => { setPoster(k); refreshMenu(); saveSettingsSoon(); })));
         ['walls', 'carpet', 'sheets'].forEach((part) => fillChips(`chips-${part}`, Object.keys(RECOLOR[part].opts).map((k) => chip(RECOLOR[part].opts[k][0], roomColors[part] === k, () => { setRoomColor(part, k); refreshMenu(); saveSettingsSoon(); }))));
         fillChips('chips-outside', Object.keys(OUTSIDE_ENVS).map((k) => chip(`${OUTSIDE_ENVS[k].icon} ${OUTSIDE_ENVS[k].name}`, outsideEnv === k, () => { setOutsideEnv(k); saveSettingsSoon(); })));
+        fillChips('chips-jasper', Object.keys(JASPER_PRESETS).map((k) => chip(JASPER_PRESETS[k].name, jasperColors.preset === k, () => { applyJasperColors({ ...JASPER_PRESETS[k], preset: k }); refreshMenu(); playSfx('ui'); saveSettingsSoon(); })));
+        ['coat', 'dark', 'light'].forEach((p) => { const el = $('jasper-' + p); if (el && document.activeElement !== el) el.value = jasperColors[p]; });
+        renderAchievements(); updateAlarmUi();
         fillChips('chips-decor', [['auto', 'Auto (by date)'], ['off', 'None'], ['halloween', 'Halloween'], ['winter', 'Winter holidays'], ['valentine', "Valentine's"], ['summer', 'Summer']].map(([k, label]) => chip(label + (k === 'auto' && decorMode === 'auto' ? ` · ${activeDecor()}` : ''), decorMode === k, () => { decorMode = k; applyDecor(); playSfx('ui'); refreshMenu(); saveSettingsSoon(); })));
         fillChips('chips-vibe', Object.keys(VIBES).map((k) => chip(VIBES[k].label, vibeMode === k, () => { setVibe(k); saveSettingsSoon(); })));
         fillChips('chips-focus', [['off', 'Off'], ['short', '25 min + 5 break'], ['long', '50 min + 10 break']].map(([k, label]) => chip(label, focus.mode === k, () => setFocus(k))));
@@ -15797,7 +15927,7 @@
         jitter: jitterBase, affine: ps1Uniforms.uAffineStrength.value, dither: postMaterial.uniforms.uDitherStrength.value,
         volumetric: userVolumetricSetting, sway: swayAmount, ao: aoBase,
         tempUnit, fpsChoice, ecoIdle,
-        poster: posterChoice, colors: { ...roomColors }, decor: decorMode, heater: heaterMode, outside: outsideEnv,
+        poster: posterChoice, colors: { ...roomColors }, decor: decorMode, heater: heaterMode, outside: outsideEnv, jasper: { ...jasperColors },
         audioOn: audioReady ? isAudioPlaying : wantAudio, startScreen: startScreenEnabled, tutorialSeen, sleepDim
       };
     }
@@ -15840,7 +15970,7 @@
         if (typeof s.pcCh === 'number' && s.pcCh < CHANNEL_NAMES.length) { currentChannel = s.pcCh; monitorLight.color.setHex(CHANNEL_LIGHT_COLORS[currentChannel]); }
         for (let i = 0; i < (s.radio || 0); i++) cycleRadio();
         if (s.livingTv === false && livingRoomTvOn) toggleLivingRoomTv();
-        if (s.door && !doorOpen) toggleDoor();
+        if (s.door && !doorOpen && HALLWAY_ENABLED) toggleDoor();
         if (s.vol) Object.keys(volMultipliers).forEach((k) => {
           if (typeof s.vol[k] !== 'number') return;
           volMultipliers[k] = s.vol[k];
@@ -15866,6 +15996,7 @@
         if (s.colors) Object.keys(s.colors).forEach((part) => { if (RECOLOR[part]) setRoomColor(part, s.colors[part], true); });
         if (s.decor) { decorMode = s.decor; applyDecor(); }
         if (s.outside && s.outside !== "city") setOutsideEnv(s.outside, true);
+        if (s.jasper && s.jasper.coat) applyJasperColors(s.jasper);
         if (s.heater && s.heater !== 'auto') { while (heaterMode !== s.heater) cycleHeater(true); }
         startScreenEnabled = s.startScreen !== false;
         tutorialSeen = !!s.tutorialSeen;
@@ -16679,6 +16810,169 @@
       };
     })();
 
+
+    // =========================================================================
+    // 1.3: SLEEP MODE, SUNRISE ALARM, SHARE CARD, ACHIEVEMENTS, DAILY SURPRISES
+    // =========================================================================
+    const store13 = {
+      get(k, d) { try { const v = localStorage.getItem('ps1bedroom.' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+      set(k, v) { try { localStorage.setItem('ps1bedroom.' + k, JSON.stringify(v)); } catch (e) { /* private mode */ } }
+    };
+
+    // ---- Achievements: little goals, unlocked as you live in the room
+    const ACHIEVEMENTS = {
+      firstNight: ['🌙', 'First night', 'Open the room after dark'],
+      sunrise: ['🌅', 'Early bird', 'Watch the sun come up'],
+      storm: ['⛈️', 'Storm watcher', 'Sit through a thunderstorm'],
+      blizzard: ['❄️', 'Snowed in', 'Survive a blizzard'],
+      petJasper: ['🐕', 'Good boy', 'Pet Jasper'],
+      petJasper10: ['🦴', 'Best friends', 'Pet Jasper 10 times'],
+      traveler: ['🧳', 'World traveler', 'Visit 8 places outside the window'],
+      allPlaces: ['🗺️', 'Seen it all', 'Visit all 15 places'],
+      gamer: ['🎮', 'Player one', 'Put a game in the PlayStation'],
+      dj: ['📻', 'DJ', 'Play your own music on the boombox'],
+      tuber: ['📺', 'Couch potato', 'Watch YouTube on the TV'],
+      sleeper: ['😴', 'Lights out', 'Fall asleep with sleep mode'],
+      alarm: ['⏰', 'Rise and shine', 'Wake up to the sunrise alarm'],
+      photographer: ['📷', 'Photographer', 'Take a photo'],
+      sharer: ['💌', 'Postcard', 'Make a share card'],
+      surprise: ['🎁', 'Surprise!', 'Find a daily surprise'],
+      surprise7: ['🎉', 'Regular', 'Find surprises on 7 different days'],
+      minesweeper: ['💣', 'Sweeper', 'Win a game of Minesweeper']
+    };
+    const unlocked = store13.get('achievements', {});
+    function achieve(id) {
+      if (!ACHIEVEMENTS[id] || unlocked[id]) return;
+      unlocked[id] = Date.now();
+      store13.set('achievements', unlocked);
+      const [icon, name] = ACHIEVEMENTS[id];
+      setTimeout(() => { showToast(`🏆 ACHIEVEMENT: ${icon} ${name}`); playSfx('ui'); }, 600);
+      if (typeof refreshMenu === 'function') refreshMenu();
+    }
+    function renderAchievements() {
+      const el = document.getElementById('ach-list');
+      if (!el) return;
+      const ids = Object.keys(ACHIEVEMENTS);
+      document.getElementById('ach-count').textContent = `${ids.filter((i) => unlocked[i]).length} / ${ids.length}`;
+      el.innerHTML = ids.map((id) => { const [icon, name, desc] = ACHIEVEMENTS[id]; const got = !!unlocked[id]; return `<div class="ach ${got ? 'got' : ''}"><b>${got ? icon : '🔒'}</b><span><em>${name}</em><small>${desc}</small></span></div>`; }).join('');
+    }
+    // Hook the existing actions
+    const wrap13 = (orig, after) => { return function () { const r = orig.apply(this, arguments); try { after.apply(this, arguments); } catch (e) { /* never break the original */ } return r; }; };
+    petDog = wrap13(petDog, () => { const n = store13.get('pets', 0) + 1; store13.set('pets', n); achieve('petJasper'); if (n >= 10) achieve('petJasper10'); });
+    document.getElementById('photo-shutter').addEventListener('click', () => achieve('photographer'));
+    setOutsideEnv = wrap13(setOutsideEnv, (k) => { const seen = store13.get('placesSeen', {}); seen[outsideEnv] = 1; store13.set('placesSeen', seen); const n = Object.keys(seen).length; if (n >= 8) achieve('traveler'); if (n >= Object.keys(OUTSIDE_ENVS).length) achieve('allPlaces'); });
+    insertHeldGame = wrap13(insertHeldGame, () => achieve('gamer'));
+    setInterval(() => {
+      if (ENV.daylight < 0.2) achieve('firstNight');
+      if (W.base === 'storm' && !W.snow && isAudioPlaying) achieve('storm');
+      if (ENV.weatherKind === 'blizzard') achieve('blizzard');
+      if (ENV.sunDeg > -2 && ENV.sunDeg < 4 && ENV.morning) achieve('sunrise');
+      if (radioStation === MY_MUSIC_STATION && typeof mpShouldPlay === 'function' && mpShouldPlay()) achieve('dj');
+      if (ytActive) achieve('tuber');
+      const g = document.getElementById('ms-face'); if (g && g.textContent === '😎') achieve('minesweeper');
+    }, 5000);
+
+    // ---- Sleep mode: one tap gets the room ready for bed
+    let sleepModeOn = false;
+    function startSleepMode() {
+      sleepModeOn = true;
+      if (!isAudioPlaying) toggleAmbienceAudio();
+      if (fanLightOn) toggleFanLight();
+      if (lampOn) toggleLamp();
+      if (bedroomTvOn) toggleBedroomTv();
+      if (stringLightsMode !== 1) setStringLights(1, true); // a soft warm glow to fall asleep to
+      if (!fanSpinning) toggleCeilingFanSpin();
+      if (playerMode !== 'bed') setPlayerMode('bed');
+      dogSpots().filter((s) => s.name === 'bed').forEach((s) => sendDog(s));
+      if (!sleepEnd) setSleepTimer(45, true);
+      closeMenu();
+      showToast('😴 SLEEP MODE: lights down, fan on, Jasper\'s on the bed. Everything fades out in 45 minutes. Sweet dreams.');
+      achieve('sleeper');
+    }
+
+    // ---- Sunrise alarm: the room slowly brightens before your alarm, then music or birdsong plays
+    let alarm = store13.get('alarm', { on: false, time: '07:00', music: true });
+    let alarmFiredOn = '';
+    function alarmMinutes() { const [h, m] = alarm.time.split(':').map(Number); return h * 60 + m; }
+    function updateAlarmUi() {
+      const t = document.getElementById('alarm-time'), c = document.getElementById('alarm-on'), mu = document.getElementById('alarm-music');
+      if (t && document.activeElement !== t) t.value = alarm.time;
+      if (c) c.checked = alarm.on;
+      if (mu) mu.checked = alarm.music;
+    }
+    let sunriseK = 0; // 0..1 how far into the 20-minute sunrise glow we are
+    const sunriseLight = new THREE.PointLight(0xffa04a, 0, 9, 1.4);
+    sunriseLight.position.set(0.8, 2.6, -2.4);
+    scene.add(sunriseLight);
+    setInterval(() => {
+      if (!alarm.on) { sunriseK = 0; sunriseLight.intensity = 0; return; }
+      const now = new Date(), mins = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
+      let until = alarmMinutes() - mins; if (until < -60) until += 1440;
+      sunriseK = until > 20 || until < -30 ? 0 : Math.min(1, (20 - until) / 20);
+      sunriseLight.intensity = sunriseK * 2.2;
+      const today = now.toDateString();
+      if (until <= 0 && until > -1 && alarmFiredOn !== today) {
+        alarmFiredOn = today;
+        document.body.classList.remove('sleeping'); renderPaused = false; fpsCap = QUALITY[qualityMode].fps;
+        if (ANDROID && ANDROID.keepScreenOn) ANDROID.keepScreenOn(true);
+        if (!isAudioPlaying) toggleAmbienceAudio();
+        if (blindsOpenState === 2) setBlindsState(0, true);
+        if (alarm.music && myTracks.length) { mediaControl('play'); } else { for (let i = 0; i < 6; i++) setTimeout(() => { try { birdCall(Tone.now()); } catch (e) {} }, i * 900); }
+        showToast(`⏰ GOOD MORNING! It's ${formatHour(now.getHours() + now.getMinutes() / 60)}. Jasper is already wagging.`);
+        dog.wagUntil = clock.elapsedTime + 8;
+        achieve('alarm');
+      }
+    }, 1000);
+
+    // ---- Share card: a postcard of your room (place, time, weather) to save and post
+    function makeShareCard() {
+      captureRequest = (canvas) => {
+        const W2 = 1080, H2 = 1350, c = document.createElement('canvas'); c.width = W2; c.height = H2;
+        const x = c.getContext('2d');
+        x.fillStyle = '#0b0a1a'; x.fillRect(0, 0, W2, H2);
+        x.imageSmoothingEnabled = false;
+        const s = Math.max(W2 / canvas.width, 1000 / canvas.height), w = canvas.width * s, h = canvas.height * s;
+        x.save(); x.beginPath(); x.rect(40, 40, W2 - 80, 1000); x.clip();
+        x.drawImage(canvas, (W2 - w) / 2, 40 + (1000 - h) / 2, w, h); x.restore();
+        x.strokeStyle = '#ff3ea5'; x.lineWidth = 6; x.strokeRect(40, 40, W2 - 80, 1000);
+        x.fillStyle = '#ffd27d'; x.font = 'bold 74px "Arial Black", Impact, sans-serif'; x.fillText('PS1 BEDROOM', 40, 1140);
+        const e = envDef();
+        x.fillStyle = '#e8e4ff'; x.font = '600 36px "Segoe UI", Arial, sans-serif';
+        x.fillText(`${e.icon} ${e.name} · ${formatHour(ENV.hour)} · ${W.label} · ${formatTemp(currentTempC())}`, 40, 1205);
+        x.fillStyle = '#b9b4e6'; x.font = '28px "Segoe UI", Arial, sans-serif';
+        x.fillText('A cozy 2001 bedroom that lives on your real clock and weather', 40, 1255);
+        x.fillStyle = '#ff3ea5'; x.font = 'bold 28px monospace'; x.fillText('galloade.itch.io/ps1-bedroom', 40, 1305);
+        const dataUrl = c.toDataURL('image/png'), name = `ps1-bedroom-card-${Date.now()}.png`;
+        if (ANDROID && ANDROID.saveImage) { const ok = ANDROID.saveImage(dataUrl.split(',')[1], name); showToast(ok ? '💌 Share card saved to Pictures / PS1 Bedroom' : '💌 Could not save the card'); }
+        else { const a = document.createElement('a'); a.href = dataUrl; a.download = name; a.click(); showToast('💌 Share card saved'); }
+        achieve('sharer');
+      };
+      playSfx('recStop');
+    }
+
+    // ---- Daily surprises: something new in the room each day (found by tapping it)
+    const SURPRISES = [
+      { id: 'package', msg: '📦 A package by the door! It\'s a memory card. 15 blocks free. Finally.', build: (g) => { const b = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.3, 0.32), makePS1Material({ color: 0xb8864b })); b.position.set(1.9, 0.15, 2.9); g.add(b); const t = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.04, 0.06), makePS1Material({ color: 0xe8dcc0 })); t.position.set(1.9, 0.3, 2.9); g.add(t); } },
+      { id: 'pizza', msg: '🍕 Leftover pizza on the desk. Cold pizza is the best pizza.', build: (g) => { const b = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.04, 0.42), makePS1Material({ color: 0xd9c9a3 })); b.position.set(-1.5, 1.53, -0.95); g.add(b); } },
+      { id: 'balloon', msg: '🎈 A balloon from somebody\'s party drifted in and got stuck on the ceiling.', build: (g) => { const b = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), makePS1Material({ color: 0xef4444, emissive: 0x330000, emissiveIntensity: 0.3 })); b.scale.y = 1.2; b.position.set(0.2, 4.7, 1.2); g.add(b); const s = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, 1.2, 3), makePS1Material({ color: 0xffffff })); s.position.set(0.2, 4.0, 1.2); g.add(s); } },
+      { id: 'note', msg: '📝 A note under the door: "dinner\'s in the fridge. love you. -mom"', build: (g) => { const n = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.005, 0.14), makePS1Material({ color: 0xfef9c3 })); n.position.set(2.3, 0.01, 3.2); n.rotation.y = 0.4; g.add(n); } },
+      { id: 'soda', msg: '🥤 A can of grape soda on the nightstand. Still cold, somehow.', build: (g) => { const c = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.12, 8), makePS1Material({ color: 0x7c3aed })); c.position.set(1.05, 1.24, -2.35); g.add(c); } },
+      { id: 'ball', msg: '🎾 Jasper left his tennis ball in the middle of the floor. He would like you to throw it.', build: (g) => { const b = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), makePS1Material({ color: 0xd9f99d })); b.position.set(0.3, 0.06, 1.0); g.add(b); } },
+      { id: 'magazine', msg: '📰 The new issue of GamePro on the bed. Cheat codes on page 74.', build: (g) => { const m = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.01, 0.4), makePS1Material({ color: 0xdc2626 })); m.position.set(2.6, 0.9, 0.6); m.rotation.y = 0.3; g.add(m); } }
+    ];
+    const surpriseGroup = new THREE.Group(); scene.add(surpriseGroup);
+    let todaysSurprise = null;
+    (function placeSurprise() {
+      const day = Math.floor(Date.now() / 86400000);
+      todaysSurprise = SURPRISES[day % SURPRISES.length];
+      todaysSurprise.build(surpriseGroup);
+      surpriseGroup.traverse((o) => { if (o.isMesh) { o.castShadow = true; registerInteractable(o, 'surprise'); } });
+    })();
+    function findSurprise() {
+      showToast(todaysSurprise.msg); playSfx('caseClick');
+      const days = store13.get('surpriseDays', {}); days[new Date().toDateString()] = todaysSurprise.id; store13.set('surpriseDays', days);
+      achieve('surprise'); if (Object.keys(days).length >= 7) achieve('surprise7');
+    }
     applyEnvironmentSettings();
     animate();
   </script>

@@ -288,6 +288,10 @@
       display: none; gap: 10px; z-index: 35;
     }
     body.photo-mode #photo-bar { display: flex; }
+    #ach-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+    #ach-list .ach { display: flex; gap: 8px; align-items: center; padding: 6px 8px; border: 1px solid rgba(255,255,255,0.12); border-radius: 6px; opacity: 0.5; font-size: 11px; }
+    #ach-list .ach.got { opacity: 1; border-color: #c084fc; }
+    #ach-list .ach b { font-size: 18px; } #ach-list .ach em { display: block; font-style: normal; font-weight: bold; } #ach-list .ach small { opacity: 0.75; }
     #photo-shutter { width: 64px; height: 64px; border-radius: 50%; border: 4px solid #fff; background: rgba(255, 255, 255, 0.25); box-shadow: 3px 3px 0 #000; }
     #photo-flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 36; transition: opacity 0.35s; }
     #sleep-overlay { position: fixed; inset: 0; background: #000; z-index: 45; display: none; align-items: center; justify-content: center; color: #333a5c; font-size: 12px; letter-spacing: 2px; }
@@ -485,6 +489,12 @@
 
       <section data-panel="timer">
         <h4>Sleep timer <span id="timer-readout">Off</span></h4>
+        <button class="big-toggle" id="btn-sleepmode" onclick="startSleepMode()">&#128564; SLEEP MODE</button>
+        <div class="note">One tap: lights down, fan on, a soft glow, you in bed, Jasper curled up beside you, and everything fades out in 45 minutes.</div>
+        <h4>Sunrise alarm</h4>
+        <div class="row" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;"><label class="check"><input type="checkbox" id="alarm-on" /> On</label><input type="time" id="alarm-time" value="07:00" /><label class="check"><input type="checkbox" id="alarm-music" checked /> Wake to my music</label></div>
+        <div class="note">The room glows warmer for 20 minutes before your alarm, like a sunrise, then your music (or birdsong) plays. Leave the app open.</div>
+        <h4>Sleep timer</h4>
         <div class="chips" id="chips-timer"></div>
         <label class="check"><input type="checkbox" id="chk-sleep-dim" checked /> Fade the screen to black when it ends</label>
         <h4>Focus timer</h4>
@@ -501,6 +511,10 @@
           <button class="tile" id="btn-changelog">&#128220; CHANGELOG</button>
           <button class="tile" id="btn-tutorial">&#10067; HOW TO</button>
           <button class="tile" id="btn-record">REC VIDEO</button>
+        </div>
+        <h4>Achievements <span id="ach-count"></span></h4>
+        <div id="ach-list"></div>
+        <div>
         </div>
       </section>
     </div>
@@ -523,7 +537,7 @@
       <div class="tut-actions"><button class="pill" id="tut-skip">SKIP</button><button class="pill" id="tut-next" style="color:var(--pink);">NEXT &rarr;</button></div>
     </div>
   </div>
-  <div id="photo-bar"><button class="pill" id="photo-exit">&#10005; DONE</button><button id="photo-shutter" aria-label="Take photo"></button><button class="pill" id="photo-hide">HIDE</button></div>
+  <div id="photo-bar"><button class="pill" id="photo-exit">&#10005; DONE</button><button id="photo-shutter" aria-label="Take photo"></button><button class="pill" id="photo-hide">HIDE</button><button class="pill" id="photo-card" onclick="makeShareCard()">&#128140; CARD</button></div>
   <div id="photo-flash"></div>
   <div id="sleep-overlay">SLEEPING &middot; TAP TO WAKE</div>
   <div id="touch-stick"><div id="touch-knob"></div></div>
@@ -10835,6 +10849,8 @@
         cycleHeater();
       } else if (tag === 'machine') {
         playMessages();
+      } else if (tag === 'surprise') {
+        findSurprise();
       } else if (tag === 'dog') {
         petDog();
       } else if (tag === 'discman') {
@@ -10983,9 +10999,31 @@
     // ---------------- CHANGELOG (newest first; add a new entry at the top for every release) ----------------
     const APP_VERSION = '1.3';
     const CHANGELOG = [
-      { v: '1.3', name: 'Beta (in development)', sections: {
+      { v: '1.3', name: 'Goodnight, Jasper', sections: {
         Added: [
-          'Work in progress: this is a beta build of the next update. Expect bugs, and tell Daymion about them'
+          'SLEEP MODE: one tap turns the lights down, starts the fan, puts you in bed with Jasper curled up beside you, and fades everything out in 45 minutes',
+          'SUNRISE ALARM: the room glows warmer for 20 minutes before your alarm, then wakes you with your own music or birdsong',
+          'SHARE CARDS: a postcard of your room with the place, time and weather stamped on it, from Photo mode (CARD)',
+          '18 achievements to unlock, from Early bird to Seen it all (Menu, then About)',
+          'Daily surprises: something new turns up in the room each day. Find it and tap it',
+          'Jasper has a name, a collar with a tag, and a brand-new chunky PS1 model with clean sitting and lying poses',
+          'Choose Jasper's coat: black & tan, sable, black & silver, black & red, all black, white, or your own colours',
+          'An UNDER CONSTRUCTION sign on the door: the rest of the house is being built for a future update'
+        ],
+        Changed: [
+          'The living room TV really sounds like it's down the hall behind a closed door now, and it's much quieter',
+          'Android: when the sleep timer ends, your phone's screen turns off on its normal timeout instead of staying on'
+        ],
+        Fixed: [
+          'The TV was hard to turn off: a big red power button, and flipping past the last channel turns it off (1.2.1)',
+          'Hiding the interface in Photo mode no longer hides the YouTube video, and the old TV picture no longer shows around it',
+          'The office chair post no longer floats below the seat',
+          'The backpack no longer sinks into the floor',
+          'Messages now slide fully off screen when they close',
+          'Audio crackle on loud moments'
+        ],
+        Removed: [
+          'The hallway, for now (it is being rebuilt)'
         ] } },
       { v: '1.2.1', name: 'TV power', sections: {
         Fixed: [
@@ -15779,6 +15817,9 @@
       if (fpsChoice === '120') showToast('⚡ 120 FPS: buttery smooth on 120 Hz screens. Uses more battery.');
     }));
     $('chk-eco-idle').addEventListener('change', (e) => { ecoIdle = e.target.checked; saveSettingsSoon(); });
+    $('alarm-on').addEventListener('change', (e) => { alarm.on = e.target.checked; store13.set('alarm', alarm); showToast(alarm.on ? `⏰ Sunrise alarm set for ${alarm.time}` : '⏰ Alarm off'); });
+    $('alarm-time').addEventListener('change', (e) => { alarm.time = e.target.value || '07:00'; store13.set('alarm', alarm); });
+    $('alarm-music').addEventListener('change', (e) => { alarm.music = e.target.checked; store13.set('alarm', alarm); });
     ['coat', 'dark', 'light'].forEach((p) => $('jasper-' + p).addEventListener('input', (e) => { applyJasperColors({ [p]: e.target.value, preset: 'custom' }); refreshMenu(); saveSettingsSoon(); }));
     $('ctrl-hour').addEventListener('input', (e) => setPresetHour(parseFloat(e.target.value), true));
     $('city-go').addEventListener('click', () => { ENV.weatherMode = 'live'; fetchLiveWeather($('city-input').value); refreshMenu(); });
@@ -15821,6 +15862,7 @@
         fillChips('chips-outside', Object.keys(OUTSIDE_ENVS).map((k) => chip(`${OUTSIDE_ENVS[k].icon} ${OUTSIDE_ENVS[k].name}`, outsideEnv === k, () => { setOutsideEnv(k); saveSettingsSoon(); })));
         fillChips('chips-jasper', Object.keys(JASPER_PRESETS).map((k) => chip(JASPER_PRESETS[k].name, jasperColors.preset === k, () => { applyJasperColors({ ...JASPER_PRESETS[k], preset: k }); refreshMenu(); playSfx('ui'); saveSettingsSoon(); })));
         ['coat', 'dark', 'light'].forEach((p) => { const el = $('jasper-' + p); if (el && document.activeElement !== el) el.value = jasperColors[p]; });
+        renderAchievements(); updateAlarmUi();
         fillChips('chips-decor', [['auto', 'Auto (by date)'], ['off', 'None'], ['halloween', 'Halloween'], ['winter', 'Winter holidays'], ['valentine', "Valentine's"], ['summer', 'Summer']].map(([k, label]) => chip(label + (k === 'auto' && decorMode === 'auto' ? ` · ${activeDecor()}` : ''), decorMode === k, () => { decorMode = k; applyDecor(); playSfx('ui'); refreshMenu(); saveSettingsSoon(); })));
         fillChips('chips-vibe', Object.keys(VIBES).map((k) => chip(VIBES[k].label, vibeMode === k, () => { setVibe(k); saveSettingsSoon(); })));
         fillChips('chips-focus', [['off', 'Off'], ['short', '25 min + 5 break'], ['long', '50 min + 10 break']].map(([k, label]) => chip(label, focus.mode === k, () => setFocus(k))));
@@ -16769,6 +16811,168 @@
     })();
 
 
+    // =========================================================================
+    // 1.3: SLEEP MODE, SUNRISE ALARM, SHARE CARD, ACHIEVEMENTS, DAILY SURPRISES
+    // =========================================================================
+    const store13 = {
+      get(k, d) { try { const v = localStorage.getItem('ps1bedroom.' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+      set(k, v) { try { localStorage.setItem('ps1bedroom.' + k, JSON.stringify(v)); } catch (e) { /* private mode */ } }
+    };
+
+    // ---- Achievements: little goals, unlocked as you live in the room
+    const ACHIEVEMENTS = {
+      firstNight: ['🌙', 'First night', 'Open the room after dark'],
+      sunrise: ['🌅', 'Early bird', 'Watch the sun come up'],
+      storm: ['⛈️', 'Storm watcher', 'Sit through a thunderstorm'],
+      blizzard: ['❄️', 'Snowed in', 'Survive a blizzard'],
+      petJasper: ['🐕', 'Good boy', 'Pet Jasper'],
+      petJasper10: ['🦴', 'Best friends', 'Pet Jasper 10 times'],
+      traveler: ['🧳', 'World traveler', 'Visit 8 places outside the window'],
+      allPlaces: ['🗺️', 'Seen it all', 'Visit all 15 places'],
+      gamer: ['🎮', 'Player one', 'Put a game in the PlayStation'],
+      dj: ['📻', 'DJ', 'Play your own music on the boombox'],
+      tuber: ['📺', 'Couch potato', 'Watch YouTube on the TV'],
+      sleeper: ['😴', 'Lights out', 'Fall asleep with sleep mode'],
+      alarm: ['⏰', 'Rise and shine', 'Wake up to the sunrise alarm'],
+      photographer: ['📷', 'Photographer', 'Take a photo'],
+      sharer: ['💌', 'Postcard', 'Make a share card'],
+      surprise: ['🎁', 'Surprise!', 'Find a daily surprise'],
+      surprise7: ['🎉', 'Regular', 'Find surprises on 7 different days'],
+      minesweeper: ['💣', 'Sweeper', 'Win a game of Minesweeper']
+    };
+    const unlocked = store13.get('achievements', {});
+    function achieve(id) {
+      if (!ACHIEVEMENTS[id] || unlocked[id]) return;
+      unlocked[id] = Date.now();
+      store13.set('achievements', unlocked);
+      const [icon, name] = ACHIEVEMENTS[id];
+      setTimeout(() => { showToast(`🏆 ACHIEVEMENT: ${icon} ${name}`); playSfx('ui'); }, 600);
+      if (typeof refreshMenu === 'function') refreshMenu();
+    }
+    function renderAchievements() {
+      const el = document.getElementById('ach-list');
+      if (!el) return;
+      const ids = Object.keys(ACHIEVEMENTS);
+      document.getElementById('ach-count').textContent = `${ids.filter((i) => unlocked[i]).length} / ${ids.length}`;
+      el.innerHTML = ids.map((id) => { const [icon, name, desc] = ACHIEVEMENTS[id]; const got = !!unlocked[id]; return `<div class="ach ${got ? 'got' : ''}"><b>${got ? icon : '🔒'}</b><span><em>${name}</em><small>${desc}</small></span></div>`; }).join('');
+    }
+    // Hook the existing actions
+    const wrap13 = (orig, after) => { return function () { const r = orig.apply(this, arguments); try { after.apply(this, arguments); } catch (e) { /* never break the original */ } return r; }; };
+    petDog = wrap13(petDog, () => { const n = store13.get('pets', 0) + 1; store13.set('pets', n); achieve('petJasper'); if (n >= 10) achieve('petJasper10'); });
+    document.getElementById('photo-shutter').addEventListener('click', () => achieve('photographer'));
+    setOutsideEnv = wrap13(setOutsideEnv, (k) => { const seen = store13.get('placesSeen', {}); seen[outsideEnv] = 1; store13.set('placesSeen', seen); const n = Object.keys(seen).length; if (n >= 8) achieve('traveler'); if (n >= Object.keys(OUTSIDE_ENVS).length) achieve('allPlaces'); });
+    insertHeldGame = wrap13(insertHeldGame, () => achieve('gamer'));
+    setInterval(() => {
+      if (ENV.daylight < 0.2) achieve('firstNight');
+      if (W.base === 'storm' && !W.snow && isAudioPlaying) achieve('storm');
+      if (ENV.weatherKind === 'blizzard') achieve('blizzard');
+      if (ENV.sunDeg > -2 && ENV.sunDeg < 4 && ENV.morning) achieve('sunrise');
+      if (radioStation === MY_MUSIC_STATION && typeof mpShouldPlay === 'function' && mpShouldPlay()) achieve('dj');
+      if (ytActive) achieve('tuber');
+      const g = document.getElementById('ms-face'); if (g && g.textContent === '😎') achieve('minesweeper');
+    }, 5000);
+
+    // ---- Sleep mode: one tap gets the room ready for bed
+    let sleepModeOn = false;
+    function startSleepMode() {
+      sleepModeOn = true;
+      if (!isAudioPlaying) toggleAmbienceAudio();
+      if (fanLightOn) toggleFanLight();
+      if (lampOn) toggleLamp();
+      if (bedroomTvOn) toggleBedroomTv();
+      if (stringLightsMode !== 1) setStringLights(1, true); // a soft warm glow to fall asleep to
+      if (!fanSpinning) toggleCeilingFanSpin();
+      if (playerMode !== 'bed') setPlayerMode('bed');
+      dogSpots().filter((s) => s.name === 'bed').forEach((s) => sendDog(s));
+      if (!sleepEnd) setSleepTimer(45, true);
+      closeMenu();
+      showToast('😴 SLEEP MODE: lights down, fan on, Jasper\'s on the bed. Everything fades out in 45 minutes. Sweet dreams.');
+      achieve('sleeper');
+    }
+
+    // ---- Sunrise alarm: the room slowly brightens before your alarm, then music or birdsong plays
+    let alarm = store13.get('alarm', { on: false, time: '07:00', music: true });
+    let alarmFiredOn = '';
+    function alarmMinutes() { const [h, m] = alarm.time.split(':').map(Number); return h * 60 + m; }
+    function updateAlarmUi() {
+      const t = document.getElementById('alarm-time'), c = document.getElementById('alarm-on'), mu = document.getElementById('alarm-music');
+      if (t && document.activeElement !== t) t.value = alarm.time;
+      if (c) c.checked = alarm.on;
+      if (mu) mu.checked = alarm.music;
+    }
+    let sunriseK = 0; // 0..1 how far into the 20-minute sunrise glow we are
+    const sunriseLight = new THREE.PointLight(0xffa04a, 0, 9, 1.4);
+    sunriseLight.position.set(0.8, 2.6, -2.4);
+    scene.add(sunriseLight);
+    setInterval(() => {
+      if (!alarm.on) { sunriseK = 0; sunriseLight.intensity = 0; return; }
+      const now = new Date(), mins = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
+      let until = alarmMinutes() - mins; if (until < -60) until += 1440;
+      sunriseK = until > 20 || until < -30 ? 0 : Math.min(1, (20 - until) / 20);
+      sunriseLight.intensity = sunriseK * 2.2;
+      const today = now.toDateString();
+      if (until <= 0 && until > -1 && alarmFiredOn !== today) {
+        alarmFiredOn = today;
+        document.body.classList.remove('sleeping'); renderPaused = false; fpsCap = QUALITY[qualityMode].fps;
+        if (ANDROID && ANDROID.keepScreenOn) ANDROID.keepScreenOn(true);
+        if (!isAudioPlaying) toggleAmbienceAudio();
+        if (blindsOpenState === 2) setBlindsState(0, true);
+        if (alarm.music && myTracks.length) { mediaControl('play'); } else { for (let i = 0; i < 6; i++) setTimeout(() => { try { birdCall(Tone.now()); } catch (e) {} }, i * 900); }
+        showToast(`⏰ GOOD MORNING! It's ${formatHour(now.getHours() + now.getMinutes() / 60)}. Jasper is already wagging.`);
+        dog.wagUntil = clock.elapsedTime + 8;
+        achieve('alarm');
+      }
+    }, 1000);
+
+    // ---- Share card: a postcard of your room (place, time, weather) to save and post
+    function makeShareCard() {
+      captureRequest = (canvas) => {
+        const W2 = 1080, H2 = 1350, c = document.createElement('canvas'); c.width = W2; c.height = H2;
+        const x = c.getContext('2d');
+        x.fillStyle = '#0b0a1a'; x.fillRect(0, 0, W2, H2);
+        x.imageSmoothingEnabled = false;
+        const s = Math.max(W2 / canvas.width, 1000 / canvas.height), w = canvas.width * s, h = canvas.height * s;
+        x.save(); x.beginPath(); x.rect(40, 40, W2 - 80, 1000); x.clip();
+        x.drawImage(canvas, (W2 - w) / 2, 40 + (1000 - h) / 2, w, h); x.restore();
+        x.strokeStyle = '#ff3ea5'; x.lineWidth = 6; x.strokeRect(40, 40, W2 - 80, 1000);
+        x.fillStyle = '#ffd27d'; x.font = 'bold 74px "Arial Black", Impact, sans-serif'; x.fillText('PS1 BEDROOM', 40, 1140);
+        const e = envDef();
+        x.fillStyle = '#e8e4ff'; x.font = '600 36px "Segoe UI", Arial, sans-serif';
+        x.fillText(`${e.icon} ${e.name} · ${formatHour(ENV.hour)} · ${W.label} · ${formatTemp(currentTempC())}`, 40, 1205);
+        x.fillStyle = '#b9b4e6'; x.font = '28px "Segoe UI", Arial, sans-serif';
+        x.fillText('A cozy 2001 bedroom that lives on your real clock and weather', 40, 1255);
+        x.fillStyle = '#ff3ea5'; x.font = 'bold 28px monospace'; x.fillText('galloade.itch.io/ps1-bedroom', 40, 1305);
+        const dataUrl = c.toDataURL('image/png'), name = `ps1-bedroom-card-${Date.now()}.png`;
+        if (ANDROID && ANDROID.saveImage) { const ok = ANDROID.saveImage(dataUrl.split(',')[1], name); showToast(ok ? '💌 Share card saved to Pictures / PS1 Bedroom' : '💌 Could not save the card'); }
+        else { const a = document.createElement('a'); a.href = dataUrl; a.download = name; a.click(); showToast('💌 Share card saved'); }
+        achieve('sharer');
+      };
+      playSfx('recStop');
+    }
+
+    // ---- Daily surprises: something new in the room each day (found by tapping it)
+    const SURPRISES = [
+      { id: 'package', msg: '📦 A package by the door! It\'s a memory card. 15 blocks free. Finally.', build: (g) => { const b = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.3, 0.32), makePS1Material({ color: 0xb8864b })); b.position.set(1.9, 0.15, 2.9); g.add(b); const t = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.04, 0.06), makePS1Material({ color: 0xe8dcc0 })); t.position.set(1.9, 0.3, 2.9); g.add(t); } },
+      { id: 'pizza', msg: '🍕 Leftover pizza on the desk. Cold pizza is the best pizza.', build: (g) => { const b = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.04, 0.42), makePS1Material({ color: 0xd9c9a3 })); b.position.set(-1.5, 1.53, -0.95); g.add(b); } },
+      { id: 'balloon', msg: '🎈 A balloon from somebody\'s party drifted in and got stuck on the ceiling.', build: (g) => { const b = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), makePS1Material({ color: 0xef4444, emissive: 0x330000, emissiveIntensity: 0.3 })); b.scale.y = 1.2; b.position.set(0.2, 4.7, 1.2); g.add(b); const s = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, 1.2, 3), makePS1Material({ color: 0xffffff })); s.position.set(0.2, 4.0, 1.2); g.add(s); } },
+      { id: 'note', msg: '📝 A note under the door: "dinner\'s in the fridge. love you. -mom"', build: (g) => { const n = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.005, 0.14), makePS1Material({ color: 0xfef9c3 })); n.position.set(2.3, 0.01, 3.2); n.rotation.y = 0.4; g.add(n); } },
+      { id: 'soda', msg: '🥤 A can of grape soda on the nightstand. Still cold, somehow.', build: (g) => { const c = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.12, 8), makePS1Material({ color: 0x7c3aed })); c.position.set(1.05, 1.24, -2.35); g.add(c); } },
+      { id: 'ball', msg: '🎾 Jasper left his tennis ball in the middle of the floor. He would like you to throw it.', build: (g) => { const b = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), makePS1Material({ color: 0xd9f99d })); b.position.set(0.3, 0.06, 1.0); g.add(b); } },
+      { id: 'magazine', msg: '📰 The new issue of GamePro on the bed. Cheat codes on page 74.', build: (g) => { const m = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.01, 0.4), makePS1Material({ color: 0xdc2626 })); m.position.set(2.6, 0.9, 0.6); m.rotation.y = 0.3; g.add(m); } }
+    ];
+    const surpriseGroup = new THREE.Group(); scene.add(surpriseGroup);
+    let todaysSurprise = null;
+    (function placeSurprise() {
+      const day = Math.floor(Date.now() / 86400000);
+      todaysSurprise = SURPRISES[day % SURPRISES.length];
+      todaysSurprise.build(surpriseGroup);
+      surpriseGroup.traverse((o) => { if (o.isMesh) { o.castShadow = true; registerInteractable(o, 'surprise'); } });
+    })();
+    function findSurprise() {
+      showToast(todaysSurprise.msg); playSfx('caseClick');
+      const days = store13.get('surpriseDays', {}); days[new Date().toDateString()] = todaysSurprise.id; store13.set('surpriseDays', days);
+      achieve('surprise'); if (Object.keys(days).length >= 7) achieve('surprise7');
+    }
     applyEnvironmentSettings();
     animate();
   </script>

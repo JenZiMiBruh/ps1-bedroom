@@ -63,18 +63,18 @@
 <table>
 <tr>
 <td width="33%" align="center" valign="top"><h3>🕰️</h3><b>Real time, real weather</b><br><sub>The sun and moon follow your clock on real paths. It rains when it rains in your city. 15 weathers and 5 skies.</sub></td>
-<td width="33%" align="center" valign="top"><h3>🎮</h3><b>A PlayStation full of games</b><br><sub>Put any game from the shelf in the PS1, including every GTA as a hand-drawn tribute.</sub></td>
-<td width="33%" align="center" valign="top"><h3>📻</h3><b>Your music on the boombox</b><br><sub>Your own albums with their cover art, shuffle, repeat and FM stations. Your music never leaves your device.</sub></td>
+<td width="33%" align="center" valign="top">🎮<br><b>A PlayStation full of games</b><br><sub>Put any game from the shelf in the PS1, including every GTA as a hand-drawn tribute.</sub></td>
+<td width="33%" align="center" valign="top">📻<br><b>Your music on the boombox</b><br><sub>Your own albums with their cover art, shuffle, repeat and FM stations. Your music never leaves your device.</sub></td>
 </tr>
 <tr>
-<td width="33%" align="center" valign="top"><h3>📺</h3><b>YouTube on the CRT</b><br><sub>Paste a link, or Share a video to PS1 Bedroom on Android, and it plays on the old TV.</sub></td>
-<td width="33%" align="center" valign="top"><h3>🐕</h3><b>Jasper the German Shepherd</b><br><sub>Naps in the sunbeam, watches TV with you, sleeps on the bed. Pick his coat colours.</sub></td>
+<td width="33%" align="center" valign="top">📺<br><b>YouTube on the CRT</b><br><sub>Paste a link, or Share a video to PS1 Bedroom on Android, and it plays on the old TV.</sub></td>
+<td width="33%" align="center" valign="top">🐕<br><b>Jasper the German Shepherd</b><br><sub>Naps in the sunbeam, watches TV with you, sleeps on the bed. Pick his coat colours.</sub></td>
 <td width="33%" align="center" valign="top"><h3>🖥️</h3><b>A working 2001 PC</b><br><sub>Instant messenger, WinBeats, Minesweeper and the dial-up screech.</sub></td>
 </tr>
 <tr>
-<td width="33%" align="center" valign="top"><h3>😴</h3><b>Made for falling asleep</b><br><sub>Sleep mode, a sleep timer that fades everything out, and a sunrise alarm.</sub></td>
-<td width="33%" align="center" valign="top"><h3>🔊</h3><b>Sound all around you</b><br><sub>Rain on the glass, the CRT hum, the fan, crickets, a train going by. Every sound placed in 3D.</sub></td>
-<td width="33%" align="center" valign="top"><h3>📷</h3><b>Photo mode and share cards</b><br><sub>Hide the UI, pick a look (Raw PS1, Warm VHS, Neon Dream, Noir…) and make a postcard of your room.</sub></td>
+<td width="33%" align="center" valign="top">😴<br><b>Made for falling asleep</b><br><sub>Sleep mode, a sleep timer that fades everything out, and a sunrise alarm.</sub></td>
+<td width="33%" align="center" valign="top">🔊<br><b>Sound all around you</b><br><sub>Rain on the glass, the CRT hum, the fan, crickets, a train going by. Every sound placed in 3D.</sub></td>
+<td width="33%" align="center" valign="top">📷<br><b>Photo mode and share cards</b><br><sub>Hide the UI, pick a look (Raw PS1, Warm VHS, Neon Dream, Noir…) and make a postcard of your room.</sub></td>
 </tr>
 </table>
 

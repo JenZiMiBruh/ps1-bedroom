@@ -244,26 +244,6 @@ Sleep mode · sunrise alarm · share cards · 18 achievements · daily surprises
 
 <br>
 
-## 🔧 Build it yourself
-
-<details>
-<summary>Project layout and builds (Windows)</summary>
-<br>
-
-```
-src/ps1_bedroom.html   ← the whole app (3D, sound, UI) in one file
-android/               ← small WebView wrapper: service, widgets, bridge
-Build APK.bat          ← builds releases/PS1-Bedroom-vX.Y.apk
-tools/build-web.ps1    ← builds the browser zip and docs/play
-tools/qa-flicker.js    ← flicker / z-fighting detector, run before every release
-```
-
-No Gradle: the APK script runs `aapt2 → javac → d8 → zipalign → apksigner` directly. Bring your own keystore in `android/signing/`.
-
-</details>
-
-<br>
-
 ---
 
 <div align="center">

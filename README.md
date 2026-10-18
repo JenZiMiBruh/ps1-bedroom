@@ -57,6 +57,7 @@ Leave it on while you study, work, game or fall asleep. The room **follows your 
 
 ## 🔜 Coming soon in 1.4
 
+- 🔋 A big performance pass: smoother, cooler phones, no more audio crackle
 - 📅 A working wall calendar, with a little pixel-art design for every month
 - 🕰️ A bedside clock you can read from the default view
 - 🌌 A brand new seamless sky dome around the whole world

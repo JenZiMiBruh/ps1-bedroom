@@ -15,6 +15,7 @@ import kotlin.math.hypot
 class MainActivity : Activity() {
     private lateinit var view: GLSurfaceView
     private val app = App()
+    private lateinit var pacer: FramePacer
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -23,17 +24,19 @@ class MainActivity : Activity() {
             override fun onSizeChanged(w: Int, h: Int, ow: Int, oh: Int) { super.onSizeChanged(w, h, ow, oh); app.viewHeight = h.toFloat() }
         }
         view.setEGLContextClientVersion(3)
-        view.setEGLConfigChooser(8, 8, 8, 8, 16, 0)
+        // No depth / stencil on the window surface: the 3D renders into its own low-res target
+        view.setEGLConfigChooser(8, 8, 8, 8, 0, 0)
         view.preserveEGLContextOnPause = true
         view.setRenderer(app)
-        view.renderMode = GLSurfaceView.RENDERMODE_CONTINUOUSLY
+        view.renderMode = GLSurfaceView.RENDERMODE_WHEN_DIRTY
         view.setOnTouchListener { _, e -> onTouch(e); true }
         setContentView(view)
+        pacer = FramePacer(this, view, app)
         hideSystemBars()
     }
 
-    override fun onResume() { super.onResume(); view.onResume(); hideSystemBars() }
-    override fun onPause() { view.onPause(); super.onPause() }
+    override fun onResume() { super.onResume(); view.onResume(); pacer.interacted(); pacer.start(); hideSystemBars() }
+    override fun onPause() { pacer.stop(); view.onPause(); super.onPause() }
     override fun onWindowFocusChanged(hasFocus: Boolean) { super.onWindowFocusChanged(hasFocus); if (hasFocus) hideSystemBars() }
 
     @Suppress("DEPRECATION")
@@ -52,15 +55,22 @@ class MainActivity : Activity() {
     // ---- touch: same gestures as OrbitControls on a phone ----
     private var lastX = 0f; private var lastY = 0f
     private var lastDist = 0f; private var lastMidX = 0f; private var lastMidY = 0f
+    private var downX = 0f; private var downY = 0f; private var wasPinching = false
     private fun onTouch(e: MotionEvent) {
+        pacer.interacted()
         when (e.actionMasked) {
-            MotionEvent.ACTION_DOWN -> { lastX = e.x; lastY = e.y }
+            MotionEvent.ACTION_DOWN -> { lastX = e.x; lastY = e.y; downX = e.x; downY = e.y; wasPinching = false }
+            MotionEvent.ACTION_UP -> {
+                // a tap: the finger barely moved and it wasn't a pinch (14 CSS px, as in the HTML)
+                if (!wasPinching && hypot(e.x - downX, e.y - downY) <= 14f * resources.displayMetrics.density) app.onTap(e.x, e.y, view.width.toFloat(), view.height.toFloat())
+            }
             MotionEvent.ACTION_POINTER_DOWN -> if (e.pointerCount >= 2) {
+                wasPinching = true
+                if (e.pointerCount == 3) app.debugNextTimePreset()
                 lastDist = hypot(e.getX(0) - e.getX(1), e.getY(0) - e.getY(1))
                 lastMidX = (e.getX(0) + e.getX(1)) / 2; lastMidY = (e.getY(0) + e.getY(1)) / 2
             }
             MotionEvent.ACTION_POINTER_UP -> {
-                // keep orbiting smoothly with the finger that stays down
                 val keep = if (e.actionIndex == 0) 1 else 0
                 lastX = e.getX(keep); lastY = e.getY(keep)
             }

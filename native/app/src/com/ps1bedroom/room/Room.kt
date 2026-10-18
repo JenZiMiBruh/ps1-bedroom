@@ -20,6 +20,10 @@ import kotlin.math.PI
 class Room(val scene: Scene, val tex: Textures) {
     val interactables = ArrayList<Mesh>()
     fun registerInteractable(m: Mesh, tag: String) { m.userData["interactTag"] = tag; interactables += m }
+    /** Groups that move or animate: never merged by static batching (the HTML's DYNAMIC_ROOTS). */
+    fun dynamicRoots(): Set<com.ps1bedroom.room.engine.Object3D> = setOf(doorLeaf)
+    /** Meshes that change on their own (the HTML skips snowCapMeshes, blindSlats and lavaBlobs when batching). */
+    fun batchExcluded(): Set<com.ps1bedroom.room.engine.Object3D> = (snowCapMeshes + blindSlats).toSet()
 
     val matWall = PS1.material(map = tex.wall)
     val matWood = PS1.material(map = tex.wood)
@@ -128,7 +132,82 @@ class Room(val scene: Scene, val tex: Textures) {
         doorPanel.position.set(0f, 1.78f, 0.76f); doorPanel.castShadow = true; doorPanel.receiveShadow = true
         doorLeaf.add(doorPanel); registerInteractable(doorPanel, "door")
 
+        buildWindow()
         buildLights()
+    }
+
+    // ---------------------------------------------------------------- window and blinds (HTML 4296-4368, 10644-10681)
+    val blindSlats = ArrayList<Mesh>()
+    val snowCapMeshes = ArrayList<Mesh>()
+    /** 0 slatted · 1 tilted open · 2 closed · 3 rolled all the way up (tap order 0 -> 1 -> 3 -> 2) */
+    var blindsOpenState = 0; private set
+    private var blindsRaise = 0f
+    private val slatTilt = FloatArray(17) { 0.34f }
+    /** Called when something that casts shadows moved (the renderer re-renders its shadow maps once). */
+    var onShadowsChanged: () -> Unit = {}
+    /** setBlindsState re-applies the environment (how much light gets through). */
+    var onBlindsChanged: () -> Unit = {}
+
+    private fun buildWindow() {
+        // Window sill snow drift (visible in winter)
+        val sillSnowMesh = Mesh(Geo.box(2.88f, 0.065f, 0.16f, 8, 1, 2), PS1.material(color = 0xf1f5f9, emissive = 0x94a3b8, emissiveIntensity = 0.25f))
+        sillSnowMesh.position.set(0.8f, 1.58f, -3.05f); sillSnowMesh.visible = false
+        scene.add(sillSnowMesh); snowCapMeshes += sillSnowMesh
+
+        val blindGroup = Group()
+        val matBlind = PS1.material(color = 0x8a9cc2)
+        val matWindowFrame = PS1.material(color = 0x5c6b8a)
+        // Frame jambs and centre mullion (cast the window-frame shadow into the room)
+        fun part(m: Mesh, x: Float, y: Float, z: Float): Mesh { m.position.set(x, y, z); m.castShadow = true; blindGroup.add(m); return m }
+        part(Mesh(Geo.box(2.88f, 0.08f, 0.28f), matWindowFrame), 0.8f, 3.73f, -3.08f)
+        part(Mesh(Geo.box(0.08f, 2.24f, 0.28f), matWindowFrame), -0.58f, 2.65f, -3.08f)
+        part(Mesh(Geo.box(0.08f, 2.24f, 0.28f), matWindowFrame), 2.18f, 2.65f, -3.08f)
+        part(Mesh(Geo.box(0.05f, 2.20f, 0.06f), matWindowFrame), 0.8f, 2.65f, -3.14f)
+        // 17 venetian blind slats casting slatted shadows and slicing the light rays
+        for (i in 0 until 17) {
+            val slat = Mesh(Geo.box(2.74f, 0.024f, 0.095f, 6, 1, 1), matBlind)
+            slat.position.set(0.8f, 1.62f + i * 0.125f, -2.98f)
+            slat.rotation.x = 0.34f
+            slat.castShadow = true; slat.receiveShadow = true
+            blindGroup.add(slat); blindSlats += slat
+            registerInteractable(slat, "blinds")
+        }
+        val windowSill = Mesh(Geo.box(2.96f, 0.08f, 0.28f, 6, 1, 1), matBlind)
+        windowSill.position.set(0.8f, 1.53f, -2.92f); windowSill.castShadow = true; windowSill.receiveShadow = true
+        blindGroup.add(windowSill)
+        val blindHeader = part(Mesh(Geo.box(2.84f, 0.12f, 0.16f), matBlind), 0.8f, 3.74f, -2.96f)
+        registerInteractable(blindHeader, "blinds")
+        for (cx in listOf(-0.25f, 0.8f, 1.85f)) part(Mesh(Geo.cylinder(0.01f, 0.01f, 2.15f, 4), matBlind), cx, 2.65f, -2.97f)
+        part(Mesh(Geo.cylinder(0.012f, 0.012f, 1.45f, 5), matBlind), -0.48f, 2.85f, -2.88f)
+        scene.add(blindGroup)
+    }
+
+    private val blindOrder = intArrayOf(0, 1, 3, 2)
+    fun setBlindsState(n: Int) {
+        blindsOpenState = n
+        if (n != 3) slatTilt.fill(floatArrayOf(0.34f, 0.0f, 1.38f)[n])
+        onBlindsChanged()
+        onShadowsChanged()
+    }
+    fun cycleWindowBlinds() = setBlindsState(blindOrder[(blindOrder.indexOf(blindsOpenState) + 1) % blindOrder.size])
+
+    /** Slats glide up into a tight stack under the header (or back down), tilting flat as they go. */
+    fun updateBlinds(dt: Float) {
+        val target = if (blindsOpenState == 3) 1f else 0f
+        val prev = blindsRaise
+        blindsRaise += (target - blindsRaise) * minOf(1f, dt * 2.6f)
+        if (kotlin.math.abs(target - blindsRaise) < 0.002f) blindsRaise = target
+        var moved = kotlin.math.abs(blindsRaise - prev) > 0.0001f
+        val n = blindSlats.size
+        for (i in 0 until n) {
+            val sl = blindSlats[i]
+            val baseY = 1.62f + i * 0.125f
+            val stackY = 3.66f - (n - 1 - i) * 0.013f
+            sl.position.y = baseY + (stackY - baseY) * blindsRaise
+            val tilt = slatTilt[i] * (1 - blindsRaise)
+            if (kotlin.math.abs(sl.rotation.x - tilt) > 0.001f) { sl.rotation.x += (tilt - sl.rotation.x) * minOf(1f, dt * 8f); moved = true }
+        }
+        if (moved) onShadowsChanged()
     }
 
     /** Room lights (HTML lines 8141-8222), with their starting values before the environment updates them. */

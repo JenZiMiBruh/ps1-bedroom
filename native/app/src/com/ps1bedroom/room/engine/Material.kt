@@ -46,7 +46,8 @@ class Material(
     /** PS1 vertex snap + affine warp (off for MeshBasicMaterial / sky layers) */
     @JvmField var ps1: Boolean = true,
     @JvmField var macro: Boolean = false,
-    @JvmField var fog: Boolean = true
+    @JvmField var fog: Boolean = true,
+    @JvmField var vertexColors: Boolean = false
 )
 
 /** makePS1Material from the HTML, same defaults and the same grime / macro rules. */

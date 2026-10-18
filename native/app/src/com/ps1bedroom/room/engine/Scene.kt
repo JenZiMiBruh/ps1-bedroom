@@ -28,15 +28,26 @@ open class Object3D {
 
     fun updateMatrix() { quaternion.setFromEuler(rotation); matrix.compose(position, quaternion, scale) }
 
+    /** false for baked static batches: their matrix stays identity (three's matrixAutoUpdate). */
+    @JvmField var matrixAutoUpdate = true
+
     fun updateMatrixWorld(force: Boolean = true) {
-        updateMatrix()
+        if (matrixAutoUpdate) updateMatrix()
         val p = parent
         if (p == null) matrixWorld.copy(matrix) else matrixWorld.multiplyMatrices(p.matrixWorld, matrix)
-        for (c in children) c.updateMatrixWorld(force)
+        val n = children.size
+        for (i in 0 until n) children[i].updateMatrixWorld(force)
     }
 
+    /** Safe while the callback removes objects (iterates a snapshot); used at build time only. */
     fun traverse(fn: (Object3D) -> Unit) { fn(this); for (c in ArrayList(children)) c.traverse(fn) }
-    fun traverseVisible(fn: (Object3D) -> Unit) { if (!visible) return; fn(this); for (c in children) c.traverseVisible(fn) }
+    /** Per-frame traversal: no allocation. */
+    fun traverseVisible(fn: (Object3D) -> Unit) {
+        if (!visible) return
+        fn(this)
+        val n = children.size
+        for (i in 0 until n) children[i].traverseVisible(fn)
+    }
 
     fun getWorldPosition(out: Vec3): Vec3 = out.setFromMatrixPosition(matrixWorld)
 

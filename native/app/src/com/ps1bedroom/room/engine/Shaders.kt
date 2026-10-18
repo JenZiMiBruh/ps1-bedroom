@@ -15,6 +15,7 @@ precision highp float;
 layout(location = 0) in vec3 position;
 layout(location = 1) in vec3 normal;
 layout(location = 2) in vec2 uv;
+layout(location = 3) in vec3 color;
 uniform mat4 modelMatrix;
 uniform mat4 modelViewMatrix;
 uniform mat4 projectionMatrix;
@@ -34,7 +35,9 @@ out vec3 vMacroPos;
 out float vFogDepth;
 out vec4 vShadowCoord0;
 out vec4 vShadowCoord1;
+out vec3 vColor;
 void main() {
+  vColor = color;
   vUv = (uvTransform * vec3(uv, 1.0)).xy;
   vec3 transformedNormal = normalMatrix * normal;
   vNormal = normalize(transformedNormal);
@@ -86,6 +89,7 @@ in vec3 vMacroPos;
 in float vFogDepth;
 in vec4 vShadowCoord0;
 in vec4 vShadowCoord1;
+in vec3 vColor;
 out vec4 fragColor;
 uniform vec3 diffuse;
 uniform float opacity;
@@ -97,6 +101,7 @@ uniform int uLit;
 uniform int uFog;
 uniform int uDoubleSide;
 uniform int uReceiveShadow;
+uniform int uVertexColors;
 uniform sampler2D map;
 uniform sampler2D emissiveMap;
 uniform vec3 ambientLightColor;
@@ -142,6 +147,7 @@ float shadowAt(sampler2D sm, vec4 coord, float bias) {
 }
 void main() {
   vec4 diffuseColor = vec4(diffuse, opacity);
+  if (uVertexColors == 1) diffuseColor.rgb *= vColor;
   vec2 affineUv = vAffineUv / vAffineW;
   if (uHasMap == 1) diffuseColor *= texture(map, affineUv);
   if (uMacro == 1) {

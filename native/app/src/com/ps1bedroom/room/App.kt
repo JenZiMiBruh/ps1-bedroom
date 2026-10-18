@@ -19,6 +19,10 @@ import kotlin.math.sin
  * Input arrives from MainActivity through the thread-safe methods at the bottom.
  */
 class App : GLSurfaceView.Renderer {
+    companion object {
+        // Clickable parts that never move can still merge, as long as they merge with parts of the same tag
+        val STATIC_TAGS = setOf("bed", "pc", "monitor", "tv", "tvPower", "ac", "lavalamp", "phone", "fan", "fanspin", "cat", "ps1Body", "ps1Pad", "dresser", "lamp", "boombox", "switch")
+    }
     val scene = Scene()
     // Default orbit view from inside the room, by the front wall, looking toward the desk and window
     val defaultCamPos = Vec3(0.6f, 3.15f, 3.1f)
@@ -27,12 +31,14 @@ class App : GLSurfaceView.Renderer {
     val controls = OrbitControls(camera)
     val renderer = Renderer()
     private lateinit var room: Room
+    lateinit var env: Environment; private set
 
     // settings (the HTML defaults: Balanced quality, 240p, wobble 160, camera breathing 40%)
     var resShort = 240
     var jitterBase = 160f
     var swayAmount = 0.4f
     private val basePos = Vec3()
+    private var lastT = -1f
     private var startMs = 0L
     private var built = false
 
@@ -42,6 +48,13 @@ class App : GLSurfaceView.Renderer {
             val tex = Textures()
             room = Room(scene, tex)
             room.build()
+            // Merge everything that never moves into a few big meshes (the HTML's batchStaticMeshes)
+            val r = com.ps1bedroom.room.engine.Batching.batchStaticMeshes(scene, room.dynamicRoots(), emptySet(), room.batchExcluded(), STATIC_TAGS, room.interactables)
+            room.onShadowsChanged = { renderer.shadowsNeedUpdate = true }
+            env = Environment(scene, room, renderer)
+            room.onBlindsChanged = { env.applyEnvironmentSettings() }
+            env.applyEnvironmentSettings()
+            android.util.Log.i("PS1Bedroom", "static batching: ${r.removed} meshes -> ${r.added} batches")
             renderer.post.rayLight = room.moonLight
             camera.position.copy(defaultCamPos)
             controls.target.copy(defaultTarget)
@@ -56,15 +69,24 @@ class App : GLSurfaceView.Renderer {
         }
     }
 
+    private var surfaceW = 1; private var surfaceH = 1
     override fun onSurfaceChanged(gl: GL10?, width: Int, height: Int) {
-        renderer.resize(width, height, resShort, jitterBase)
+        surfaceW = width; surfaceH = height
+        renderer.resize(width, height, effectiveRes(), jitterBase)
         camera.aspect = width.toFloat() / max(1, height)
         camera.updateProjectionMatrix()
     }
 
     override fun onDrawFrame(gl: GL10?) {
         val t = (SystemClock.uptimeMillis() - startMs) / 1000f
+        val dt = minOf(0.05f, if (lastT < 0f) 0f else t - lastT)
+        lastT = t
+        applyPerfLevel()
         applyInput()
+        handleTaps()
+        env.tick(System.currentTimeMillis())
+        if (debugPresetStep) { debugPresetStep = false; debugPreset = (debugPreset + 1) % env.TIME_PRESETS.size; env.setTimePreset(env.TIME_PRESETS[debugPreset].first) }
+        room.updateBlinds(dt)
         controls.update()
         // Keep the free camera inside the room
         camera.position.x = max(Room.MIN_X + 0.2f, min(Room.MAX_X - 0.2f, camera.position.x))
@@ -80,6 +102,62 @@ class App : GLSurfaceView.Renderer {
         renderer.render(scene, camera)
         camera.position.copy(basePos)
     }
+
+    // ---- Automatic quality (the HTML's setPerfLevel), driven here by Android's real thermal status ----
+    // level 0: as set · 1: fewer light-ray steps · 2: 80% resolution, no ambient occlusion · 3: 65% resolution
+    @Volatile private var wantedPerfLevel = 0
+    private var perfLevel = 0
+    var aoBase = 0.8f
+    var marchSteps = 14
+    private fun effectiveRes() = maxOf(120, (resShort * floatArrayOf(1f, 1f, 0.8f, 0.65f)[perfLevel]).toInt())
+    fun onThermal(status: Int) {
+        wantedPerfLevel = when {
+            status >= android.os.PowerManager.THERMAL_STATUS_SEVERE -> 3
+            status >= android.os.PowerManager.THERMAL_STATUS_MODERATE -> 2
+            status >= android.os.PowerManager.THERMAL_STATUS_LIGHT -> 1
+            else -> 0
+        }
+    }
+    private fun applyPerfLevel() {
+        val n = wantedPerfLevel
+        if (n == perfLevel && built) return
+        perfLevel = n
+        renderer.post.marchSteps = if (n >= 1) minOf(marchSteps, 8) else marchSteps
+        renderer.post.aoStrength = if (n >= 2) 0f else aoBase
+        renderer.resize(surfaceW, surfaceH, effectiveRes(), jitterBase)
+    }
+
+    // ---- Taps (the HTML's pointerup -> raycast interactables -> triggerEasterEgg) ----
+    private val raycaster = com.ps1bedroom.room.engine.Raycaster()
+    private val taps = ArrayList<FloatArray>()
+    var fanLightOn = false; private set
+    fun onTap(x: Float, y: Float, w: Float, h: Float) = synchronized(lock) { taps += floatArrayOf(x / w * 2 - 1, -(y / h) * 2 + 1) }
+    private fun handleTaps() {
+        val list = synchronized(lock) { if (taps.isEmpty()) return; ArrayList(taps).also { taps.clear() } }
+        for (p in list) {
+            raycaster.setFromCamera(p[0], p[1], camera)
+            val hit = raycaster.intersect(room.interactables) ?: continue
+            triggerEasterEgg(hit.first.userData["interactTag"] as String? ?: continue)
+        }
+    }
+    private fun triggerEasterEgg(tag: String) {
+        when (tag) {
+            "blinds" -> room.cycleWindowBlinds()
+            "switch" -> toggleFanLight()
+        }
+    }
+    fun toggleFanLight() {
+        fanLightOn = !fanLightOn
+        room.fanLight.intensity = if (fanLightOn) 1.85f else 0.0f
+        room.fanHemiFill.intensity = if (fanLightOn) 0.52f else 0.0f
+        renderer.post.fanLightOn = if (fanLightOn) 1f else 0f
+        renderer.shadowsNeedUpdate = true
+    }
+
+    // Temporary test shortcut until the menus are ported: a three-finger tap steps through the time presets
+    @Volatile private var debugPresetStep = false
+    private var debugPreset = -1
+    fun debugNextTimePreset() { debugPresetStep = true }
 
     // ---- input from the UI thread ----
     private val lock = Any()

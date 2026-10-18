@@ -14,7 +14,9 @@ class Geometry(
     @JvmField val uvs: FloatArray,
     @JvmField val indices: IntArray?,
     /** (start, count, materialIndex) in indices, like three's geometry.groups */
-    @JvmField val groups: List<IntArray> = emptyList()
+    @JvmField val groups: List<IntArray> = emptyList(),
+    /** Per-vertex RGB (static batches carry each part's material colour here, like three's vertexColors) */
+    @JvmField val colors: FloatArray? = null
 ) {
     val vertexCount get() = positions.size / 3
     // GL handles, filled in by the renderer
@@ -60,7 +62,7 @@ class Geometry(
             n[i] = tx; n[i + 1] = ty; n[i + 2] = tz
             i += 3
         }
-        return Geometry(p, n, uvs.copyOf(), indices?.copyOf(), groups)
+        return Geometry(p, n, uvs.copyOf(), indices?.copyOf(), groups, colors?.copyOf())
     }
     fun rotateX(a: Float) = transformed(Mat4().compose(Vec3(), Quat().setFromEuler(Euler(a, 0f, 0f)), Vec3(1f, 1f, 1f)))
     fun rotateY(a: Float) = transformed(Mat4().compose(Vec3(), Quat().setFromEuler(Euler(0f, a, 0f)), Vec3(1f, 1f, 1f)))

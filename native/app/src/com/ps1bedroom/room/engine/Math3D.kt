@@ -87,20 +87,39 @@ class Mat4 {
         return this
     }
 
-    /** this = a * b */
+    /** this = a * b (no allocation: runs for every object every frame) */
     fun multiplyMatrices(a: Mat4, b: Mat4): Mat4 {
         val ae = a.e; val be = b.e
-        val r = FloatArray(16)
-        for (c in 0 until 4) for (row in 0 until 4) {
-            r[c * 4 + row] = ae[row] * be[c * 4] + ae[4 + row] * be[c * 4 + 1] + ae[8 + row] * be[c * 4 + 2] + ae[12 + row] * be[c * 4 + 3]
-        }
-        System.arraycopy(r, 0, e, 0, 16)
+        val a11 = ae[0]; val a12 = ae[4]; val a13 = ae[8]; val a14 = ae[12]
+        val a21 = ae[1]; val a22 = ae[5]; val a23 = ae[9]; val a24 = ae[13]
+        val a31 = ae[2]; val a32 = ae[6]; val a33 = ae[10]; val a34 = ae[14]
+        val a41 = ae[3]; val a42 = ae[7]; val a43 = ae[11]; val a44 = ae[15]
+        val b11 = be[0]; val b12 = be[4]; val b13 = be[8]; val b14 = be[12]
+        val b21 = be[1]; val b22 = be[5]; val b23 = be[9]; val b24 = be[13]
+        val b31 = be[2]; val b32 = be[6]; val b33 = be[10]; val b34 = be[14]
+        val b41 = be[3]; val b42 = be[7]; val b43 = be[11]; val b44 = be[15]
+        e[0] = a11 * b11 + a12 * b21 + a13 * b31 + a14 * b41
+        e[4] = a11 * b12 + a12 * b22 + a13 * b32 + a14 * b42
+        e[8] = a11 * b13 + a12 * b23 + a13 * b33 + a14 * b43
+        e[12] = a11 * b14 + a12 * b24 + a13 * b34 + a14 * b44
+        e[1] = a21 * b11 + a22 * b21 + a23 * b31 + a24 * b41
+        e[5] = a21 * b12 + a22 * b22 + a23 * b32 + a24 * b42
+        e[9] = a21 * b13 + a22 * b23 + a23 * b33 + a24 * b43
+        e[13] = a21 * b14 + a22 * b24 + a23 * b34 + a24 * b44
+        e[2] = a31 * b11 + a32 * b21 + a33 * b31 + a34 * b41
+        e[6] = a31 * b12 + a32 * b22 + a33 * b32 + a34 * b42
+        e[10] = a31 * b13 + a32 * b23 + a33 * b33 + a34 * b43
+        e[14] = a31 * b14 + a32 * b24 + a33 * b34 + a34 * b44
+        e[3] = a41 * b11 + a42 * b21 + a43 * b31 + a44 * b41
+        e[7] = a41 * b12 + a42 * b22 + a43 * b32 + a44 * b42
+        e[11] = a41 * b13 + a42 * b23 + a43 * b33 + a44 * b43
+        e[15] = a41 * b14 + a42 * b24 + a43 * b34 + a44 * b44
         return this
     }
 
     fun invert(src: Mat4 = this): Mat4 {
         val m = src.e
-        val inv = FloatArray(16)
+        val inv = scratch
         inv[0] = m[5] * m[10] * m[15] - m[5] * m[11] * m[14] - m[9] * m[6] * m[15] + m[9] * m[7] * m[14] + m[13] * m[6] * m[11] - m[13] * m[7] * m[10]
         inv[4] = -m[4] * m[10] * m[15] + m[4] * m[11] * m[14] + m[8] * m[6] * m[15] - m[8] * m[7] * m[14] - m[12] * m[6] * m[11] + m[12] * m[7] * m[10]
         inv[8] = m[4] * m[9] * m[15] - m[4] * m[11] * m[13] - m[8] * m[5] * m[15] + m[8] * m[7] * m[13] + m[12] * m[5] * m[11] - m[12] * m[7] * m[9]
@@ -168,14 +187,25 @@ class Mat4 {
         return this
     }
 
-    /** Normal matrix (upper 3x3 inverse-transpose) of this, written into a 9-float array. */
+    /** Normal matrix (inverse-transpose of the upper 3x3, three's Matrix3.getNormalMatrix), column-major, no allocation. */
     fun normalMatrixInto(out: FloatArray) {
-        val inv = Mat4().invert(this).e
-        // transpose of the inverse, upper 3x3, column-major
-        out[0] = inv[0]; out[1] = inv[4]; out[2] = inv[8]
-        out[3] = inv[1]; out[4] = inv[5]; out[5] = inv[9]
-        out[6] = inv[2]; out[7] = inv[6]; out[8] = inv[10]
+        val n11 = e[0]; val n21 = e[1]; val n31 = e[2]
+        val n12 = e[4]; val n22 = e[5]; val n32 = e[6]
+        val n13 = e[8]; val n23 = e[9]; val n33 = e[10]
+        val t11 = n33 * n22 - n32 * n23; val t12 = n32 * n13 - n33 * n12; val t13 = n23 * n12 - n22 * n13
+        val det = n11 * t11 + n21 * t12 + n31 * t13
+        if (det == 0f) { out.fill(0f); return }
+        val d = 1f / det
+        // inverse (column-major), then transpose
+        val i11 = t11 * d; val i21 = (n31 * n23 - n33 * n21) * d; val i31 = (n32 * n21 - n31 * n22) * d
+        val i12 = t12 * d; val i22 = (n33 * n11 - n31 * n13) * d; val i32 = (n31 * n12 - n32 * n11) * d
+        val i13 = t13 * d; val i23 = (n21 * n13 - n23 * n11) * d; val i33 = (n22 * n11 - n21 * n12) * d
+        out[0] = i11; out[1] = i12; out[2] = i13
+        out[3] = i21; out[4] = i22; out[5] = i23
+        out[6] = i31; out[7] = i32; out[8] = i33
     }
+
+    companion object { private val scratch = FloatArray(16) }
 
     /** Euler (XYZ) from the rotation part, three's Euler.setFromRotationMatrix. */
     fun toEulerXYZ(out: Euler): Euler {
@@ -209,6 +239,8 @@ class Color(@JvmField var r: Float = 1f, @JvmField var g: Float = 1f, @JvmField 
         }
         return this
     }
+    fun lerp(c: Color, k: Float): Color { r += (c.r - r) * k; g += (c.g - g) * k; b += (c.b - b) * k; return this }
+    fun multiplyScalar(s: Float): Color { r *= s; g *= s; b *= s; return this }
     fun clone() = Color(r, g, b)
 }
 

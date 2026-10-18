@@ -57,12 +57,15 @@ Leave it on while you study, work, game or fall asleep. The room **follows your 
 
 ## 🔜 Coming soon in 1.4
 
-- 🔋 A big performance pass: smoother, cooler phones, no more audio crackle
-- 📅 A working wall calendar, with a little pixel-art design for every month
-- 🕰️ A bedside clock you can read from the default view
-- 🌌 A brand new seamless sky dome around the whole world
-- 👆 Tap the top bar to switch time, weather and season, plus a new location button
-- 🪚 Fixes: ceiling fan brackets, game shelf in front of the games
+Already working on the [`beta`](../../tree/beta) branch:
+
+- ✅ 📅 A working wall calendar, with a little pixel-art design for every month
+- ✅ 🕰️ A big LED clock on the nightstand you can read from the default view
+- ✅ 🌌 A brand new seamless sky dome around the whole world
+- ✅ 👆 Tap the top bar to switch time, weather, season and the new location button
+- ✅ 🏆 Achievements unlock with their own animation and fanfare
+- ✅ 🪚 Fixes: ceiling fan brackets, game shelf in front of the games
+- 🔧 🔋 A big performance pass: smoother, cooler phones, no more audio crackle (first pass done, testing)
 - 🚪 Later: the hallway comes back
 
 Follow along on the **[1.4 milestone](../../milestone/1)**.

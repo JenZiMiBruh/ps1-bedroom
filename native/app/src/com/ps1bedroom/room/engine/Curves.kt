@@ -65,6 +65,7 @@ class CatmullRomCurve3(private val points: List<DoubleArray>) {
         return (i + (target - before) / (after - before)) / (il - 1)
     }
     fun getPointAt(u: Double) = getPoint(getUtoTmapping(u))
+    fun getLength() = lengths[lengths.size - 1]
     fun getTangentAt(u: Double): DoubleArray {
         val t = getUtoTmapping(u)
         val delta = 0.0001

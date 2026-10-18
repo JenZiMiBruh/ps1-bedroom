@@ -27,6 +27,7 @@ class MainActivity : Activity() {
         // No depth / stencil on the window surface: the 3D renders into its own low-res target
         view.setEGLConfigChooser(8, 8, 8, 8, 0, 0)
         view.preserveEGLContextOnPause = true
+        app.res = resources
         view.setRenderer(app)
         view.renderMode = GLSurfaceView.RENDERMODE_WHEN_DIRTY
         view.setOnTouchListener { _, e -> onTouch(e); true }

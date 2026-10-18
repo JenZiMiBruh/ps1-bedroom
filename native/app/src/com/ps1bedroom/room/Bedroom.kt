@@ -185,8 +185,10 @@ class Bedroom(private val room: Room) {
         chairBack.rotation.x = -0.1f
         val backShell = chairPart(makeBackGeo(0.75f, 0.88f, 0.03f, 0.03f), matChairShell, 0f, 1.5f, -0.4f)
         backShell.rotation.x = -0.1f
-        val spine = chairPart(Geo.box(0.1f, 0.5f, 0.04f), matChairShell, 0f, 1.06f, -0.4f)
-        spine.rotation.x = 0.35f
+        // Spine: from the back of the seat mechanism up into the bottom of the back shell, both ends buried
+        // (native fix: the HTML's spine leaned the other way, so it floated behind the backrest)
+        val spine = chairPart(Geo.box(0.1f, 0.48f, 0.05f), matChairShell, 0f, 0.975f, -0.235f)
+        spine.rotation.x = -0.75f
         // T-armrests with soft pads
         for (side in intArrayOf(-1, 1)) {
             chairPart(Geo.box(0.16f, 0.035f, 0.06f), matChairShell, side * 0.33f, 0.86f, -0.02f)

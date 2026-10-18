@@ -38,6 +38,9 @@ class App : GLSurfaceView.Renderer {
     lateinit var bedroom: Bedroom; private set
     lateinit var fan: Fan; private set
     lateinit var furniture: Furniture; private set
+    lateinit var decor: Decor; private set
+    /** Set by MainActivity before the GL thread starts (for raw model files). */
+    lateinit var res: android.content.res.Resources
     private var lastCalendarCheck = 0f
     private var lastClockDraw = -99f
     private var lastSkylineUpdate = -99f
@@ -77,6 +80,9 @@ class App : GLSurfaceView.Renderer {
                 fan = Fan(room); fan.build()
                 room.extraDynamicRoots += fan.fanBladesGroup; room.extraDynamicRoots += fan.fanPullChain; room.extraDynamicRoots += fan.lightPullChain
                 furniture = Furniture(room); furniture.build()
+                decor = Decor(room, res); decor.build()
+                room.extraBatchExcluded.addAll(decor.stringBulbs)
+                decor.buildKenney()   // the HTML's GLB models finish loading after everything else
                 room.extraBatchExcluded.addAll(desk.lavaBlobs)
             }
             room.build()
@@ -121,6 +127,7 @@ class App : GLSurfaceView.Renderer {
         exterior.update(t, dt, sky.outsideEnv)
         desk.update(t)
         fan.update(dt)
+        decor.update(t)
         room.updateAc(t, dt)
         if (t - lastCalendarCheck > 60f) { lastCalendarCheck = t; furniture.refreshCalendar() }
         if (t - lastClockDraw > 1f) { lastClockDraw = t; bedroom.drawAlarmClock(env.currentHour()) }
@@ -193,6 +200,7 @@ class App : GLSurfaceView.Renderer {
             "fanspin" -> fan.toggleCeilingFanSpin()
             "ac" -> room.toggleAcUnit()
             "lamp" -> furniture.toggleLamp()
+            "string" -> decor.cycleStringLights()
         }
     }
     fun toggleFanLight() {

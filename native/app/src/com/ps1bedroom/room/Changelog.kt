@@ -24,6 +24,13 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.8", "String lights, gadgets and furniture-kit models", listOf(
+            "String lights along the top of the back and right walls: tap a bulb for warm white, rainbow or off",
+            "Succulent and cactus on the windowsill",
+            "Desk speakers, potted plants, coat rack and the open cardboard box (Kenney Furniture Kit, CC0)",
+            "Discman with earbuds on the bed, Game Kid Advance on the nightstand, Noka brick phone and Tamagotchu",
+            "Fixed: the office chair's backrest is now properly connected to the seat"
+        )),
         Entry("0.7", "Ceiling fan, dresser, nightstand and more", listOf(
             "Ceiling fan: blades spin up and coast down, the glass shade glows when the light is on, pull chains jump",
             "Tap the fan to toggle its light, tap the blades or motor to start / stop it, tap the AC to switch it",

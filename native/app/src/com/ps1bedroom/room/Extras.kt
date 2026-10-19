@@ -360,7 +360,8 @@ class Extras(private val room: Room, private val env: Environment, private val t
         ceilingStarMat.emissiveIntensity += (glow * 1.1f - ceilingStarMat.emissiveIntensity) * min(1f, dt * 0.8f)
         tv.glowStarMat.emissiveIntensity = 0.1f + ceilingStarMat.emissiveIntensity * 0.7f
         // Heater coils take a while to heat up and cool down
-        heaterOn = heaterShouldBeOn()
+        val want = heaterShouldBeOn()
+        if (want != heaterOn) { heaterOn = want; onHeaterHum(heaterOn) }
         heaterGlow += ((if (heaterOn) 1f else 0f) - heaterGlow) * min(1f, dt * 0.35f)
         coilMat.emissiveIntensity = heaterGlow * (1.1f + sin(t * 2.3f) * 0.06f)
         heaterLight.intensity = heaterGlow * (0.85f + sin(t * 1.7f) * 0.05f)
@@ -371,7 +372,14 @@ class Extras(private val room: Room, private val env: Environment, private val t
         if (decor.getValue("summer").visible) fanBlades.rotation.z -= dt * 14
     }
     private fun heaterShouldBeOn() = when (heaterMode) { "on" -> true; "off" -> false; else -> env.currentSeason == "winter" && (env.daylight < 0.4 || env.isSnowingNow()) }
-    fun cycleHeater() { heaterMode = mapOf("auto" to "on", "on" to "off", "off" to "auto").getValue(heaterMode) }
+    /** Sound hooks / toasts, set by the app. */
+    var onHeaterHum: (Boolean) -> Unit = {}
+    var toast: (String) -> Unit = {}
+    var sfx: (String) -> Unit = {}
+    fun cycleHeater(quiet: Boolean = false) {
+        heaterMode = mapOf("auto" to "on", "on" to "off", "off" to "auto").getValue(heaterMode)
+        if (!quiet) { sfx("lightSwitch"); toast(mapOf("auto" to "🔥 SPACE HEATER: Auto (warms the room on winter nights)", "on" to "🔥 SPACE HEATER: On. Toasty.", "off" to "🔥 SPACE HEATER: Off").getValue(heaterMode)) }
+    }
 
     // ---- Poster ----
     private val POSTERS: Map<String, ((Canvas2D, Int, Int) -> Unit)?> = linkedMapOf(
@@ -433,8 +441,15 @@ class Extras(private val room: Room, private val env: Environment, private val t
     }
     fun cyclePoster() {
         val keys = POSTER_NAMES.keys.filter { it != "none" }
-        setPoster(keys[(keys.indexOf(posterChoice) + 1) % keys.size])
+        choosePoster(keys[(keys.indexOf(posterChoice) + 1) % keys.size])
     }
+    /** setPoster with its click and toast (taps and the menu). */
+    fun choosePoster(key: String) {
+        setPoster(key)
+        sfx("caseClick")
+        toast(if (posterChoice == "none") "🖼 Took the poster down" else "🖼 Put up a new poster: ${POSTER_NAMES[posterChoice]}")
+    }
+    val heaterIsOn get() = heaterOn
 
     // ---- Room colours ----
     /** (key, label) pairs for the menu's colour chips. */

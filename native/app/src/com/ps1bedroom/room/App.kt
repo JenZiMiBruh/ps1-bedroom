@@ -44,6 +44,7 @@ class App : GLSurfaceView.Renderer {
     lateinit var weatherFx: WeatherFx; private set
     lateinit var places: Places; private set
     lateinit var monitor: Monitor; private set
+    val phone = Phone(this)
     /** The sound engine (HTML Tone.js soundscape). */
     val sound = com.ps1bedroom.room.audio.Sound(this)
     fun sfx(name: String) = sound.sfx(name)
@@ -55,6 +56,7 @@ class App : GLSurfaceView.Renderer {
         sound.toggle()
         if (first && sound.playing) toast("🔊 SOUND ON: every sound is placed in the room. Walk around and listen!")
         hud?.audioChanged(sound.playing)
+        sound.heaterHum(extras.heaterIsOn)
         onAudioState?.invoke(sound.playing)
         settings.changed()
     }
@@ -187,6 +189,8 @@ class App : GLSurfaceView.Renderer {
             weatherFx.onThunder = { sound.thunderclap() }
             player.onStep = { onRug -> sound.sfx(if (onRug) "stepRug" else "step") }
             player.sfx = { sound.sfx(it) }
+            jasper.onSound = { kind, at -> sound.dogSound(kind, at) }; jasper.toast = { toast(it) }
+            extras.onHeaterHum = { on -> sound.heaterHum(on) }; extras.toast = { toast(it) }; extras.sfx = { sound.sfx(it) }
             hud?.refreshMenu(); hud?.refreshStatus()
         }
     }
@@ -218,6 +222,7 @@ class App : GLSurfaceView.Renderer {
         places.update(t, dt)
         desk.update(t)
         monitor.tick(t)
+        phone.update(t)
         // The monitor redraws ~6x a second, only while the PC is on and the screen is in view
         desk.monScreen.updateMatrixWorld(); SPHERE_MONITOR_C.setFromMatrixPosition(desk.monScreen.matrixWorld)
         if (monitor.pcPoweredOn && t - lastMonitorUpdate > 0.16f && renderer.sphereInView(SPHERE_MONITOR_C, 0.6f)) { monitor.update(t); lastMonitorUpdate = t }
@@ -329,13 +334,13 @@ class App : GLSurfaceView.Renderer {
             "ps1Reset" -> ps1.resetPress(lastT)
             "ps1Open" -> ps1.lidToggle(lastT, true)
             "ps1Pad" -> ps1.padPress(lastT)
-            "machine" -> {} // the answering machine plays its messages with the audio phase
+            "machine" -> phone.playMessages { ms, fn -> hud?.later(ms, fn) }
             "heater" -> extras.cycleHeater()
             "poster" -> extras.cyclePoster()
             "boombox", "bbscreen" -> extras.cycleRadio(furniture.radioDisplayMat)
             "pc" -> { monitor.setPower(!monitor.pcPoweredOn); toast(if (monitor.pcPoweredOn) "💾 Rebooting HP Pavilion... Windows 98 / XP ScanDisk complete." else "⚠️ \"DO NOT TURN OFF!\" You just killed a 48-hour Napster download at 99%!") }
             "monitor" -> openPc()
-            "phone" -> toast("📞 56k V.90 MODEM: \"MOM HANG UP THE PHONE! I'M IN A STARCRAFT MATCH!\"")
+            "phone" -> if (phone.ringing) phone.answer() else { toast("📞 56k V.90 MODEM: \"MOM HANG UP THE PHONE! I'M IN A STARCRAFT MATCH!\""); sfx("phone") }
             "door" -> toast("🚧 UNDER CONSTRUCTION: The rest of the house is still being built. Check back in a future update!")
             "discman" -> toast("💿 SONIX D-SPIN Discman: 45-second anti-skip! A burned mix CD is still inside.")
             "gba" -> toast("🎮 GAME KID ADVANCE: The battery light is red. Of course it is.")
@@ -362,11 +367,10 @@ class App : GLSurfaceView.Renderer {
             "lavalamp" -> sfx("lavaSwitch")
             "cat" -> sfx(if (bedroom.catEyesGlowing) "meow" else "purr")
             "pc" -> sfx(if (monitor.pcPoweredOn) "pcOn" else "pcOff")
-            "phone" -> sfx("phone")
             "door", "discman", "brickphone", "tama", "box", "dresser" -> sfx("caseClick")
             "gba" -> sfx("ps1Button")
             "boombox", "bbscreen" -> sfx("radioTune")
-            "heater", "poster", "lamp", "string" -> sfx("ui")
+            "lamp", "string" -> sfx("ui")
         }
         sound.updateLayered()
     }

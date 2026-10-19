@@ -400,7 +400,7 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
             Triple("DOOR: CLOSED", false, { post { app.toast("🚧 UNDER CONSTRUCTION: The rest of the house is still being built. Check back in a future update!") } })
         ))
         h4("Poster above the desk")
-        chips(app.extras.POSTER_NAMES.map { (k, l) -> Triple(l, app.extras.posterChoice == k, { post { app.extras.setPoster(k); s.changed() } }) })
+        chips(app.extras.POSTER_NAMES.map { (k, l) -> Triple(l, app.extras.posterChoice == k, { post { app.extras.choosePoster(k); s.changed() } }) })
         for ((part, title) in listOf("walls" to "Wall paint", "carpet" to "Carpet", "sheets" to "Bedsheets")) {
             h4(title)
             chips(app.extras.colorOptions(part).map { (k, l) -> Triple(l, app.extras.roomColors[part] == k, { post { app.extras.setRoomColor(part, k); s.changed() } }) })

@@ -303,13 +303,29 @@ class Jasper(private val room: Room, private val env: Environment) {
         tailSegs[1].rotation.x = -0.25f * standK + TAIL_LIE2 * lieK + TAIL_SIT2 * sitK
         tailSegs[2].rotation.x = -0.3f * standK
         dogTail.rotation.y = sin(t * (if (petting) 16f else (if (pose == "walk") 7f else 2f))) * (if (petting) 0.6f else (if (pose == "sleep") 0.04f else 0.15f))
-        // (soft snores while asleep come with the audio phase)
+        // Soft snores while asleep at night
+        if (pose == "sleep" && state == "rest" && t > nextSnore) { nextSnore = t + 4.2f + rnd.nextFloat() * 1.5f; onSound("snore", soundPos()) }
     }
+    private var nextSnore = 0f
+    /** Sound hook (Sound.dogSound) and toasts, set by the app. */
+    var onSound: (String, Vec3) -> Unit = { _, _ -> }
+    var toast: (String) -> Unit = {}
+    private fun soundPos() = Vec3(dogGroup.position.x, y + 0.5f, dogGroup.position.z)
+    private val DOG_PETS = listOf(
+        "He thumps his tail and leans his whole weight into your hand.",
+        "Big stretch, a happy sneeze, then he flops over for belly rubs.",
+        "One ice-blue eye and one half brown, staring right into your soul. He knows he is handsome.",
+        "He gives a soft \"boof\" and nudges your hand for more.",
+        "Ears up! He heard something outside. False alarm.",
+        "He rests his chin on your knee and sighs like it has been a long day."
+    )
 
     /** Tap: tail thumps and a head tilt; a sleeping Jasper opens one eye and lies awake. */
     fun petDog(t: Float) {
         wagUntil = t + 2.5f
-        if (pose == "sleep") pose = "lie"
+        if (pose == "sleep") { pose = "lie"; toast("🐕 Jasper opens one eye (the half-brown one), yawns, and thumps his tail twice.") }
+        else toast("🐕 JASPER: ${DOG_PETS[rnd.nextInt(DOG_PETS.size)]}")
+        onSound("boof", soundPos())
     }
 
 }

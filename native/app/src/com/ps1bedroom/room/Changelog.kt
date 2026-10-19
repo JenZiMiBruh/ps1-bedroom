@@ -24,6 +24,12 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.21", "Phone calls and Jasper's voice", listOf(
+            "The cordless phone rings every so often while the sound is on: tap it to answer and hear who it is",
+            "Miss it and the answering machine takes a message: its red light blinks until you tap it to play them",
+            "Jasper gives a soft \"boof\" when you pet him (with a new line every time) and snores while he sleeps",
+            "The space heater hums while it runs, with toasts for its modes; posters click into place"
+        )),
         Entry("0.20", "Sound", listOf(
             "A native sound engine (no WebView, no Tone.js): synths, noise, filters, envelopes, delay, reverb and a bus compressor, mixed on its own audio thread",
             "Every source is placed in the room and pans as you turn: the PC tower's fan and hard drive, the ceiling fan, the AC, the CRT, the lava lamp, the PlayStation's disc drive",

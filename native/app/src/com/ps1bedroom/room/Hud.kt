@@ -242,6 +242,8 @@ class Hud(private val act: Activity, private val root: FrameLayout, private val 
     fun refreshStatus() = act.runOnUiThread { menu.refreshStatus() }
     /** The dock's Sound button mirrors the audio state (🔊 / 🔈). */
     fun audioChanged(on: Boolean) = act.runOnUiThread { dockBtns["audio"]?.let { b -> b.icon.text = if (on) "🔊" else "🔈"; b.view.background = if (on) GradientDrawable().apply { setColor(ACTIVE_BG); cornerRadius = dp(10f); setStroke(dpi(2f), PINK) } else null; b.label.setTextColor(if (on) Color.WHITE else MUTED) } }
+    /** setTimeout on the UI thread. */
+    fun later(ms: Long, fn: () -> Unit) { root.postDelayed(fn, ms) }
     fun showSleeping(on: Boolean) = act.runOnUiThread { sleepOverlay.visibility = if (on) View.VISIBLE else View.GONE }
     private var currentMode = "orbit"
     /** Android back: close the menu, then stand up / leave first person. */

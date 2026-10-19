@@ -959,6 +959,70 @@ class Sound(private val app: App) {
         }
     }
 
+    // ---- The cordless phone ringing: 4 cycles of 2 s fast warble, 4 s quiet ----
+    private var ringNodes: List<Any>? = null
+    fun ringPhone(): Boolean = ctx.sync {
+        try {
+            val spot = Spot(Vec3().copy(pos.getValue("phone")), 1.4, 1.0, 0.2, master, vol.getValue("sfx"))
+            val g = gain(0.0); g.connect(spot.level)
+            val a = Oscillator(ctx, 440.0, "sine"); val b = Oscillator(ctx, 480.0, "sine")
+            a.volume.value = -10.0; b.volume.value = -10.0; a.connect(g); b.connect(g)
+            val t0 = ctx.currentTime + 0.05
+            a.start(t0); b.start(t0)
+            for (c in 0 until 4) for (k in 0 until 40) g.gain.setValueAtTime(if (k % 2 == 1) 0.0 else 0.5, t0 + c * 6 + k * 0.05)
+            g.gain.setValueAtTime(0.0, t0 + 24)
+            a.stop(t0 + 24.2); b.stop(t0 + 24.2)
+            ringNodes = listOf(a, b, g, spot)
+            true
+        } catch (e: Exception) { false }
+    }
+    fun stopRing() = ctx.sync {
+        val n = ringNodes ?: return@sync
+        ringNodes = null
+        val g = n[2] as Gain
+        g.gain.cancelScheduledValues(ctx.currentTime); g.gain.setValueAtTime(0.0, ctx.currentTime)
+        pendingDispose += (ctx.currentTime + 0.3) to { (n[0] as Node).dispose(); (n[1] as Node).dispose(); g.dispose(); @Suppress("UNCHECKED_CAST") (n[3] as Spot).remove() }
+    }
+
+    // ---- Jasper: a soft "boof" when petted, slow snores while asleep ----
+    fun dogSound(kind: String, at: Vec3) {
+        if (!ready || !playing) return
+        try { ctx.sync {
+            val spot = Spot(Vec3().copy(at), 1.2, 1.0, 0.15, master, vol.getValue("sfx"))
+            val t0 = ctx.currentTime + 0.02
+            val parts = ArrayList<Any>()
+            if (kind == "boof") {
+                val thump = MembraneSynth(ctx, 0.05, 2.0, Envelope(ctx, 0.005, 0.18, 0.0, 0.05)); thump.volume.value = -10.0; thump.connect(spot.level); thump.triggerAttackRelease("A2", 0.15, t0, 0.8)
+                val breath = Noise(ctx, "brown"); val bf = filt(650.0, "bandpass", 1.2); val bg = gain(0.0)
+                breath.connect(bf); bf.connect(bg); bg.connect(spot.level)
+                bg.gain.setValueAtTime(0.0, t0); bg.gain.linearRampToValueAtTime(0.5, t0 + 0.03); bg.gain.linearRampToValueAtTime(0.0, t0 + 0.22)
+                breath.start(t0); breath.stop(t0 + 0.3)
+                parts.addAll(listOf(thump, breath, bf, bg))
+            } else {
+                val n = Noise(ctx, "brown"); val f = filt(260.0, "lowpass", 0.8); val g = gain(0.0)
+                n.connect(f); f.connect(g); g.connect(spot.level)
+                g.gain.setValueAtTime(0.0, t0); g.gain.linearRampToValueAtTime(0.35, t0 + 1.1); g.gain.linearRampToValueAtTime(0.0, t0 + 2.2)
+                n.start(t0); n.stop(t0 + 2.3)
+                parts.addAll(listOf(n, f, g))
+            }
+            pendingDispose += (t0 + 3.2) to { for (p in parts) when (p) { is Node -> p.dispose(); is Instrument -> p.dispose() }; spot.remove() }
+        } } catch (e: Exception) { }
+    }
+    // ---- The space heater's fan hum ----
+    private var heaterHumGain: Gain? = null
+    fun heaterHum(on: Boolean) {
+        if (!ready) return
+        ctx.sync {
+            val g = heaterHumGain ?: run {
+                val spot = Spot(Vec3(1.2f, 0.3f, 1.38f), 1.2, 1.0, 0.08, master, vol.getValue("sfx"))
+                val g = gain(0.0); g.connect(spot.level)
+                Noise(ctx, "brown").start().chain(filt(420.0, "lowpass", 0.6), gain(0.55), g)
+                heaterHumGain = g; g
+            }
+            g.gain.rampTo(if (on && playing) 0.35 else 0.0, 1.5)
+        }
+    }
+
     // ---------------- On / off ----------------
     fun setMasterVolume(v: Double) {
         masterVolume = v.coerceIn(0.0, 1.0)

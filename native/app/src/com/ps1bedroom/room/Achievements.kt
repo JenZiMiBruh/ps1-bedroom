@@ -98,27 +98,27 @@ class Achievements(private val app: App, ctx: Context) {
 class AchievementPop(private val act: Activity, private val root: FrameLayout) {
     private fun dp(v: Float) = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, v, act.resources.displayMetrics)
     private fun dpi(v: Float) = dp(v).toInt()
-    private val icon = TextView(act).apply { setTextSize(TypedValue.COMPLEX_UNIT_SP, 30f); gravity = Gravity.CENTER }
+    private val icon = TextView(act).apply { setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f); gravity = Gravity.CENTER; includeFontPadding = false }
     private val small = TextView(act).apply { text = "ACHIEVEMENT UNLOCKED"; setTextSize(TypedValue.COMPLEX_UNIT_SP, 9f); letterSpacing = 0.3f; typeface = Typeface.MONOSPACE }
-    private val name = TextView(act).apply { setTextColor(Color.WHITE); setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f); typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD); letterSpacing = 0.07f }
-    private val desc = TextView(act).apply { setTextColor(Color.rgb(170, 179, 230)); setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f); typeface = Typeface.MONOSPACE }
+    private val name = TextView(act).apply { maxLines = 1; setTextColor(Color.WHITE); setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f); typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD); letterSpacing = 0.07f }
+    private val desc = TextView(act).apply { maxLines = 2; setTextColor(Color.rgb(170, 179, 230)); setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f); typeface = Typeface.MONOSPACE }
     private val shine = View(act)
     private val card = FrameLayout(act).apply { visibility = View.INVISIBLE; clipToOutline = true }
     private val iconBg = GradientDrawable().apply { gradientType = GradientDrawable.RADIAL_GRADIENT; cornerRadius = dp(10f) }
     private val cardBg = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(Color.rgb(26, 31, 69), Color.rgb(12, 16, 48))).apply { cornerRadius = dp(14f) }
     init {
-        val row = LinearLayout(act).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(dpi(12f), dpi(10f), dpi(18f), dpi(10f)) }
+        val row = LinearLayout(act).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(dpi(10f), dpi(8f), dpi(16f), dpi(8f)) }
         icon.background = iconBg
-        row.addView(icon, LinearLayout.LayoutParams(dpi(44f), dpi(44f)))
+        row.addView(icon, LinearLayout.LayoutParams(dpi(38f), dpi(38f)))
         val tx = LinearLayout(act).apply { orientation = LinearLayout.VERTICAL; addView(small); addView(name); addView(desc) }
         row.addView(tx, LinearLayout.LayoutParams(-2, -2).apply { marginStart = dpi(12f) })
         card.addView(row)
         shine.background = GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, intArrayOf(0, Color.argb(90, 255, 255, 255), 0))
-        card.addView(shine, FrameLayout.LayoutParams(dpi(90f), -1))
+        card.addView(shine, FrameLayout.LayoutParams(dpi(70f), dpi(64f)))   // fixed: match-parent in a wrap-content card made it screen-tall
         card.background = cardBg
-        card.minimumWidth = dpi(240f)
+        card.minimumWidth = dpi(220f)
         card.elevation = dp(12f)
-        root.addView(card, FrameLayout.LayoutParams(-2, -2, Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply { topMargin = dpi(14f) })
+        root.addView(card, FrameLayout.LayoutParams(-2, -2, Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply { topMargin = dpi(14f); leftMargin = dpi(16f); rightMargin = dpi(16f) })
     }
     private var hideRun: Runnable? = null
     fun show(a: Array<String>, h: Int) {

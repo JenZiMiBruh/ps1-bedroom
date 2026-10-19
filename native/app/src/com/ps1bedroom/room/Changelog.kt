@@ -24,6 +24,14 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.28", "Media controls, a widget, and fixes", listOf(
+            "The phone now treats the room like a music app: the media player in your notification shade and lock screen, with the song, cover art, play / pause / skip and a seek bar for your music",
+            "Headphone, Bluetooth, car and watch buttons control it; it pauses for phone calls and other players, and when headphones come out",
+            "New home-screen widget: what's playing, with play / pause and skip",
+            "Fixed: the Tamagotchu no longer shares a spot with the trophy, the grape soda sits on the nightstand, the pizza and magazine sit on the desk and bed, and the box no longer clips into the floor",
+            "Fixed: the achievement pop-up was far too tall; it's a compact card now, and the list in Menu → About is tidier",
+            "Optimization pass 2: the screen's refresh rate drops to match the frame cap (big battery saving on 90 / 120 Hz phones), Android's Battery Saver lowers the cap, power-saving audio output, memory freed when the app is in the background, a leaner build"
+        )),
         Entry("0.27", "Optimization pass, part 1", listOf(
             "Settings are only written when something changed, instead of re-saving every 4 seconds",
             "The status bar only re-lays itself out when its text actually changes",

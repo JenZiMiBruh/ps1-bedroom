@@ -19,18 +19,18 @@ class Surprises(private val app: App, ctx: Context) {
             Mesh(Geo.box(0.4f, 0.3f, 0.32f), m(0xb8864b)).apply { position.set(1.9f, 0.15f, 2.9f); g.add(this) }
             Mesh(Geo.box(0.42f, 0.04f, 0.06f), m(0xe8dcc0)).apply { position.set(1.9f, 0.3f, 2.9f); g.add(this) } },
         Surprise("pizza", "🍕 Leftover pizza on the desk. Cold pizza is the best pizza.") { g ->
-            Mesh(Geo.box(0.42f, 0.04f, 0.42f), m(0xd9c9a3)).apply { position.set(-1.5f, 1.53f, -0.95f); g.add(this) } },
+            Mesh(Geo.box(0.42f, 0.04f, 0.42f), m(0xd9c9a3)).apply { position.set(-2.53f, 1.517f, -1.01f); rotation.y = 0.32f; g.add(this) } },
         Surprise("balloon", "🎈 A balloon from somebody's party drifted in and got stuck on the ceiling.") { g ->
             Mesh(Geo.sphere(0.16f, 8, 6), m(0xef4444, 0x330000, 0.3f)).apply { scale.y = 1.2f; position.set(0.2f, 4.7f, 1.2f); g.add(this) }
             Mesh(Geo.cylinder(0.004f, 0.004f, 1.2f, 3), m(0xffffff)).apply { position.set(0.2f, 4.0f, 1.2f); g.add(this) } },
         Surprise("note", "📝 A note under the door: \"dinner's in the fridge. love you. -mom\"") { g ->
             Mesh(Geo.box(0.2f, 0.005f, 0.14f), m(0xfef9c3)).apply { position.set(2.3f, 0.01f, 3.2f); rotation.y = 0.4f; g.add(this) } },
         Surprise("soda", "🥤 A can of grape soda on the nightstand. Still cold, somehow.") { g ->
-            Mesh(Geo.cylinder(0.035f, 0.035f, 0.12f, 8), m(0x7c3aed)).apply { position.set(1.05f, 1.24f, -2.35f); g.add(this) } },
+            Mesh(Geo.cylinder(0.035f, 0.035f, 0.12f, 8), m(0x7c3aed)).apply { position.set(0.93f, 0.68f, -2.78f); g.add(this) } },
         Surprise("ball", "🎾 Jasper left his tennis ball in the middle of the floor. He would like you to throw it.") { g ->
             Mesh(Geo.sphere(0.06f, 8, 6), m(0xd9f99d)).apply { position.set(0.3f, 0.06f, 1.0f); g.add(this) } },
         Surprise("magazine", "📰 The new issue of GamePro on the bed. Cheat codes on page 74.") { g ->
-            Mesh(Geo.box(0.3f, 0.01f, 0.4f), m(0xdc2626)).apply { position.set(2.6f, 0.9f, 0.6f); rotation.y = 0.3f; g.add(this) } }
+            Mesh(Geo.box(0.3f, 0.01f, 0.4f), m(0xdc2626)).apply { position.set(2.6f, 0.86f, 0.6f); rotation.y = 0.3f; g.add(this) } }
     )
     private val prefs = ctx.getSharedPreferences("ps1bedroom", Context.MODE_PRIVATE)
     val group = Group()

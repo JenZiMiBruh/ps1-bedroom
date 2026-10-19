@@ -507,7 +507,8 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
         tiles(listOf(Triple("📜 CHANGELOG", false, { Changelog.show(act) }), Triple("❓ HOW TO", false, { close(); app.hud?.overlays?.startTutorial() })))
         val ach = app.achievements
         h4("🏆 Achievements", "${ach.count} / ${Achievements.LIST.size}")
-        chips(Achievements.LIST.map { (id, a) -> val got = ach.has(id); Triple("${if (got) a[0] else "🔒"} ${a[1]}: ${a[2]}", got, { }) })
+        chips(Achievements.LIST.map { (id, a) -> val got = ach.has(id); Triple("${if (got) a[0] else "🔒"} ${a[1]}", got, { app.toast("${if (got) a[0] + " " else "🔒 "}${a[1]}: ${a[2]}") }) })
+        note("Tap one to see how to get it.", true)
     }
 
     private fun hideKeyboard(v: View) {

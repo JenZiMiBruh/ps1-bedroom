@@ -34,8 +34,26 @@ class FramePacer(context: Context, private val view: GLSurfaceView, private val 
 
     fun interacted() { lastInteractMs = SystemClock.uptimeMillis() }
 
+    // Android's own Battery Saver counts as our battery-saver caps too
+    @Volatile private var osSaver = power.isPowerSaveMode
+    private val saverReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(c: Context?, i: android.content.Intent?) { osSaver = power.isPowerSaveMode }
+    }
+    init { context.registerReceiver(saverReceiver, android.content.IntentFilter(PowerManager.ACTION_POWER_SAVE_MODE_CHANGED)) }
+
+    /** Tells the display how fast we actually draw, so a 90 / 120 Hz panel can drop to 60 or 30 Hz (a big battery win). */
+    private var hintedCap = -1
+    private fun hintFrameRate(cap: Int) {
+        if (Build.VERSION.SDK_INT < 30 || cap == hintedCap) return
+        val s = view.holder.surface
+        if (s == null || !s.isValid) return
+        hintedCap = cap
+        try { s.setFrameRate(cap.toFloat(), android.view.Surface.FRAME_RATE_COMPATIBILITY_DEFAULT) } catch (e: Exception) { }
+    }
+
     fun currentCap(now: Long): Int {
         var cap = baseCap
+        if (osSaver) cap = minOf(cap, 30)
         if (ecoIdle) {
             val idle = now - lastInteractMs
             if (idle > 120_000) cap = minOf(cap, if (saver) 15 else 20)
@@ -52,13 +70,14 @@ class FramePacer(context: Context, private val view: GLSurfaceView, private val 
         return cap
     }
 
-    fun start() { if (!running) { running = true; Choreographer.getInstance().postFrameCallback(this) } }
+    fun start() { hintedCap = -1; if (!running) { running = true; Choreographer.getInstance().postFrameCallback(this) } }
     fun stop() { running = false; Choreographer.getInstance().removeFrameCallback(this) }
 
     override fun doFrame(frameTimeNanos: Long) {
         if (!running) return
         val now = SystemClock.uptimeMillis()
         val cap = currentCap(now)
+        hintFrameRate(cap)
         // same test as the HTML: draw when at least one frame interval (minus 2 ms of slack) has passed
         if (now - lastFrameMs >= 1000 / cap - 2) {
             lastFrameMs = now

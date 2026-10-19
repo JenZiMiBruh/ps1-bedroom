@@ -38,15 +38,15 @@ class MainActivity : Activity() {
         app.myMusic = MyMusic(app, this)
         app.achievements = Achievements(app, this); app.alarm = Alarm(app, this)
         app.pickMusic = { folder -> runOnUiThread { pickMusic(folder) } }
-        app.onNowPlaying = { title, artist, _ -> runOnUiThread { MediaService.nowPlaying = title?.let { if (artist.isNullOrEmpty()) it else "$it · $artist" }; if (app.sound.playing) MediaService.start(this) } }
-        MediaService.onControl = { cmd -> app.post { app.myMusic.mediaControl(cmd) } }
+        app.onMediaState = { s -> runOnUiThread { MediaService.update(this, s); NowPlayingWidget.update(this, s) } }
+        MediaService.onControl = { cmd -> app.postOrRun { app.mediaCommand(cmd) } }
+        MediaService.onSeek = { ms -> app.postOrRun { app.sound.musicStream?.seek(ms / 1000.0); app.publishMedia() } }
         app.hud = Hud(this, root, app).also { it.attachMenu() }
         setContentView(root)
         pacer = FramePacer(this, view, app)
         app.pacer = pacer
-        app.onAudioState = { on -> runOnUiThread { if (on) { askNotifications(); MediaService.start(this) } else MediaService.stop(this) } }
+        app.onAudioState = { on -> if (on) runOnUiThread { askNotifications() } }
         // (straight away: the GL thread, which runs posted work, is paused while the app is in the background)
-        MediaService.onPause = { if (app.sound.playing) app.toggleAudio() }
         hideSystemBars()
         handleShare(intent)
     }
@@ -88,12 +88,18 @@ class MainActivity : Activity() {
         }.start()
     }
 
-    override fun onResume() { super.onResume(); view.onResume(); pacer.interacted(); pacer.start(); hideSystemBars() }
+    /** Memory pressure (or the app went to the background): drop what can be re-made. */
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN) app.postOrRun { app.myMusic.trim() }
+    }
+
+    override fun onResume() { super.onResume(); app.glActive = true; view.onResume(); pacer.interacted(); pacer.start(); hideSystemBars() }
     private fun askNotifications() { if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 7) }
-    override fun onDestroy() { MediaService.stop(this); app.sound.shutdown(); super.onDestroy() }
+    override fun onDestroy() { MediaService.onControl = null; MediaService.onSeek = null; MediaService.stop(this); NowPlayingWidget.update(this, null); app.sound.shutdown(); super.onDestroy() }
     @Deprecated("Activity back handling")
     override fun onBackPressed() { if (app.hud?.back() != true) @Suppress("DEPRECATION") super.onBackPressed() }
-    override fun onPause() { pacer.stop(); view.onPause(); super.onPause() }
+    override fun onPause() { pacer.stop(); view.onPause(); app.glActive = false; super.onPause() }
     override fun onWindowFocusChanged(hasFocus: Boolean) { super.onWindowFocusChanged(hasFocus); if (hasFocus) hideSystemBars() }
 
     @Suppress("DEPRECATION")

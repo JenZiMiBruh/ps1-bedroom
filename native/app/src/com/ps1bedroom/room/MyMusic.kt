@@ -97,6 +97,8 @@ class MyMusic(private val app: App, val ctx: Context) {
     }
     private fun artFile(key: String) = File(artDir, "${key.hashCode().toUInt()}.jpg")
     private val artCache = HashMap<String, Bitmap?>()
+    /** onTrimMemory: covers are re-read from disk when needed. */
+    fun trim() { artCache.clear() }
     fun art(key: String): Bitmap? = artCache.getOrPut(key) { artFile(key).takeIf { it.exists() }?.let { BitmapFactory.decodeFile(it.path) } }
 
     // ---------------- Importing: songs, or whole album folders ----------------

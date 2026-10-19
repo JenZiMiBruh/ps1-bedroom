@@ -55,6 +55,8 @@ class AudioCtx {
             .setAudioFormat(AudioFormat.Builder().setEncoding(AudioFormat.ENCODING_PCM_FLOAT).setSampleRate(sampleRate).setChannelMask(ch).build())
             .setBufferSizeInBytes(max(minBuf * 4, sampleRate / 5 * 8))
             .setTransferMode(AudioTrack.MODE_STREAM)
+            // the deep-buffer output path: the CPU sleeps between big writes (ambience doesn't need low latency)
+            .apply { if (android.os.Build.VERSION.SDK_INT >= 26) setPerformanceMode(AudioTrack.PERFORMANCE_MODE_POWER_SAVING) }
             .build()
         track = t
         t.play()

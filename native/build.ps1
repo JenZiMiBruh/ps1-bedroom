@@ -36,7 +36,7 @@ Run "$bt\aapt2.exe" $link
 
 Write-Host '2/6 kotlin'
 $srcs = @(Get-ChildItem -Recurse "$app\src" -Include *.kt, *.java | ForEach-Object FullName) + @(Get-ChildItem -Recurse "$out\gen" -Filter *.java | ForEach-Object FullName)
-& $kotlinc @('-jvm-target', '1.8', '-language-version', '1.9', '-api-version', '1.9', '-no-reflect', '-nowarn', '-cp', $aj, '-d', "$out\classes") @srcs 2>&1 | ForEach-Object { "$_" } | Where-Object { $_ -notmatch '^warning:' }
+& $kotlinc @('-jvm-target', '1.8', '-language-version', '1.9', '-api-version', '1.9', '-no-reflect', '-nowarn', '-Xno-param-assertions', '-Xno-call-assertions', '-Xno-receiver-assertions', '-cp', $aj, '-d', "$out\classes") @srcs 2>&1 | ForEach-Object { "$_" } | Where-Object { $_ -notmatch '^warning:' }
 if ($LASTEXITCODE -ne 0) { throw "kotlinc failed with exit code $LASTEXITCODE" }
 # R.java comes out of aapt2 as Java: compile it too (kotlinc only reads it)
 $gen = @(Get-ChildItem -Recurse "$out\gen" -Filter *.java | ForEach-Object FullName)

@@ -91,6 +91,39 @@ class App : GLSurfaceView.Renderer {
     /** toggleAmbienceAudio: the first time builds the engine. */
     /** The activity starts / stops the media service with this. */
     @Volatile var onAudioState: ((Boolean) -> Unit)? = null
+    /** False while the activity is in the background: the GL thread is paused, so posted work would never run. */
+    @Volatile var glActive = true
+    /** Runs on the GL thread when it's running, otherwise right here (nothing else touches the room then). */
+    fun postOrRun(fn: () -> Unit) { if (glActive) post(fn) else synchronized(posted) { fn() } }
+    /** The phone's media controls (notification, lock screen, headphones, Bluetooth, watch). Pause silences the room like any player. */
+    fun mediaCommand(cmd: String) {
+        if (!isBuilt) return
+        when (cmd) {
+            "play" -> { if (!sound.playing) toggleAudio(); if (extras.radioStation == myMusic.MY_MUSIC_STATION && myMusic.paused) myMusic.mediaControl("play") }
+            "pause", "stop" -> if (sound.playing) toggleAudio()
+            "toggle" -> mediaCommand(if (sound.playing) "pause" else "play")
+            "next", "prev" -> { if (!sound.playing) toggleAudio(); myMusic.mediaControl(cmd) }
+        }
+        publishMedia()
+    }
+    /** Song or room changes for the media session (MediaService). */
+    @Volatile var onMediaState: ((MediaService.State) -> Unit)? = null
+    fun publishMedia() {
+        if (!isBuilt) return
+        val mm = myMusic
+        val st = extras.radioStation
+        val t = mm.current
+        val music = st == mm.MY_MUSIC_STATION && t != null
+        val stream = sound.musicStream
+        val place = Places.OUTSIDE_ENVS[sky.outsideEnv]
+        onMediaState?.invoke(MediaService.State(sound.playing && (!music || !mm.paused),
+            if (music) t!!.title else if (st > 0) extras.RADIO_STATIONS[st].substringBefore(':') else "PS1 Bedroom",
+            if (music) t!!.artist.ifEmpty { "My Music" } else if (st > 0) extras.RADIO_STATIONS[st].substringAfter(": ") else "${env.W.label} · ${place?.name ?: "Your room"}",
+            if (music) t!!.album else "PS1 Bedroom",
+            if (music) mm.nowArt else null, music,
+            if (music && stream != null) (stream.positionSec * 1000).toLong() else 0L,
+            if (music && stream != null && !stream.durationSec.isNaN()) (stream.durationSec * 1000).toLong() else 0L))
+    }
     fun toggleAudio() {
         val first = !sound.ready
         sound.toggle()
@@ -98,6 +131,7 @@ class App : GLSurfaceView.Renderer {
         hud?.audioChanged(sound.playing)
         sound.heaterHum(extras.heaterIsOn)
         onAudioState?.invoke(sound.playing)
+        publishMedia()
         settings.changed()
     }
     /** The start screen (or launch without it) turns the sound on if it was on last time. */
@@ -224,7 +258,7 @@ class App : GLSurfaceView.Renderer {
             controls.update()
             startMs = SystemClock.uptimeMillis()
             built = true
-            myMusic.onChanged = { hud?.refreshMenu() }
+            myMusic.onChanged = { hud?.refreshMenu(); publishMedia() }
             scene.add(alarm.light)
             surprises = Surprises(this, alarm.context); surprises.build()
             jasper.onPet = { achievements.petted() }

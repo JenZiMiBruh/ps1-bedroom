@@ -155,12 +155,12 @@ class Decor(private val room: Room, private val res: Resources) {
         brickFace.rotation.x = (-PI / 2).toFloat(); brickFace.position.y = 0.026f
         brick.add(brickFace); room.registerInteractable(brickFace, "brickphone")
         val tama = Group()
-        tama.position.set(-3.38f, 1.43f, 1.8f) // native fix: fully on the dresser top
+        tama.position.set(-3.22f, 1.43f, 1.93f) // native fix: on the dresser top, between the trophy and the boombox (it used to share the trophy's spot)
         scene.add(tama)
-        val egg = propPart(tama, Geo.sphere(0.04f, 10, 8), PS1.material(color = 0xff8fc8), 0f, 0.04f, 0f, "tama")
+        val egg = propPart(tama, Geo.sphere(0.04f, 10, 8), PS1.material(color = 0xff8fc8), 0f, 0.049f, 0f, "tama")
         egg.scale.set(1f, 1.2f, 0.6f)
         val tamaFace = Mesh(Geo.plane(0.035f, 0.03f), PS1.material(color = 0x9fbf6a, emissive = 0x9fbf6a, emissiveIntensity = 0.15f))
-        tamaFace.position.set(0.026f, 0.045f, 0f); tamaFace.rotation.y = (PI / 2).toFloat()
+        tamaFace.position.set(0.026f, 0.054f, 0f); tamaFace.rotation.y = (PI / 2).toFloat()
         tama.add(tamaFace); room.registerInteractable(tamaFace, "tama")
     }
 
@@ -179,7 +179,8 @@ class Decor(private val room: Room, private val res: Resources) {
             var minY = Float.MAX_VALUE
             val v = Vec3()
             root.traverse { o -> if (o is Mesh) { val p = o.geometry.positions; for (i in 0 until o.geometry.vertexCount) { v.set(p[i * 3], p[i * 3 + 1], p[i * 3 + 2]).applyMatrix4(o.matrixWorld); if (v.y < minY) minY = v.y } } }
-            if (minY != Float.MAX_VALUE) root.position.y += pos.y - minY
+            // (+1.5 cm: the PS1 vertex snap wobbles near-flush faces through the surface under them)
+            if (minY != Float.MAX_VALUE) root.position.y += pos.y - minY + 0.015f
             scene.add(root); kenneyRoots += root
         }
         placeKenney(R.raw.kenney_speaker_small, Vec3(-1.95f, 1.5f, -1.45f), 0.55f, 1.35f)

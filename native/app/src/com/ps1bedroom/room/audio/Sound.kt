@@ -374,7 +374,7 @@ class Sound(private val app: App) {
             tvPower.gain.rampTo(if (app.tv.bedroomTvOn) 1.0 else 0.0, if (app.tv.bedroomTvOn) 0.4 else 0.15)
             setActiveChannel("pc", if (app.monitor.pcPoweredOn) app.monitor.currentChannel else null)
             val ch = app.tv.bedroomTvChannel
-            setActiveChannel("tv", if (app.tv.bedroomTvOn) ch else null, if (ch == Tv.PS1_TV_CHANNEL) app.library.insertedGame else (if (ch == 2) app.extras.currentTape else 0))
+            setActiveChannel("tv", if (app.tv.bedroomTvOn && !app.ytActive) ch else null, if (ch == Tv.PS1_TV_CHANNEL) app.library.insertedGame else (if (ch == 2) app.extras.currentTape else 0))
             setActiveChannel("radio", if (app.extras.radioStation in 1..Music.RADIO_CHANNELS.size) app.extras.radioStation - 1 else null)
             radio.level.gain.rampTo(vol.getValue("radio"), 0.2)
             // Weather

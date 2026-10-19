@@ -218,6 +218,8 @@ class Hud(private val act: Activity, private val root: FrameLayout, private val 
     val menu: Menu by lazy { Menu(act, root, app) }
     val overlays: Overlays by lazy { Overlays(act, root, app) }
     val pcDesktop: PcDesktop by lazy { PcDesktop(act, root, app) }
+    val yt: YouTubeTv by lazy { YouTubeTv(act, root, app) }
+    fun runUi(fn: () -> Unit) = act.runOnUiThread(fn)
     fun openPc() = act.runOnUiThread { menu.close(); pcDesktop.show() }
     private var uiHidden = false
     /** Photo mode: everything but the photo bar goes away. */
@@ -249,6 +251,7 @@ class Hud(private val act: Activity, private val root: FrameLayout, private val 
     /** Android back: close the menu, then stand up / leave first person. */
     fun back(): Boolean {
         if (pcDesktop.isOpen) { pcDesktop.close(); return true }
+        if (app.ytActive || yt.dialogOpen) { if (yt.back()) return true }
         if (overlays.back()) return true
         if (menu.isOpen) { menu.close(); return true }
         if (currentMode != "orbit") { app.post { app.setPlayerMode("orbit") }; return true }

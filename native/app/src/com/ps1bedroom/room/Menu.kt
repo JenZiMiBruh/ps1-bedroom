@@ -367,6 +367,7 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
         tiles(listOf(
             Triple(if (tv.bedroomTvOn) "TV: ${Tv.TV_CHANNEL_NAMES[tv.bedroomTvChannel].substringBefore(':')}" else "TV CHANNEL", tv.bedroomTvOn, { post { app.tvNextChannel(); app.sfx("tvChannel"); s.changed() } }),
             Triple(if (app.extras.radioStation > 0) "RADIO: ${app.extras.RADIO_STATIONS[app.extras.radioStation].substringBefore(':')}" else "RADIO: OFF", app.extras.radioStation > 0, { post { app.extras.cycleRadio(app.furniture.radioDisplayMat); app.sfx("radioTune"); s.changed() } }),
+            Triple("▶ YOUTUBE ON TV", app.ytActive, { close(); app.hud?.yt?.openDialog() }),
             Triple("PC SCREEN", app.monitor.pcPoweredOn, { post { val on = app.monitor.pcPoweredOn; app.monitorNextChannel(); app.sfx(if (on) "monitorChannel" else "pcOn"); s.changed() } })
         ))
         buildMyMusic()
@@ -466,6 +467,7 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
         }
         h4("Temperature")
         seg(listOf("F" to "°F  Fahrenheit", "C" to "°C  Celsius"), s.tempUnit) { v -> post { s.tempUnit = v; s.changed(); app.hud?.refreshStatus() } }
+        app.hud?.yt?.let { yt -> check("PS1 look on YouTube: a pixel grid the size of the room's pixels, chunkier scanlines, and the picture wobbles with the TV", yt.ps1Look) { c -> yt.ps1Look = c } }
         check("Show the start screen when the app opens", s.startScreenEnabled) { c -> post { s.startScreenEnabled = c; s.changed() } }
         check("Debug: the free camera can leave the room", s.debugFreeCam) { c -> post { s.debugFreeCam = c } }
     }

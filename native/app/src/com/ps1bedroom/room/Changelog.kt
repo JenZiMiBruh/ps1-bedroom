@@ -24,6 +24,12 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.23", "YouTube on the TV", listOf(
+            "Paste a YouTube link (Menu → Sound → YOUTUBE ON TV), or Share a video to PS1 Bedroom, and it plays on the bedroom CRT",
+            "The player is pinned to the TV glass in 3D, with scanlines and an optional PS1 pixel grid that wobbles with the TV",
+            "⛶ Full for full screen, recently watched list, and searches open YouTube so you can share a video back",
+            "The TV's own channel sound steps aside while YouTube plays"
+        )),
         Entry("0.22", "My Music", listOf(
             "Add your own songs, or a whole album folder, from your phone (Menu → Sound → My Music); the files stay where they are",
             "They play through the boombox like the radio: tap it to switch between the FM stations and MY MUSIC",

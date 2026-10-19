@@ -50,6 +50,35 @@ class App : GLSurfaceView.Renderer {
     @Volatile var onNowPlaying: ((String?, String?, android.graphics.Bitmap?) -> Unit)? = null
     /** Opens the system file picker for songs (false) or a whole album folder (true). */
     @Volatile var pickMusic: ((Boolean) -> Unit)? = null
+    /** YouTube is playing on the bedroom TV (YouTubeTv); the TV's own channel sound steps aside. */
+    @Volatile var ytActive = false
+    private val YT_CORNERS = arrayOf(Vec3(-0.395f, 0.3f, -0.015f), Vec3(0.395f, 0.3f, -0.015f), Vec3(-0.395f, -0.3f, -0.015f), Vec3(0.395f, -0.3f, -0.015f))
+    private val ytPts = FloatArray(8); private val ytTmp = Vec3(); private val ytView = Vec3(); private val ytC = Vec3(); private val ytN = Vec3()
+    /** ytPlaceOverlay: the TV glass's 4 corners on screen, snapped like the PS1 vertex shader snaps the TV. */
+    private fun placeYouTube() {
+        val yt = hud?.yt ?: return
+        if (!tv.bedroomTvOn) { hud?.runUi { yt.stop(true) }; ytActive = false; return }
+        if (yt.isFull) return
+        val m = tv.screenMesh.matrixWorld
+        ytC.set(0f, 0f, 0.02f).applyMatrix4(m)
+        ytN.set(0f, 0f, 1f).applyMatrix4Dir(m).normalize()
+        ytTmp.subVectors(camera.position, ytC)
+        var show = ytN.dot(ytTmp) > 0.05f
+        val jg = renderer.ps1Uniforms.jitterGrid
+        if (show) for (i in 0 until 4) {
+            ytTmp.copy(YT_CORNERS[i]).applyMatrix4(m)
+            ytView.copy(ytTmp).applyMatrix4(camera.matrixWorldInverse)
+            if (ytView.z > -0.05f) { show = false; break }
+            ytTmp.applyMatrix4(camera.projectionMatrix.let { p -> ytProj.multiplyMatrices(p, camera.matrixWorldInverse) })
+            if (ps1Jitter) { val k = maxOf(1f, -ytView.z * 0.5f); ytTmp.x = Math.floor((jg[0] * k * ytTmp.x + 0.5f).toDouble()).toFloat() / (jg[0] * k); ytTmp.y = Math.floor((jg[1] * k * ytTmp.y + 0.5f).toDouble()).toFloat() / (jg[1] * k) }
+            ytPts[i * 2] = (ytTmp.x + 1) / 2 * surfaceW; ytPts[i * 2 + 1] = (1 - ytTmp.y) / 2 * surfaceH
+        }
+        val wPx = maxOf(8f, Math.hypot((ytPts[2] - ytPts[0]).toDouble(), (ytPts[3] - ytPts[1]).toDouble()).toFloat() / surfaceW * renderer.internalW)
+        yt.place(ytPts, show, 640f / wPx)
+    }
+    private val ytProj = com.ps1bedroom.room.engine.Mat4()
+    /** The YouTube PS1 look (also snaps the overlay to the wobble). */
+    val ps1Jitter get() = hud?.yt?.ps1Look ?: true
     val phone = Phone(this)
     /** The sound engine (HTML Tone.js soundscape). */
     val sound = com.ps1bedroom.room.audio.Sound(this)
@@ -280,6 +309,7 @@ class App : GLSurfaceView.Renderer {
         }
         renderer.post.time = t
         renderer.render(scene, camera)
+        if (ytActive) placeYouTube()
         photoCallback?.let { cb -> photoCallback = null; cb(readScreen()) }
         camera.position.copy(basePos)
     }

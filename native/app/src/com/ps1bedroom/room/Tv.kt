@@ -36,6 +36,8 @@ class Tv(private val room: Room, private val env: Environment) {
         val PS1_TV_CHANNEL = TV_CHANNEL_NAMES.size - 1 // the A/V input is always the last channel
     }
     var bedroomTvOn = true; private set
+    /** The picture (YouTube is pinned over it). */
+    lateinit var screenMesh: Mesh
     var bedroomTvChannel = 0; private set
     /** The PlayStation is on (it adds A/V 1 to the rotation): comes with the console phase. */
     var ps1On = false
@@ -155,7 +157,7 @@ class Tv(private val room: Room, private val env: Environment) {
         }
         // Layered with real depth (the PS1 wobble shifts depth by a centimetre at an angle): the black tube face is a
         // solid block 2.2 cm proud of the bezel, the picture floats 1.5 cm in front of that
-        val tvScreenMesh = Mesh(tvScreenGeo, tvScreenMat)
+        val tvScreenMesh = Mesh(tvScreenGeo, tvScreenMat); screenMesh = tvScreenMesh
         tvScreenMesh.position.set(0f, 1.36f, 0.377f)
         tvStandGroup.add(tvScreenMesh); room.registerInteractable(tvScreenMesh, "tv")
         val tvGlassMask = Mesh(Geo.box(0.79f, 0.60f, 0.022f), PS1.material(color = 0x07080c))

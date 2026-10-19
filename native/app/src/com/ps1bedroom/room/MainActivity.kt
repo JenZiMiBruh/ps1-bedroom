@@ -47,7 +47,15 @@ class MainActivity : Activity() {
         // (straight away: the GL thread, which runs posted work, is paused while the app is in the background)
         MediaService.onPause = { if (app.sound.playing) app.toggleAudio() }
         hideSystemBars()
+        handleShare(intent)
     }
+    /** A YouTube link shared to PS1 Bedroom plays on the bedroom TV. */
+    private fun handleShare(i: android.content.Intent?) {
+        if (i?.action != android.content.Intent.ACTION_SEND) return
+        val text = i.getStringExtra(android.content.Intent.EXTRA_TEXT) ?: return
+        view.postDelayed({ app.hud?.yt?.playLink(text) }, if (app.isBuilt) 0L else 2500L)
+    }
+    override fun onNewIntent(intent: android.content.Intent?) { super.onNewIntent(intent); setIntent(intent); handleShare(intent) }
 
     // ---- My Music: the system file picker (songs, or a whole album folder) ----
     @Suppress("DEPRECATION")

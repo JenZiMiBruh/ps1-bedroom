@@ -24,6 +24,14 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.10", "The CRT TV", listOf(
+            "20\" MAGNAVOLT CRT with domed glass, scanlines, a rolling band and phosphor glow, on the walnut media cart",
+            "VCR with the blinking 12:00, VHS tapes and game cases on the shelf, rabbit-ear antennas, A/V jacks",
+            "Seven channels: late-night anime, the weather channel with today's forecast, the VCR, the shopping network, static, cartoons and the music video countdown",
+            "Tap the TV to flip channels (past the last one it turns off); tap the red button for power",
+            "The TV's glow flickers onto the room, and it only redraws while it's on and in view",
+            "Glow-in-the-dark stars and the wall outlet; baseboards now match the web version exactly"
+        )),
         Entry("0.9", "Jasper", listOf(
             "Jasper the German Shepherd: black & tan pixel fur, ice-blue eyes, his left one half brown",
             "He wanders between his favourite spots: the rug, the door, the TV, the desk and any sunbeam on the floor",

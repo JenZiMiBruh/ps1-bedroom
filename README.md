@@ -13,7 +13,7 @@
 ![Release](https://img.shields.io/badge/📅%20RELEASE-October%2021%2C%202026-ff3ea5?style=for-the-badge&labelColor=1a1033)
 ![Google Play](https://img.shields.io/badge/GOOGLE%20PLAY-before%20the%20end%20of%202026-22c55e?style=for-the-badge&logo=googleplay&logoColor=white&labelColor=1a1033)
 
-![Native build](https://img.shields.io/badge/native%20build-v0.9-a78bfa?style=flat-square&labelColor=1a1033)
+![Native build](https://img.shields.io/badge/native%20build-v0.10-a78bfa?style=flat-square&labelColor=1a1033)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.0-7f52ff?style=flat-square&logo=kotlin&logoColor=white&labelColor=1a1033)
 ![OpenGL ES](https://img.shields.io/badge/OpenGL%20ES-3.0-5586a4?style=flat-square&logo=opengl&logoColor=white&labelColor=1a1033)
 ![APK](https://img.shields.io/badge/APK-~820%20KB-ef4444?style=flat-square&labelColor=1a1033)
@@ -68,11 +68,12 @@ The port follows the web version section by section and is checked against it as
 - **Ceiling fan**: spinning blades, glowing shade, pull chains (tap to toggle the fan and the light)
 - **More of the room**: dresser with the boombox, nightstand reading lamp, wastebasket, backpack, the 2001 wall calendar, posters, string lights (warm / rainbow), windowsill plants, Discman, Game Kid Advance, Noka, Tamagotchu, Kenney furniture-kit models
 - **Jasper**: the German Shepherd with the split-colour eye, wandering between his favourite spots, sleeping on the bed at night, wagging when you pet him
+- **CRT TV**: the MAGNAVOLT set on its media cart with the VCR, seven live channels, scanlines and glow; tap to flip channels or power it off
 - **In-app changelog**: tap the version tag in the corner
 
 ### 🔨 In progress / up next
 
-- 📺 **The CRT TV and PlayStation**: channels, the console with working buttons and lid, the game shelf, the VCR tapes, the GTA collection
+- 🎮 **The PlayStation**: the console with working buttons and lid, the game shelf, the VCR tapes, the GTA collection
 - 🌦️ **Weather**: rain and snow particles, lightning, the window glass with raindrops
 - 🏞️ **All 15 places** outside the window
 - 🔊 **Native audio**: the full soundscape, sleep timer fade, lock-screen controls
@@ -86,6 +87,7 @@ Newest first. The same list is in the app (tap the version tag in the bottom-lef
 
 | Build | What changed |
 |---|---|
+| **0.10** | The CRT TV on its media cart: VCR, tapes, seven live channels, channel / power taps; glow-in-the-dark stars, outlet, baseboards matched to the web version |
 | **0.9** | Jasper: pixel-fur German Shepherd with the half-brown eye, favourite spots, bed at night and in storms, walking / sitting / lying poses, petting |
 | **0.8** | String lights (warm / rainbow), windowsill succulent and cactus, Kenney furniture-kit models, Discman, Game Kid Advance, Noka, Tamagotchu; office chair backrest fixed |
 | **0.7** | Ceiling fan with spinning blades and pull chains, AC louvre, dresser with boombox, nightstand reading lamp, wastebasket, backpack, wall calendar, posters |

@@ -121,6 +121,20 @@ class Canvas2D(@JvmField val width: Int, @JvmField val height: Int) {
         globalCompositeOperation = s.gco; font = s.font; textAlign = s.align; textBaseline = s.base
     }
     fun translate(x: Number, y: Number) { canvas.translate(x.toFloat(), y.toFloat()) }
+    private val tm = android.graphics.Matrix(); private val tmv = FloatArray(9)
+    /** ctx.setTransform(a, b, c, d, e, f): replaces the current transform. */
+    fun setTransform(a: Number, b: Number, c: Number, d: Number, e: Number, f: Number) {
+        tmv[0] = a.toFloat(); tmv[1] = c.toFloat(); tmv[2] = e.toFloat()
+        tmv[3] = b.toFloat(); tmv[4] = d.toFloat(); tmv[5] = f.toFloat()
+        tmv[6] = 0f; tmv[7] = 0f; tmv[8] = 1f
+        tm.setValues(tmv)
+        @Suppress("DEPRECATION") canvas.setMatrix(tm)
+    }
+    /** Fast path for per-pixel fills (TV static): an ARGB colour instead of a CSS string, same result. */
+    fun fillRectArgb(x: Number, y: Number, w: Number, h: Number, argb: Int) {
+        fill.shader = null; fill.color = withAlpha(argb, globalAlpha)
+        canvas.drawRect(x.toFloat(), y.toFloat(), x.toFloat() + w.toFloat(), y.toFloat() + h.toFloat(), fill)
+    }
     fun rotate(a: Number) { canvas.rotate(Math.toDegrees(a.toDouble()).toFloat()) }
     fun scale(x: Number, y: Number) { canvas.scale(x.toFloat(), y.toFloat()) }
     fun clip() { canvas.clipPath(path) }

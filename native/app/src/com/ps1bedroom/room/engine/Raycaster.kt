@@ -22,7 +22,7 @@ class Raycaster {
     fun intersect(meshes: List<Mesh>): Pair<Mesh, Float>? {
         var best: Mesh? = null; var bestD = Float.MAX_VALUE
         for (m in meshes) {
-            if (!isVisible(m) || !m.material.visible) continue
+            if (!isVisible(m)) continue   // (three tests object visibility only: invisible-material tap pads still count)
             val d = intersectMesh(m) ?: continue
             if (d < bestD) { bestD = d; best = m }
         }

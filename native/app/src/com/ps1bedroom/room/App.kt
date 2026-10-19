@@ -40,6 +40,9 @@ class App : GLSurfaceView.Renderer {
     lateinit var furniture: Furniture; private set
     lateinit var decor: Decor; private set
     lateinit var jasper: Jasper; private set
+    lateinit var tv: Tv; private set
+    private var lastTvUpdate = 0.05f
+    private val SPHERE_TV_C = Vec3(-2.05f, 1.3f, 0.65f)
     /** Set by MainActivity before the GL thread starts (for raw model files). */
     lateinit var res: android.content.res.Resources
     private var lastCalendarCheck = 0f
@@ -63,6 +66,7 @@ class App : GLSurfaceView.Renderer {
             room = Room(scene, tex)
             env = Environment(scene, room, renderer)
             // Each part is built at its place in the HTML's creation order (that keeps the grime maps 1:1)
+            room.onBuildTv = { tv = Tv(room, env); tv.build() }
             room.onBuildOutside = {
                 // The outside: painted backdrop, sky dome, sun, moon, clouds, horizon ring, then the 3D city.
                 // All of it moves or redraws, so it never takes part in static batching.
@@ -132,6 +136,10 @@ class App : GLSurfaceView.Renderer {
         fan.update(dt)
         decor.update(t)
         jasper.update(t, dt)
+        jasper.bedroomTvOn = tv.bedroomTvOn
+        tv.updateLight(t)
+        // The TV redraws ~6x a second (the PlayStation ~16x) and only while it is on and on screen, as in the HTML
+        if (tv.bedroomTvOn && t - lastTvUpdate > (if (tv.bedroomTvChannel == Tv.PS1_TV_CHANNEL) 0.06f else 0.16f) && renderer.sphereInView(SPHERE_TV_C, 0.7f)) { tv.updateBedroomTvScreen(t); lastTvUpdate = t }
         room.updateAc(t, dt)
         if (t - lastCalendarCheck > 60f) { lastCalendarCheck = t; furniture.refreshCalendar() }
         if (t - lastClockDraw > 1f) { lastClockDraw = t; bedroom.drawAlarmClock(env.currentHour()) }
@@ -206,6 +214,8 @@ class App : GLSurfaceView.Renderer {
             "lamp" -> furniture.toggleLamp()
             "string" -> decor.cycleStringLights()
             "dog" -> jasper.petDog(lastT)
+            "tv" -> tv.cycleBedroomTvChannel(lastT)
+            "tvPower" -> tv.toggleBedroomTv(lastT)
         }
     }
     fun toggleFanLight() {

@@ -109,13 +109,6 @@ class Room(val scene: Scene, val tex: Textures) {
             bb.position.set((x0 + x1) / 2, 0.07f, 3.45f)
             scene.add(bb)
         }
-        // Window wall and right wall, so the baseboard runs all the way around the room
-        val bbBack = Mesh(Geo.box(MAX_X - MIN_X, 0.14f, 0.06f, 8, 1, 1), matWood)
-        bbBack.position.set((MIN_X + MAX_X) / 2, 0.07f, MIN_Z + 0.03f)
-        scene.add(bbBack)
-        val bbRight = Mesh(Geo.box(0.06f, 0.14f, MAX_Z - MIN_Z, 1, 1, 6), matWood)
-        bbRight.position.set(MAX_X - 0.03f, 0.07f, (MIN_Z + MAX_Z) / 2)
-        scene.add(bbRight)
 
         // Light switch beside the door (controls the ceiling fan light)
         val switchPlate = Mesh(Geo.box(0.12f, 0.2f, 0.025f), matBeigePlastic)
@@ -181,13 +174,14 @@ class Room(val scene: Scene, val tex: Textures) {
         doorLightCrack.position.set(0f, 0.02f, 0f); doorGroup.add(doorLightCrack)
 
         buildAc()
-        // (the CRT TV & VCR cart, HTML 2785-3490, comes with the TV phase)
+        onBuildTv()                // HTML 2785-3490: CRT TV and VCR cart, back / right baseboards, outlet, glow stars
         onBuildOutside()           // HTML 3494: the exterior world (grime 37 onward)
         buildWindow()              // HTML 4296 (grime 141)
         onBuildInterior()          // HTML 4370 onward: the desk corner and the rest of the room
         buildLights()
     }
     /** Hooks for the parts built by other classes, called at their place in the HTML's creation order. */
+    var onBuildTv: () -> Unit = {}
     var onBuildOutside: () -> Unit = {}
     var onBuildInterior: () -> Unit = {}
 

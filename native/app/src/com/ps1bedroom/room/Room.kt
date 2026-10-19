@@ -138,7 +138,9 @@ class Room(val scene: Scene, val tex: Textures) {
         doorPanel.position.set(0f, 1.78f, 0.76f); doorPanel.castShadow = true; doorPanel.receiveShadow = true
         doorLeaf.add(doorPanel); registerInteractable(doorPanel, "door")
         // 1.3: an UNDER CONSTRUCTION sign taped to the door (the hallway is closed for now)
-        val constructionTex = com.ps1bedroom.room.engine.createCanvasTex(64, 48) { ctx, w, h ->
+        val constructionTex = com.ps1bedroom.room.engine.createCanvasTex(128, 96) { ctx, w0, h0 ->
+            // v0.33: drawn at 2x and kept out of the distant-texture mipmaps, so the lettering stays readable across the room
+            ctx.scale(2, 2); val w = w0 / 2; val h = h0 / 2
             ctx.fillStyle = "#facc15"; ctx.fillRect(0, 0, w, h)
             var x = -48
             while (x < w) {
@@ -147,9 +149,9 @@ class Room(val scene: Scene, val tex: Textures) {
                 x += 12
             }
             ctx.fillStyle = "#111"; ctx.font = "bold 9px monospace"; ctx.textAlign = "center"
-            ctx.fillText("UNDER", w / 2, 21); ctx.fillText("CONSTRUCTION", w / 2, 31)
+            ctx.fillText("UNDER", w / 2, 21); ctx.font = "bold 8px monospace"; ctx.fillText("CONSTRUCTION", w / 2, 31)   // 8px: at 9 it ran off the sign
             ctx.font = "6px monospace"; ctx.fillText("KEEP OUT", w / 2, 38)
-        }.tex
+        }.tex.also { it.linearMin = true }
         for (s in intArrayOf(-1, 1)) {
             val sign = Mesh(Geo.plane(0.62f, 0.46f), PS1.material(map = constructionTex, color = 0xffffff, polygonOffset = true, polygonOffsetFactor = -2f, polygonOffsetUnits = -2f))
             sign.position.set(s * 0.033f, 2.25f, 0.76f); sign.rotation.set(0f, (s * PI / 2).toFloat(), s * 0.04f)

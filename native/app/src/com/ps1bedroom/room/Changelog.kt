@@ -24,6 +24,9 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.33", "The door sign", listOf(
+            "Fixed: the UNDER CONSTRUCTION sign on the door shows its lettering again (sharper, and it fits on the sign)"
+        )),
         Entry("0.32", "Fixes", listOf(
             "Fixed: the title screen could slide down and show the room behind it (its layers shared one layout, so moving one moved them all)",
             "Jasper's custom colours are a proper picker now: named colours (Jet black, Chocolate, Tan, Silver...) with a preview of his three colours",

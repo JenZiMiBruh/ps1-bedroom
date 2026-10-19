@@ -53,6 +53,46 @@ class Euler(@JvmField var x: Float = 0f, @JvmField var y: Float = 0f, @JvmField 
 }
 
 class Quat(@JvmField var x: Float = 0f, @JvmField var y: Float = 0f, @JvmField var z: Float = 0f, @JvmField var w: Float = 1f) {
+    fun copy(q: Quat): Quat { x = q.x; y = q.y; z = q.z; w = q.w; return this }
+    /** three's Quaternion.setFromRotationMatrix (upper 3x3 of an unscaled matrix). */
+    fun setFromRotationMatrix(m: Mat4): Quat {
+        val te = m.e
+        val m11 = te[0]; val m12 = te[4]; val m13 = te[8]; val m21 = te[1]; val m22 = te[5]; val m23 = te[9]; val m31 = te[2]; val m32 = te[6]; val m33 = te[10]
+        val trace = m11 + m22 + m33
+        if (trace > 0) { val s = 0.5f / kotlin.math.sqrt(trace + 1f); w = 0.25f / s; x = (m32 - m23) * s; y = (m13 - m31) * s; z = (m21 - m12) * s }
+        else if (m11 > m22 && m11 > m33) { val s = 2f * kotlin.math.sqrt(1f + m11 - m22 - m33); w = (m32 - m23) / s; x = 0.25f * s; y = (m12 + m21) / s; z = (m13 + m31) / s }
+        else if (m22 > m33) { val s = 2f * kotlin.math.sqrt(1f + m22 - m11 - m33); w = (m13 - m31) / s; x = (m12 + m21) / s; y = 0.25f * s; z = (m23 + m32) / s }
+        else { val s = 2f * kotlin.math.sqrt(1f + m33 - m11 - m22); w = (m21 - m12) / s; x = (m13 + m31) / s; y = (m23 + m32) / s; z = 0.25f * s }
+        return this
+    }
+    /** this = a * b */
+    fun multiplyQuaternions(a: Quat, b: Quat): Quat {
+        val qax = a.x; val qay = a.y; val qaz = a.z; val qaw = a.w; val qbx = b.x; val qby = b.y; val qbz = b.z; val qbw = b.w
+        x = qax * qbw + qaw * qbx + qay * qbz - qaz * qby; y = qay * qbw + qaw * qby + qaz * qbx - qax * qbz
+        z = qaz * qbw + qaw * qbz + qax * qby - qay * qbx; w = qaw * qbw - qax * qbx - qay * qby - qaz * qbz
+        return this
+    }
+    /** three's Quaternion.slerpQuaternions(a, b, t). */
+    fun slerpQuaternions(a: Quat, b: Quat, t: Float): Quat {
+        copy(a)
+        if (t == 0f) return this
+        if (t == 1f) return copy(b)
+        var cosHalf = w * b.w + x * b.x + y * b.y + z * b.z
+        var bx = b.x; var by = b.y; var bz = b.z; var bw = b.w
+        if (cosHalf < 0) { bw = -bw; bx = -bx; by = -by; bz = -bz; cosHalf = -cosHalf }
+        if (cosHalf >= 1f) return this
+        val sqrSin = 1f - cosHalf * cosHalf
+        if (sqrSin <= 1.1920929e-7f) {
+            val s = 1 - t
+            w = s * w + t * bw; x = s * x + t * bx; y = s * y + t * by; z = s * z + t * bz
+            val l = kotlin.math.sqrt(x * x + y * y + z * z + w * w); x /= l; y /= l; z /= l; w /= l
+            return this
+        }
+        val sinHalf = kotlin.math.sqrt(sqrSin); val half = kotlin.math.atan2(sinHalf, cosHalf)
+        val ra = kotlin.math.sin((1 - t) * half) / sinHalf; val rb = kotlin.math.sin(t * half) / sinHalf
+        w = w * ra + bw * rb; x = x * ra + bx * rb; y = y * ra + by * rb; z = z * ra + bz * rb
+        return this
+    }
     fun setFromEuler(e: Euler): Quat {
         val c1 = cos(e.x / 2); val c2 = cos(e.y / 2); val c3 = cos(e.z / 2)
         val s1 = sin(e.x / 2); val s2 = sin(e.y / 2); val s3 = sin(e.z / 2)

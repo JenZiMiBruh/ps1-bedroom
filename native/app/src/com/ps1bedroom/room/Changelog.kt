@@ -24,6 +24,13 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.12", "The game library", listOf(
+            "11 PS1 games on the hutch shelf and every Grand Theft Auto on the wall shelf, each with its own hand-drawn cover, spine and back",
+            "Tap a case to pick it up (it rides in front of you), then tap the PlayStation: the lid pops, the discs swap, and it boots the new game",
+            "Every game plays on the TV in its own style: skating, gliding, an RPG battle, web-swinging, a car chase, corridor shooters, broom flying, a card duel",
+            "The top-down GTAs scroll a city with traffic and cops; GTA III to VI show a 3D chase-cam drive, each with its own city, sky and HUD",
+            "Fixed: Jasper's neck no longer pokes out of the back of his head"
+        )),
         Entry("0.11", "The PlayStation", listOf(
             "The grey PlayStation on the rug: POWER, RESET and OPEN buttons that press down, a hinged lid, the disc spinning up",
             "Turn it on and the TV switches to A/V 1: the publisher screen, the PlayStation logo, the title screen, then Bandi-coot Rush",

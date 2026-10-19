@@ -42,6 +42,11 @@ class Tv(private val room: Room, private val env: Environment) {
     /** The console (it draws its own picture on A/V 1). */
     var ps1: Ps1? = null
     /** Switch the channel directly (the PlayStation puts the TV on A/V 1 and back). */
+    /** The GTA chase-cam feed replaces the drawn picture while a 3D-era game is playing (null = back to the canvas). */
+    fun useFeed(tex: com.ps1bedroom.room.engine.Texture?) {
+        val t = tex ?: tvCanvasObj.tex
+        if (tvScreenMat.map !== t) { tvScreenMat.map = t; tvScreenMat.emissiveMap = t }
+    }
     fun setChannel(ch: Int) { bedroomTvChannel = ch; room.bedroomTvLight.color.setHex(TV_CHANNEL_COLORS[ch]) }
     val tvStandGroup = Group()
     private lateinit var tvCanvasObj: CanvasTex

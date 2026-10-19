@@ -31,6 +31,9 @@ class Ps1(private val room: Room, private val tv: Tv) {
     val ps1Group = Group()
     lateinit var ps1LidPivot: Group
     private lateinit var ps1Disc: Mesh
+    val disc get() = ps1Disc
+    lateinit var discHome: com.ps1bedroom.room.engine.Vec3
+    lateinit var library: GameLibrary
     private lateinit var ps1LedMat: Material
     private class Button(val mesh: Mesh, val baseY: Float) { var press = 0f }
     private val buttons = HashMap<String, Button>()
@@ -42,88 +45,14 @@ class Ps1(private val room: Room, private val tv: Tv) {
     private var tvChannelBeforePs1 = 0
     val PS1_BOOT_SECONDS = 7.5f
 
-    // ---- Cover art helpers (HTML 4489-4510, 4756) ----
-    private fun outlinedText(ctx: Canvas2D, text: String, x: Number, y: Number, font: String, fill: String, stroke: String, lineWidth: Float = 2f) {
-        ctx.font = font; ctx.lineJoin = "round"; ctx.lineWidth = lineWidth
-        ctx.strokeStyle = stroke; ctx.strokeText(text, x, y)
-        ctx.fillStyle = fill; ctx.fillText(text, x, y)
-    }
-    private fun drawPsMark(ctx: Canvas2D, x: Int, y: Int, s: Int) {
-        for ((c, ix, iy) in arrayOf(Triple("#ef4444", 0, 0), Triple("#facc15", 1, 0), Triple("#22c55e", 0, 1), Triple("#3b82f6", 1, 1))) {
-            ctx.fillStyle = c; ctx.fillRect(x + ix * s, y + iy * s, s, s)
-        }
-    }
-    // The disc that's in the console (its case lies beside it)
-    private class Game(val title: String, val pub: String, val year: Int, val esrb: String, val discs: Int, val spineCol: String, val accent: String, val art: (Canvas2D, Int, Int, Int) -> Unit)
-    private val BANDICOOT_RUSH = Game("Bandi-coot Rush", "Naughty Pup", 1999, "E", 1, "#fb923c", "#fb923c") { ctx, x0, w, h ->
-        val g = ctx.createLinearGradient(0, 0, 0, h)
-        g.addColorStop(0, "#4c1d95"); g.addColorStop(0.5, "#f97316"); g.addColorStop(0.75, "#16a34a"); g.addColorStop(1, "#14532d")
-        ctx.fillStyle = g; ctx.fillRect(x0, 0, w - x0, h)
-        ctx.fillStyle = "#fde68a"; ctx.beginPath(); ctx.arc(100, 44, 10, 0, PI * 2); ctx.fill()
-        ctx.fillStyle = "#ea580c"; ctx.fillRect(56, 54, 26, 24); ctx.fillRect(60, 36, 22, 18)
-        ctx.fillStyle = "#ffffff"; ctx.fillRect(72, 42, 6, 6)
-        ctx.fillStyle = "#000000"; ctx.fillRect(75, 43, 3, 3)
-        ctx.fillStyle = "#1d4ed8"; ctx.fillRect(56, 78, 26, 9)
-        ctx.fillStyle = "#b45309"; ctx.fillRect(92, 76, 18, 18)
-        ctx.textAlign = "center"
-        outlinedText(ctx, "BANDI-COOT", (x0 + w) / 2.0, 17, "bold 14px Impact, sans-serif", "#fef3c7", "#7c2d12", 3f)
-        outlinedText(ctx, "RUSH", (x0 + w) / 2.0, 31, "bold 14px Impact, sans-serif", "#facc15", "#7c2d12", 3f)
-    }
-
-    /** buildPs1JewelCase: front cover, back cover, black spine; thicker case for multi-disc games. */
-    private fun buildPs1JewelCase(game: Game, matJewelPlastic: Material, tag: String?): Mesh {
-        val front = createCanvasTex(128, 112, weather = Weather(seed = (game.year + game.title.length).toDouble(), blotch = 0.12, speckle = 0.05, edge = 0.14, scratches = 6)) { ctx, w, h ->
-            game.art(ctx, 14, w, h)
-            ctx.fillStyle = "#050507"; ctx.fillRect(0, 0, 14, h)
-            drawPsMark(ctx, 3, 4, 4)
-            ctx.save(); ctx.translate(10, h - 18); ctx.rotate(-PI / 2)
-            ctx.fillStyle = "#e5e7eb"; ctx.font = "bold 6px sans-serif"; ctx.textAlign = "left"; ctx.fillText("PlayStation", 0, 0)
-            ctx.restore()
-            ctx.fillStyle = "#ffffff"; ctx.fillRect(2, h - 15, 10, 13)
-            ctx.fillStyle = "#000000"; ctx.font = "bold 9px Impact, sans-serif"; ctx.textAlign = "center"; ctx.fillText(game.esrb, 7, h - 5)
-            // Light scratches and glare on the clear plastic over the insert
-            ctx.strokeStyle = "rgba(255, 255, 255, 0.10)"; ctx.lineWidth = 3f
-            ctx.beginPath(); ctx.moveTo(w * 0.55, 0); ctx.lineTo(w * 0.2, h); ctx.stroke()
-        }.tex
-        val back = createCanvasTex(64, 56, weather = Weather(seed = game.year * 3.0, blotch = 0.1, scratches = 3)) { ctx, w, h ->
-            ctx.fillStyle = "#0b0d12"; ctx.fillRect(0, 0, w, h)
-            ctx.fillStyle = game.spineCol; ctx.fillRect(3, 3, w - 6, 6)
-            arrayOf(intArrayOf(4, 13), intArrayOf(24, 13), intArrayOf(44, 13)).forEachIndexed { i, s -> ctx.fillStyle = arrayOf("#334155", "#475569", "#1e293b")[i]; ctx.fillRect(s[0], s[1], 16, 12) }
-            ctx.fillStyle = "#9ca3af"
-            for (i in 0 until 6) ctx.fillRect(4, 30 + i * 3, 30 + ((i * 13) % 24), 1)
-            ctx.fillStyle = "#f8fafc"; ctx.fillRect(w - 18, h - 12, 15, 9)
-            ctx.fillStyle = "#000000"
-            for (i in 0 until 12) if (i % 3 != 1) ctx.fillRect(w - 17 + i, h - 11, 1, 6)
-        }.tex
-        val spine = createCanvasTex(16, 128, weather = Weather(seed = game.title.length * 7.0, blotch = 0.12, scratches = 2)) { ctx, w, h ->
-            ctx.fillStyle = "#050507"; ctx.fillRect(0, 0, w, h)
-            drawPsMark(ctx, 4, 3, 4)
-            ctx.save(); ctx.translate(w / 2 + 2, 14); ctx.rotate(PI / 2)
-            ctx.fillStyle = game.spineCol; ctx.font = "bold ${if (game.title.length > 26) 6 else 7}px sans-serif"; ctx.textAlign = "left"
-            ctx.fillText(game.title.uppercase(), 0, 0)
-            ctx.restore()
-            ctx.fillStyle = "#ffffff"; ctx.fillRect(3, h - 13, 10, 10)
-            ctx.fillStyle = "#000000"; ctx.font = "bold 8px Impact, sans-serif"; ctx.textAlign = "center"; ctx.fillText(game.esrb, 8, h - 5)
-        }.tex
-        val thick = if (game.discs > 1) 0.044f else 0.022f
-        val mesh = Mesh(Geo.box(0.27f, 0.24f, thick), listOf(matJewelPlastic, PS1.material(map = spine), matJewelPlastic, matJewelPlastic,
-            PS1.material(map = front), PS1.material(map = back)))
-        mesh.castShadow = true; mesh.receiveShadow = true
-        if (tag != null) room.registerInteractable(mesh, tag)
-        return mesh
-    }
-
     private fun ps1Part(geo: Geometry, mat: Material, x: Float, y: Float, z: Float, tag: String? = null): Mesh {
         val m = Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true
         ps1Group.add(m); if (tag != null) room.registerInteractable(m, tag); return m
     }
 
-    fun build() {
+    fun build(matJewelPlastic: Material) {
         val scene = room.scene
         val matDarkPlastic = room.matDarkPlastic
-        // (the game shelf's jewel-case plastic comes first in the HTML: grime 181)
-        PS1.syncGrime(181)
-        val matJewelPlastic = PS1.material(color = 0xc3ccd6)
 
         PS1.syncGrime(210)
         ps1Group.position.set(-1.45f, 0.032f, 0.62f) // on the rug in front of the TV cart
@@ -153,6 +82,7 @@ class Ps1(private val room: Room, private val tv: Tv) {
         }.tex
         ps1Disc = Mesh(Geo.cylinder(0.118f, 0.118f, 0.002f, 32), listOf(PS1.material(color = 0xcbd5e1), PS1.material(map = discTex), PS1.material(color = 0x050507)))
         ps1Disc.position.set(0f, 0.1055f, LID_Z); ps1Disc.castShadow = true; ps1Disc.receiveShadow = true
+        discHome = ps1Disc.position.clone()
         ps1Group.add(ps1Disc); room.registerInteractable(ps1Disc, "ps1Open")
         ps1Part(Geo.cylinder(0.014f, 0.014f, 0.004f, 10), matPs1DarkGrey, 0f, 0.106f, LID_Z)
         // Hinged lid: pivots along its rear edge and springs open
@@ -217,10 +147,11 @@ class Ps1(private val room: Room, private val tv: Tv) {
             btn.position.set(bx, 0.022f, bz); padGroup.add(btn)
         }
         // The case for the disc that's in the console, lying face-up beside it
-        val ps1Case = buildPs1JewelCase(BANDICOOT_RUSH, matJewelPlastic, "gamebox:bandicoot")
+        val ps1Case = Games.buildPs1JewelCase(Games.BANDICOOT_RUSH, matJewelPlastic)
         ps1Case.rotation.set((-PI / 2).toFloat(), 0f, 0.28f)
         ps1Case.position.set(-0.44f, 0.011f, 0.14f)
         ps1Group.add(ps1Case)
+        library.registerFloorCase(ps1Case)
         val padCable = Mesh(GeoCurves.tube(CatmullRomCurve3(listOf(doubleArrayOf(-0.12, 0.047, 0.222), doubleArrayOf(0.04, 0.012, 0.35),
             doubleArrayOf(0.26, 0.012, 0.31), doubleArrayOf(0.39, 0.025, 0.20))), 12, 0.009f, 5), matDarkPlastic)
         padCable.castShadow = true; ps1Group.add(padCable)
@@ -334,6 +265,13 @@ class Ps1(private val room: Room, private val tv: Tv) {
         if (ps1On && !lidOpen) startBoot(t)
     }
     fun padPress(t: Float) { padPressAt = t }
+    /** Seconds into the game loop (after the boot and title screens). */
+    fun gameTime(t: Float) = t - bootStart - PS1_BOOT_SECONDS - 4
+    /** The disc swap drives the lid directly. */
+    fun setLid(open: Boolean) { lidOpen = open }
+    fun showDiscLabel(tex: com.ps1bedroom.room.engine.Texture) { ps1Disc.materials[1].map = tex }
+    /** A new disc is in: power on (or reboot) and put the TV on A/V 1. */
+    fun gameInserted(t: Float) { if (!ps1On) powerToggle(t) else { switchTvToPs1(t); startBoot(t) } }
 
     // ---- The PlayStation's picture on A/V 1 (HTML 2802-3010) ----
     fun drawScreen(ctx: Canvas2D, w: Int, h: Int, t: Float) {
@@ -346,8 +284,8 @@ class Ps1(private val room: Room, private val tv: Tv) {
             }
             "menu" -> drawMenu(ctx, w, h, t)
             "boot" -> drawBoot(ctx, w, h, t - bootStart)
-            "title" -> drawTitleScreen(ctx, w, h, BANDICOOT_RUSH, t - bootStart - PS1_BOOT_SECONDS)
-            else -> { drawGame(ctx, w, h, t - bootStart - PS1_BOOT_SECONDS - 4, t); room.bedroomTvLight.color.setStyle(BANDICOOT_RUSH.accent) }
+            "title" -> library.drawTitleScreen(ctx, w, h, library.currentGame(), t - bootStart - PS1_BOOT_SECONDS)
+            else -> library.drawGameplay(ctx, w, h, t - bootStart - PS1_BOOT_SECONDS - 4, t)
         }
         ctx.textAlign = "left"
     }
@@ -402,16 +340,8 @@ class Ps1(private val room: Room, private val tv: Tv) {
         }
         room.bedroomTvLight.color.setHex(0x60a5fa)
     }
-    private fun drawTitleScreen(ctx: Canvas2D, w: Int, h: Int, g: Game, e: Float) {
-        g.art(ctx, 0, w, h)
-        ctx.fillStyle = "rgba(0, 0, 0, 0.55)"; ctx.fillRect(0, h - 22, w, 22)
-        ctx.textAlign = "center"
-        if (floor(e * 2.5).toInt() % 2 == 0) { ctx.fillStyle = "#ffffff"; ctx.font = "bold 8px monospace"; ctx.fillText("PRESS START", w / 2, h - 11) }
-        ctx.fillStyle = "#9ca3af"; ctx.font = "5px sans-serif"; ctx.fillText("© ${g.year} ${g.pub}", w / 2, h - 3)
-        ctx.textAlign = "left"
-    }
     /** Bandi-coot Rush: sunset sky, parallax mountains and palms, crates, fruit, a hopping orange critter. */
-    private fun drawGame(ctx: Canvas2D, w: Int, h: Int, g: Float, t: Float) {
+    fun drawPlatform(ctx: Canvas2D, w: Int, h: Int, g: Float, t: Float) {
         val scroll = g * 42; val groundY = 70; val heroX = 28
         val sky = ctx.createLinearGradient(0, 0, 0, groundY)
         sky.addColorStop(0, "#1e1b4b"); sky.addColorStop(0.55, "#7c3aed"); sky.addColorStop(1, "#f97316")

@@ -25,6 +25,18 @@ open class Object3D {
         return this
     }
     fun remove(o: Object3D) { if (children.remove(o)) o.parent = null }
+    /** three's Object3D.attach: re-parent while keeping the world transform (for unscaled objects). */
+    fun attach(o: Object3D) {
+        updateMatrixWorld(); o.updateMatrixWorld()
+        val inv = Mat4().invert(matrixWorld)
+        val local = Mat4().multiplyMatrices(inv, o.matrixWorld)
+        o.position.setFromMatrixPosition(local)
+        local.toEulerXYZ(o.rotation)
+        add(o)
+    }
+    /** Sets rotation (XYZ order) from a quaternion. */
+    fun setRotationFromQuat(q: Quat) { sceneTmpM.compose(sceneZero, q, sceneOne).toEulerXYZ(rotation) }
+
 
     fun updateMatrix() { quaternion.setFromEuler(rotation); matrix.compose(position, quaternion, scale) }
 
@@ -139,3 +151,8 @@ class SpotShadow {
     @JvmField val matrix = Mat4()
     @JvmField var needsUpdate = true
 }
+
+// GL-thread scratch for setRotationFromQuat (no per-object allocations)
+private val sceneTmpM = Mat4()
+private val sceneZero = Vec3()
+private val sceneOne = Vec3(1f, 1f, 1f)

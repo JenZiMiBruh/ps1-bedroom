@@ -16,6 +16,8 @@ class Texture(@JvmField var bitmap: Bitmap) {
     /** Bump when the bitmap is redrawn so the renderer re-uploads it (three's needsUpdate). */
     @JvmField var version = 1
     @JvmField var glId = 0
+    /** A render target's colour texture (set by RenderTarget): used as-is, never uploaded from the bitmap. */
+    @JvmField var external: RenderTarget? = null
     @JvmField var uploadedVersion = 0
     @JvmField var uploadedW = 0
     @JvmField var uploadedH = 0

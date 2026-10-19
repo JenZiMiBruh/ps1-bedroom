@@ -20,7 +20,9 @@ import kotlin.random.Random
  * Pavilion tower with its sticky note, cordless phone, pocket MP3 player and cable, the monitor, keyboard, mouse,
  * soda can and the lava lamp. (The PS1 game shelf on the hutch comes with the game library.)
  */
-class Desk(private val room: Room, private val tex: Textures) {
+class Desk(private val room: Room, private val tex: Textures, private val library: GameLibrary) {
+    /** Clear jewel-case plastic shared by every PS1 case (HTML 4763). */
+    lateinit var matJewelPlastic: Material
     val deskGroup = Group()
     val lavaBlobs = ArrayList<Mesh>()
     private val blobSpeed = ArrayList<Float>(); private val blobOffset = ArrayList<Float>()
@@ -114,7 +116,10 @@ class Desk(private val room: Room, private val tex: Textures) {
         val looseCdHole = Mesh(Geo.cylinder(0.028f, 0.028f, 0.008f, 10), matDarkPlastic)
         looseCdHole.position.set(1.12f, 1.551f, 0.32f); deskGroup.add(looseCdHole)
 
-        // (2. the PS1 game collection on the top hutch shelf comes with the game library)
+        // ---- 2. PlayStation game collection on the top hutch shelf ----
+        PS1.syncGrime(181)
+        matJewelPlastic = PS1.material(color = 0xc3ccd6)
+        library.buildHutchShelf(deskGroup, matJewelPlastic)
 
         // ---- 3. HP Pavilion PC tower + curled sticky note ----
         PS1.syncGrime(182)

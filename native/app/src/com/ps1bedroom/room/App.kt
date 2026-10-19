@@ -42,6 +42,19 @@ class App : GLSurfaceView.Renderer {
     lateinit var jasper: Jasper; private set
     lateinit var tv: Tv; private set
     lateinit var ps1: Ps1; private set
+    lateinit var library: GameLibrary; private set
+    private var gta3d: Gta3d? = null
+    /** The 3D-era GTA games render a chase-cam drive into a texture that the TV shows (only while one is playing). */
+    private fun updateGtaTvFeed(t: Float) {
+        val game = library.currentGame()
+        val active = tv.bedroomTvOn && tv.bedroomTvChannel == Tv.PS1_TV_CHANNEL && game.template == "gta3d" && ps1.phase(t) == "game"
+        if (active) {
+            val g3 = gta3d ?: Gta3d(renderer, env).also { gta3d = it }
+            g3.setTheme(game.theme3d!!)
+            g3.render(ps1.gameTime(t), SystemClock.uptimeMillis())
+            tv.useFeed(g3.rt.texture)
+        } else tv.useFeed(null)
+    }
     private var lastTvUpdate = 0.05f
     private val SPHERE_TV_C = Vec3(-2.05f, 1.3f, 0.65f)
     /** Set by MainActivity before the GL thread starts (for raw model files). */
@@ -80,8 +93,12 @@ class App : GLSurfaceView.Renderer {
                 room.extraDynamicRoots += exteriorWorldGroup; room.extraDynamicRoots += sky.skyBoxGroup
             }
             room.onBuildInterior = {
-                desk = Desk(room, tex); desk.build()
-                ps1 = Ps1(room, tv); ps1.build(); tv.ps1 = ps1
+                library = GameLibrary(room); library.camera = camera
+                desk = Desk(room, tex, library); desk.build()
+                ps1 = Ps1(room, tv); ps1.library = library; library.ps1 = ps1
+                ps1.build(desk.matJewelPlastic); tv.ps1 = ps1
+                library.buildGtaShelf(desk.matJewelPlastic)   // HTML 6242, after the hookups
+                room.extraBatchExcluded.addAll(library.batchExcluded()); room.extraDynamicRoots += ps1.disc
                 room.extraDynamicRoots += ps1.ps1LidPivot
                 bedroom = Bedroom(room); bedroom.build()
                 room.extraDynamicRoots += bedroom.chairGroup
@@ -142,6 +159,8 @@ class App : GLSurfaceView.Renderer {
         jasper.bedroomTvOn = tv.bedroomTvOn
         tv.updateLight(t)
         ps1.update(dt)
+        library.update(t, dt)
+        updateGtaTvFeed(t)
         // The TV redraws ~6x a second (the PlayStation ~16x) and only while it is on and on screen, as in the HTML
         if (tv.bedroomTvOn && t - lastTvUpdate > (if (tv.bedroomTvChannel == Tv.PS1_TV_CHANNEL) 0.06f else 0.16f) && renderer.sphereInView(SPHERE_TV_C, 0.7f)) { tv.updateBedroomTvScreen(t); lastTvUpdate = t }
         room.updateAc(t, dt)
@@ -207,6 +226,10 @@ class App : GLSurfaceView.Renderer {
         }
     }
     private fun triggerEasterEgg(tag: String) {
+        val isPs1Tag = tag == "ps1Power" || tag == "ps1Reset" || tag == "ps1Open" || tag == "ps1Body" || tag == "ps1Pad"
+        if (library.swapping && (isPs1Tag || tag.startsWith("gamebox:"))) return // let the disc swap finish
+        if (library.heldGame != null && isPs1Tag) { library.insertHeldGame(lastT); return } // holding a game + tapping the console = put it in
+        if (tag.startsWith("gamebox:")) { library.tapCase(tag.substringAfter(':').toInt()); return }
         when (tag) {
             "blinds" -> room.cycleWindowBlinds()
             "switch" -> toggleFanLight()

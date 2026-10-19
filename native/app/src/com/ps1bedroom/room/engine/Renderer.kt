@@ -206,6 +206,34 @@ class Renderer {
         glBindVertexArray(0)
     }
 
+    /**
+     * Renders another scene into an offscreen target (three's setRenderTarget + render): no shadows, no post pass.
+     * Call before render() in the same frame; the room's own shadow / draw state is rebuilt by render().
+     */
+    fun renderToTarget(scene: Scene, camera: PerspectiveCamera, rt: RenderTarget) {
+        rt.ensure()
+        scene.updateMatrixWorld()
+        camera.updateCameraWorld()
+        collectLights(scene)
+        glBindFramebuffer(GL_FRAMEBUFFER, rt.fbo)
+        glViewport(0, 0, rt.width, rt.height)
+        glClearColor(scene.background.r, scene.background.g, scene.background.b, 1f)
+        glDepthMask(true); curDepthWrite = true
+        glClear(GL_COLOR_BUFFER_BIT or GL_DEPTH_BUFFER_BIT)
+        buildDrawLists(scene, camera)
+        glUseProgram(ps1Prog)
+        setFrameUniforms(scene, camera)
+        resetState()
+        glEnable(GL_DEPTH_TEST); glDepthFunc(GL_LEQUAL); curDepthTest = true
+        glDisable(GL_BLEND)
+        for (i in opaque.indices) drawItem(opaque[i], camera)
+        glEnable(GL_BLEND); glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA); curAdditive = false
+        for (i in transparent.indices) drawItem(transparent[i], camera)
+        glDisable(GL_BLEND); glDepthMask(true); glDisable(GL_POLYGON_OFFSET_FILL)
+        glBindVertexArray(0)
+        glBindFramebuffer(GL_FRAMEBUFFER, 0)
+    }
+
     private val lightVisitor: (Object3D) -> Unit = { o ->
         when (o) {
             is AmbientLight -> { ar += o.color.r * o.intensity; ag += o.color.g * o.intensity; ab += o.color.b * o.intensity }
@@ -628,6 +656,7 @@ class Renderer {
     private var upPx = IntArray(0); private var upOut = IntArray(0); private var upBuf: ByteBuffer = ByteBuffer.allocateDirect(4)
     /** GL id for a texture, uploading it like a three.js CanvasTexture (flipY on, not premultiplied) when it changed. */
     private fun texId(t: Texture): Int {
+        t.external?.let { return it.ensure() }
         if (t.glId == 0) { val id = IntArray(1); glGenTextures(1, id, 0); t.glId = id[0]; uploadedTextures += t }
         if (t.uploadedVersion != t.version) {
             glActiveTexture(GL_TEXTURE7)
@@ -679,4 +708,38 @@ class Renderer {
         return p
     }
     companion object { const val TAG = "PS1Bedroom" }
+}
+
+/**
+ * three.js WebGLRenderTarget: an offscreen colour + depth target whose [texture] any material can use as its map
+ * (the TV shows the GTA chase-cam drive this way). GL objects are (re)made lazily on the GL thread.
+ */
+class RenderTarget(@JvmField var width: Int, @JvmField var height: Int) {
+    @JvmField val texture = Texture(android.graphics.Bitmap.createBitmap(1, 1, android.graphics.Bitmap.Config.ARGB_8888)).also { it.nearest = false }
+    @JvmField var fbo = 0
+    private var colorTex = 0; private var depthRb = 0; private var madeW = 0; private var madeH = 0
+    init { texture.external = this }
+    fun setSize(w: Int, h: Int) { width = w; height = h }
+    /** Makes (or resizes) the GL objects; returns the colour texture id. */
+    fun ensure(): Int {
+        if (fbo != 0 && madeW == width && madeH == height && android.opengl.GLES30.glIsFramebuffer(fbo)) return colorTex
+        val f = IntArray(1); val t = IntArray(1); val r = IntArray(1)
+        if (fbo == 0 || !android.opengl.GLES30.glIsFramebuffer(fbo)) {
+            android.opengl.GLES30.glGenFramebuffers(1, f, 0); fbo = f[0]
+            android.opengl.GLES30.glGenTextures(1, t, 0); colorTex = t[0]
+            android.opengl.GLES30.glGenRenderbuffers(1, r, 0); depthRb = r[0]
+        }
+        android.opengl.GLES30.glBindTexture(android.opengl.GLES30.GL_TEXTURE_2D, colorTex)
+        android.opengl.GLES30.glTexImage2D(android.opengl.GLES30.GL_TEXTURE_2D, 0, android.opengl.GLES30.GL_RGBA8, width, height, 0, android.opengl.GLES30.GL_RGBA, android.opengl.GLES30.GL_UNSIGNED_BYTE, null)
+        for ((p, v) in arrayOf(android.opengl.GLES30.GL_TEXTURE_MIN_FILTER to android.opengl.GLES30.GL_LINEAR, android.opengl.GLES30.GL_TEXTURE_MAG_FILTER to android.opengl.GLES30.GL_LINEAR,
+                android.opengl.GLES30.GL_TEXTURE_WRAP_S to android.opengl.GLES30.GL_CLAMP_TO_EDGE, android.opengl.GLES30.GL_TEXTURE_WRAP_T to android.opengl.GLES30.GL_CLAMP_TO_EDGE))
+            android.opengl.GLES30.glTexParameteri(android.opengl.GLES30.GL_TEXTURE_2D, p, v)
+        android.opengl.GLES30.glBindRenderbuffer(android.opengl.GLES30.GL_RENDERBUFFER, depthRb)
+        android.opengl.GLES30.glRenderbufferStorage(android.opengl.GLES30.GL_RENDERBUFFER, android.opengl.GLES30.GL_DEPTH_COMPONENT24, width, height)
+        android.opengl.GLES30.glBindFramebuffer(android.opengl.GLES30.GL_FRAMEBUFFER, fbo)
+        android.opengl.GLES30.glFramebufferTexture2D(android.opengl.GLES30.GL_FRAMEBUFFER, android.opengl.GLES30.GL_COLOR_ATTACHMENT0, android.opengl.GLES30.GL_TEXTURE_2D, colorTex, 0)
+        android.opengl.GLES30.glFramebufferRenderbuffer(android.opengl.GLES30.GL_FRAMEBUFFER, android.opengl.GLES30.GL_DEPTH_ATTACHMENT, android.opengl.GLES30.GL_RENDERBUFFER, depthRb)
+        madeW = width; madeH = height
+        return colorTex
+    }
 }

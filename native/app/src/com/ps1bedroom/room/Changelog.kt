@@ -24,6 +24,9 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.15.1", "Fixes", listOf(
+            "Fixed: 0.15 crashed on launch while building the places outside the window"
+        )),
         Entry("0.15", "15 places outside the window", listOf(
             "Downtown, a 40th-floor skyscraper, Neon City, the neighborhood, suburbs, a backyard, a trailer park, Arizona, a desert canyon, a tropical island, a beach boardwalk, a lake, a forest, the mountains and a farm",
             "Each place has its own painted horizon, 3D yard (houses, fences, palms, cacti, docks, a barn...), PS1-style sprite trees and its own ground",

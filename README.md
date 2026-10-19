@@ -13,7 +13,7 @@
 ![Release](https://img.shields.io/badge/📅%20RELEASE-October%2021%2C%202026-ff3ea5?style=for-the-badge&labelColor=1a1033)
 ![Google Play](https://img.shields.io/badge/GOOGLE%20PLAY-before%20the%20end%20of%202026-22c55e?style=for-the-badge&logo=googleplay&logoColor=white&labelColor=1a1033)
 
-![Native build](https://img.shields.io/badge/native%20build-v0.15-a78bfa?style=flat-square&labelColor=1a1033)
+![Native build](https://img.shields.io/badge/native%20build-v0.15.1-a78bfa?style=flat-square&labelColor=1a1033)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.0-7f52ff?style=flat-square&logo=kotlin&logoColor=white&labelColor=1a1033)
 ![OpenGL ES](https://img.shields.io/badge/OpenGL%20ES-3.0-5586a4?style=flat-square&logo=opengl&logoColor=white&labelColor=1a1033)
 ![APK](https://img.shields.io/badge/APK-~1%20MB-ef4444?style=flat-square&labelColor=1a1033)
@@ -89,6 +89,7 @@ Newest first. The same list is in the app (tap the version tag in the bottom-lef
 
 | Build | What changed |
 |---|---|
+| **0.15.1** | Fixed: the app crashed on launch in 0.15 |
 | **0.15** | All 15 places outside the window (painted backdrops, 3D props, sprite trees, live details); Jasper's neck joint rebuilt so his head no longer clips or flickers |
 | **0.14** | Weather: rain and splashes, snow, falling leaves, fireflies, dust in the light beam, window raindrops and frost, seasonal ground, lightning; GPU instancing in the engine |
 | **0.13** | VCR tapes you can swap in, answering machine, glow-in-the-dark ceiling constellations, space heater, poster choices, room colours, seasonal decorations, boombox stations |

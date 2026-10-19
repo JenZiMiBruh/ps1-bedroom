@@ -332,6 +332,19 @@ class Places(
         return GeoCurves.merge(parts)
     }
 
+    private val suburbPlaceholders = ArrayList<Group>()
+    private val houseFence = ArrayList<Mesh>()
+    private val trailerBodies = ArrayList<Mesh>()
+    private val trailerSkirts = ArrayList<Mesh>()
+    private lateinit var arizonaWall: Mesh
+    private val desertRocks = ArrayList<Mesh>()
+    private lateinit var boardwalk: Mesh
+    private val mountainRocks = ArrayList<Mesh>()
+    private val countryHay = ArrayList<Mesh>()
+    private val countryWood = ArrayList<Mesh>()
+    private lateinit var neonShops: Mesh
+    private val SPRITE_TEX = HashMap<String, Texture>()
+
     init {
         PS1.syncGrime(358) // HTML 14781
         for (k in OUTSIDE_ENVS.keys) if (k != "city") { val g = Group(); g.visible = false; scene.add(g); G[k] = g }
@@ -391,17 +404,6 @@ class Places(
     /** Every place's group: they move or switch, so none of it takes part in static batching. */
     fun dynamicRoots(): List<Object3D> = G.values.toList()
 
-    private val suburbPlaceholders = ArrayList<Group>()
-    private val houseFence = ArrayList<Mesh>()
-    private val trailerBodies = ArrayList<Mesh>()
-    private val trailerSkirts = ArrayList<Mesh>()
-    private lateinit var arizonaWall: Mesh
-    private val desertRocks = ArrayList<Mesh>()
-    private lateinit var boardwalk: Mesh
-    private val mountainRocks = ArrayList<Mesh>()
-    private val countryHay = ArrayList<Mesh>()
-    private val countryWood = ArrayList<Mesh>()
-    private lateinit var neonShops: Mesh
 
     private fun buildFirstPass() {
         // Skyscraper: no ground (you're 40 floors up); a neighbouring tower with a big rooftop billboard right at eye level
@@ -838,7 +840,6 @@ class Places(
 
     // ---- PS1-style filler: crossed-quad sprite trees, cacti, palms, bushes and grass tufts with chunky
     // 32/64 px cut-out textures, the way PlayStation games dressed their outdoor worlds ----
-    private val SPRITE_TEX = HashMap<String, Texture>()
     private fun spriteTex(kind: String): Texture {
         SPRITE_TEX[kind]?.let { return it }
         val W2 = 32; val H2 = if (kind == "tuft" || kind == "bush" || kind == "rocks") 16 else 64

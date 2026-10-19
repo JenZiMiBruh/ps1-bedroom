@@ -24,6 +24,14 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.35", "Widgets and Android extras", listOf(
+            "New Window widget: the real view out of your bedroom window (place, sky, weather), with a live clock, the date, the weather and temperature. Each one has its own options: clock, date, weather, place, window frame, blinds",
+            "Quick Settings tile: Room sounds. Pull down the shade and tap to play or pause",
+            "Long-press the app icon for shortcuts: Sleep mode, My Music, Photo mode, Use the PC",
+            "Picture-in-picture: leave the app and the room keeps going in a small window (turn it off in Menu → Display)",
+            "A light vibration tick when you tap things in the room and the dock buttons",
+            "Photo mode has a 📤 SHARE button for your last photo or card"
+        )),
         Entry("0.34", "Softer shadows and fixes", listOf(
             "Softer, cleaner shadows: twice the detail, smooth edges instead of stair-steps, and no speckle",
             "Fixed: the desk's front edge and top no longer flicker where they meet at the corners",

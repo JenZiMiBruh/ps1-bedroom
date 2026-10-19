@@ -72,6 +72,7 @@ class Overlays(private val act: Activity, private val root: FrameLayout, private
         photoBar.addView(shutter, LinearLayout.LayoutParams(dpi(67f), dpi(67f)).apply { marginStart = dpi(10f); marginEnd = dpi(10f) })
         photoBar.addView(hide)
         photoBar.addView(pill("💌 CARD", TEXT).apply { setOnClickListener { makeShareCard() } }, LinearLayout.LayoutParams(-2, -2).apply { marginStart = dpi(8f) })
+        photoBar.addView(pill("📤 SHARE", TEXT).apply { setOnClickListener { shareLast() } }, LinearLayout.LayoutParams(-2, -2).apply { marginStart = dpi(8f) })
         root.addView(flash, MATCH)
         root.addView(photoBar, FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply { bottomMargin = dpi(16f) })
     }
@@ -125,6 +126,15 @@ class Overlays(private val act: Activity, private val root: FrameLayout, private
         app.achievements.achieve("photographer")
         app.requestPhoto { bmp -> Thread { val ok = save(bmp); app.toast(if (ok) "📷 Saved to Pictures / PS1 Bedroom" else "📷 Could not save the photo") }.start() }
     }
+    /** The last photo or card saved, for the SHARE button (Android's share sheet). */
+    @Volatile private var lastSaved: android.net.Uri? = null
+    private fun shareLast() {
+        val u = lastSaved
+        if (u == null) { app.toast("📤 Take a photo or a card first, then share it"); return }
+        val send = android.content.Intent(android.content.Intent.ACTION_SEND).setType("image/png").putExtra(android.content.Intent.EXTRA_STREAM, u)
+            .addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        try { act.startActivity(android.content.Intent.createChooser(send, "Share your room")) } catch (e: Exception) { app.toast("📤 Nothing to share it with") }
+    }
     private fun save(bmp: Bitmap, prefix: String = "ps1-bedroom"): Boolean = try {
         val name = "$prefix-${SimpleDateFormat("yyyyMMddHHmmss", Locale.US).format(Date())}.png"
         if (Build.VERSION.SDK_INT >= 29) {
@@ -133,6 +143,7 @@ class Overlays(private val act: Activity, private val root: FrameLayout, private
                 put(MediaStore.Images.Media.RELATIVE_PATH, AEnv.DIRECTORY_PICTURES + "/PS1 Bedroom")
             }
             val uri = act.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, cv) ?: throw IllegalStateException("no uri")
+            lastSaved = uri
             act.contentResolver.openOutputStream(uri)!!.use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
         } else {
             val dir = File(act.getExternalFilesDir(AEnv.DIRECTORY_PICTURES), "PS1 Bedroom").apply { mkdirs() }

@@ -3,8 +3,8 @@
      current app; it takes over com.ps1bedroom.ambience once it matches 1-to-1. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.ps1bedroom.room"
-    android:versionCode="38"
-    android:versionName="0.34">
+    android:versionCode="39"
+    android:versionName="0.35">
 
     <uses-sdk android:minSdkVersion="24" android:targetSdkVersion="34" />
     <uses-permission android:name="android.permission.INTERNET" />
@@ -24,7 +24,9 @@
             android:exported="true"
             android:screenOrientation="fullUser"
             android:configChanges="orientation|screenSize|screenLayout|keyboard|keyboardHidden|navigation|uiMode|smallestScreenSize|density"
-            android:launchMode="singleTask">
+            android:launchMode="singleTask"
+            android:supportsPictureInPicture="true"
+            android:resizeableActivity="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -34,7 +36,20 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="text/plain" />
             </intent-filter>
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
         </activity>
+        <activity android:name=".WindowWidgetConfig" android:exported="true" android:theme="@style/AppTheme" android:excludeFromRecents="true">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" /></intent-filter>
+        </activity>
+        <receiver android:name=".WindowWidget" android:exported="false" android:label="Window">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_window_info" />
+        </receiver>
+        <service android:name=".RoomTileService" android:exported="true" android:label="Room sounds"
+            android:icon="@android:drawable/ic_media_play" android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
+            <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
+        </service>
         <receiver android:name=".NowPlayingWidget" android:exported="false" android:label="PS1 Bedroom">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_info" />

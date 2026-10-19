@@ -86,6 +86,58 @@ class App : GLSurfaceView.Renderer {
         yt.place(ytPts, show, 640f / wPx)
     }
     private val ytProj = com.ps1bedroom.room.engine.Mat4()
+
+    // ---- The Window widget: a snapshot through the bedroom window, rendered off-screen every so often ----
+    /** Set by the activity: there are Window widgets on the home screen (no snapshots otherwise). */
+    @Volatile var windowWidgets = false
+    /** A light vibration tick (set by the activity). */
+    @Volatile var onHaptic: (() -> Unit)? = null
+    /** Picture-in-picture when you leave the app (Menu → Display). */
+    @Volatile var pipEnabled = true
+    /** Hands the two snapshots (blinds hidden / as in the room) plus the weather line to the widget. */
+    @Volatile var onWindowShot: ((android.graphics.Bitmap, android.graphics.Bitmap, String, String) -> Unit)? = null
+    @Volatile var windowShotNow = false
+    private var lastShotT = -1000f
+    private var lastShotKey = ""
+    private fun windowShotDue(t: Float): Boolean {
+        if (!windowWidgets || onWindowShot == null || !built) return false
+        // every 10 minutes, and straight away when the place, the weather or the time of day changes
+        val key = sky.outsideEnv + "|" + env.weatherKind + "|" + env.currentTime + "|" + room.blindsOpenState
+        if (windowShotNow || key != lastShotKey || t - lastShotT > 600f) { windowShotNow = false; lastShotKey = key; lastShotT = t; return true }
+        return false
+    }
+    private val shotPos = Vec3()
+    private fun takeWindowShot() {
+        val px = camera.position.x; val py = camera.position.y; val pz = camera.position.z
+        val rx = camera.rotation.x; val ry = camera.rotation.y; val rz = camera.rotation.z
+        val fov = camera.fov
+        // From just inside the glass, looking out; the field of view is set so a 3:2 crop of the screen spans the window
+        val aspect = surfaceW.toFloat() / maxOf(1, surfaceH)
+        val half = if (aspect < 1.5f) 0.62f / aspect else 0.62f / 1.5f
+        camera.fov = (Math.toDegrees(2 * Math.atan(half.toDouble()))).toFloat()
+        camera.updateProjectionMatrix()
+        camera.position.set(0.8f, 2.62f, -1.75f); camera.lookAtTarget(shotPos.set(0.8f, 2.72f, -8f))   // the camera version (looks down -Z, uses the new position)
+        val withBlinds = shot3x2()
+        for (s in room.blindSlats) s.visible = false
+        val clear = shot3x2()
+        for (s in room.blindSlats) s.visible = true
+        camera.position.set(px, py, pz); camera.rotation.set(rx, ry, rz); camera.fov = fov; camera.updateProjectionMatrix()
+        val st = settings.status()
+        val p = places.envDef()
+        onWindowShot?.invoke(clear, withBlinds, "${st.time.substringBefore(' ')} ${st.temp} ${st.weather}", "${p.icon} ${p.name}")
+    }
+    /** Renders the current camera and keeps the middle 3:2 at 480 x 320. */
+    private fun shot3x2(): android.graphics.Bitmap {
+        renderer.render(scene, camera)
+        val full = readScreen()
+        val w = full.width; val h = full.height
+        val cw = if (w.toFloat() / h > 1.5f) (h * 1.5f).toInt() else w
+        val ch = if (w.toFloat() / h > 1.5f) h else (w / 1.5f).toInt()
+        val crop = android.graphics.Bitmap.createBitmap(full, (w - cw) / 2, (h - ch) / 2, cw, ch)
+        val out = android.graphics.Bitmap.createScaledBitmap(crop, 480, 320, true)
+        if (crop !== full) crop.recycle(); full.recycle()
+        return out
+    }
     /** The YouTube PS1 look (also snaps the overlay to the wobble). */
     val ps1Jitter get() = hud?.yt?.ps1Look ?: true
     val phone = Phone(this)
@@ -360,6 +412,7 @@ class App : GLSurfaceView.Renderer {
             basePos.copy(camera.position)
         }
         renderer.post.time = t
+        if (windowShotDue(t)) takeWindowShot()
         renderer.render(scene, camera)
         if (ytActive) placeYouTube()
         photoCallback?.let { cb -> photoCallback = null; cb(readScreen()) }
@@ -400,6 +453,7 @@ class App : GLSurfaceView.Renderer {
         for (p in list) {
             raycaster.setFromCamera(p[0], p[1], camera)
             val hit = raycaster.intersect(room.interactables) ?: continue
+            onHaptic?.invoke()   // a light tick when you tap something in the room
             triggerEasterEgg(hit.first.userData["interactTag"] as String? ?: continue)
         }
     }

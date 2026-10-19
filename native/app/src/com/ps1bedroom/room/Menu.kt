@@ -524,6 +524,7 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
             seg(Cutout.MODES.map { (k, l) -> k to l }, co.mode) { v -> co.apply(v); build() }
             note("Full screen runs the room (and the PC screen) right under the camera. Clear when sideways adds a black bar only with the phone turned, where a side camera would cover the PC. Always clear keeps a black bar there all the time.", true)
         }
+        check("Picture-in-picture: keep the room in a small window when you leave the app", app.pipEnabled) { c -> app.pipEnabled = c; act.getSharedPreferences("ps1bedroom", android.content.Context.MODE_PRIVATE).edit().putBoolean("pip", c).apply() }
         check("Show the start screen when the app opens", s.startScreenEnabled) { c -> post { s.startScreenEnabled = c; s.changed() } }
         check("Debug: the free camera can leave the room", s.debugFreeCam) { c -> post { s.debugFreeCam = c } }
     }

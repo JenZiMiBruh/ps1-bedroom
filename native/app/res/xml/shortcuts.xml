@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut android:shortcutId="sleep" android:enabled="true" android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/sc_sleep" android:shortcutLongLabel="@string/sc_sleep_long">
+        <intent android:action="com.ps1bedroom.room.SLEEP" android:targetPackage="com.ps1bedroom.room" android:targetClass="com.ps1bedroom.room.MainActivity" />
+    </shortcut>
+    <shortcut android:shortcutId="music" android:enabled="true" android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/sc_music" android:shortcutLongLabel="@string/sc_music_long">
+        <intent android:action="com.ps1bedroom.room.MUSIC" android:targetPackage="com.ps1bedroom.room" android:targetClass="com.ps1bedroom.room.MainActivity" />
+    </shortcut>
+    <shortcut android:shortcutId="photo" android:enabled="true" android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/sc_photo" android:shortcutLongLabel="@string/sc_photo_long">
+        <intent android:action="com.ps1bedroom.room.PHOTO" android:targetPackage="com.ps1bedroom.room" android:targetClass="com.ps1bedroom.room.MainActivity" />
+    </shortcut>
+    <shortcut android:shortcutId="pc" android:enabled="true" android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/sc_pc" android:shortcutLongLabel="@string/sc_pc_long">
+        <intent android:action="com.ps1bedroom.room.PC" android:targetPackage="com.ps1bedroom.room" android:targetClass="com.ps1bedroom.room.MainActivity" />
+    </shortcut>
+</shortcuts>

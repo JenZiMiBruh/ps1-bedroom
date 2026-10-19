@@ -73,7 +73,7 @@ class Hud(private val act: Activity, private val root: FrameLayout, private val 
             val i = TextView(act).apply { text = icon; setTextSize(TypedValue.COMPLEX_UNIT_SP, 19f); gravity = Gravity.CENTER }
             val l = TextView(act).apply { text = label; setTextColor(MUTED); typeface = MONO; setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f); gravity = Gravity.CENTER }
             b.addView(i); b.addView(l)
-            b.setOnClickListener { onClick() }
+            b.setOnClickListener { it.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY); onClick() }
             dock.addView(b, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginEnd = dpi(4f) })
             dockBtns[key] = DockBtn(b, i, l)
         }

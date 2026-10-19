@@ -1,4 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="widget_desc">Now playing in your room: the song or the room, with play, pause and skip</string>
+    <string name="window_widget_desc">The view out of your bedroom window, with the time, date and weather</string>
+    <string name="sc_sleep">Sleep mode</string>
+    <string name="sc_sleep_long">Start sleep mode</string>
+    <string name="sc_music">My Music</string>
+    <string name="sc_music_long">Open the boombox</string>
+    <string name="sc_photo">Photo mode</string>
+    <string name="sc_photo_long">Take a photo of the room</string>
+    <string name="sc_pc">Use the PC</string>
+    <string name="sc_pc_long">Sit down at the 2001 PC</string>
 </resources>

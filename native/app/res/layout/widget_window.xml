@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/ww_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_window_bg"
+    android:clipToOutline="true">
+
+    <ImageView
+        android:id="@+id/ww_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:contentDescription="The view out of your window" />
+
+    <LinearLayout
+        android:id="@+id/ww_info"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:orientation="vertical"
+        android:paddingStart="14dp"
+        android:paddingEnd="14dp"
+        android:paddingTop="22dp"
+        android:paddingBottom="10dp"
+        android:background="@drawable/widget_window_shade">
+
+        <TextClock
+            android:id="@+id/ww_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:format12Hour="h:mm"
+            android:format24Hour="HH:mm"
+            android:textColor="#FFFFFFFF"
+            android:textSize="34sp"
+            android:textStyle="bold"
+            android:fontFamily="monospace"
+            android:shadowColor="#CC000000"
+            android:shadowDx="2"
+            android:shadowDy="2"
+            android:shadowRadius="1" />
+
+        <TextClock
+            android:id="@+id/ww_date"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:format12Hour="EEEE, MMMM d"
+            android:format24Hour="EEEE, d MMMM"
+            android:textColor="#FFE8E4FF"
+            android:textSize="12sp"
+            android:fontFamily="monospace"
+            android:shadowColor="#CC000000"
+            android:shadowDx="1"
+            android:shadowDy="1"
+            android:shadowRadius="1" />
+
+        <TextView
+            android:id="@+id/ww_weather"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:text="Open PS1 Bedroom to look outside"
+            android:textColor="#FFFFD27D"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:fontFamily="monospace"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:shadowColor="#CC000000"
+            android:shadowDx="1"
+            android:shadowDy="1"
+            android:shadowRadius="1" />
+    </LinearLayout>
+</FrameLayout>

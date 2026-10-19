@@ -42,6 +42,9 @@ class MainActivity : Activity() {
         MediaService.onControl = { cmd -> app.postOrRun { app.mediaCommand(cmd) } }
         MediaService.onSeek = { ms -> app.postOrRun { app.sound.musicStream?.seek(ms / 1000.0); app.publishMedia() } }
         app.cutout = Cutout(this, root, view)
+        app.onHaptic = { view.post { view.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK) } }
+        app.pipEnabled = getSharedPreferences("ps1bedroom", MODE_PRIVATE).getBoolean("pip", true)
+        app.onWindowShot = { clear, blinds, weather, place -> Thread { WindowWidget.saveInfo(this, weather, place); WindowWidget.saveShots(this, clear, blinds); clear.recycle(); blinds.recycle() }.start() }
         app.keepScreenOn = { on -> runOnUiThread { if (on) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) } }
         app.hud = Hud(this, root, app).also { it.attachMenu() }
         setContentView(root)
@@ -51,6 +54,35 @@ class MainActivity : Activity() {
         // (straight away: the GL thread, which runs posted work, is paused while the app is in the background)
         hideSystemBars()
         handleShare(intent)
+        handleShortcut(intent)
+    }
+    /** Long-press app shortcuts (res/xml/shortcuts.xml) and the Quick Settings tile. */
+    private fun handleShortcut(i: android.content.Intent?) {
+        val a = i?.action ?: return
+        val run: () -> Unit = when (a) {
+            "com.ps1bedroom.room.SLEEP" -> { { app.post { app.settings.startSleepMode() } } }
+            "com.ps1bedroom.room.MUSIC" -> { { app.hud?.openBoombox() } }
+            "com.ps1bedroom.room.PHOTO" -> { { app.hud?.overlays?.enterPhotoMode() } }
+            "com.ps1bedroom.room.PC" -> { { app.post { app.openPc() } } }
+            else -> return
+        }
+        view.postDelayed(run, if (app.isBuilt) 0L else 3000L)
+    }
+    /** Leaving the app (home button / gesture) while the room is up: shrink it into picture-in-picture. */
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        if (app.pipEnabled && android.os.Build.VERSION.SDK_INT >= 26 && app.isBuilt && app.hud?.overlays?.bootShowing != true) {
+            val w = view.width.coerceAtLeast(1); val h = view.height.coerceAtLeast(1)
+            // PiP allows 1:2.39 to 2.39:1
+            val r = (w.toFloat() / h).coerceIn(0.42f, 2.39f)
+            val ratio = if (r < 1f) android.util.Rational(1000, (1000 / r).toInt()) else android.util.Rational((1000 * r).toInt(), 1000)
+            try { enterPictureInPictureMode(android.app.PictureInPictureParams.Builder().setAspectRatio(ratio).build()) } catch (e: Exception) { }
+        }
+    }
+    override fun onPictureInPictureModeChanged(inPip: Boolean, newConfig: android.content.res.Configuration) {
+        super.onPictureInPictureModeChanged(inPip, newConfig)
+        app.hud?.setUiHidden(inPip)
+        if (!inPip && !hasWindowFocus()) { /* closed from PiP: onStop follows */ }
     }
     /** A YouTube link shared to PS1 Bedroom plays on the bedroom TV. */
     private fun handleShare(i: android.content.Intent?) {
@@ -58,7 +90,7 @@ class MainActivity : Activity() {
         val text = i.getStringExtra(android.content.Intent.EXTRA_TEXT) ?: return
         view.postDelayed({ app.hud?.yt?.playLink(text) }, if (app.isBuilt) 0L else 2500L)
     }
-    override fun onNewIntent(intent: android.content.Intent?) { super.onNewIntent(intent); setIntent(intent); handleShare(intent) }
+    override fun onNewIntent(intent: android.content.Intent?) { super.onNewIntent(intent); setIntent(intent); handleShare(intent); handleShortcut(intent) }
 
     // ---- My Music: the system file picker (songs, or a whole album folder) ----
     @Suppress("DEPRECATION")
@@ -96,12 +128,20 @@ class MainActivity : Activity() {
         if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN) app.postOrRun { app.myMusic.trim() }
     }
 
-    override fun onResume() { super.onResume(); app.glActive = true; view.onResume(); pacer.interacted(); pacer.start(); hideSystemBars() }
+    override fun onResume() {
+        super.onResume(); app.glActive = true; view.onResume(); pacer.interacted(); pacer.start(); hideSystemBars()
+        app.windowWidgets = WindowWidget.hasWidgets(this); if (app.windowWidgets) app.windowShotNow = true
+    }
     private fun askNotifications() { if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 7) }
     override fun onDestroy() { MediaService.onControl = null; MediaService.onSeek = null; MediaService.stop(this); NowPlayingWidget.update(this, null); app.sound.shutdown(); super.onDestroy() }
     @Deprecated("Activity back handling")
     override fun onBackPressed() { if (app.hud?.back() != true) @Suppress("DEPRECATION") super.onBackPressed() }
-    override fun onPause() { pacer.stop(); view.onPause(); app.glActive = false; super.onPause() }
+    override fun onPause() {
+        // In picture-in-picture the activity is paused but still on screen: keep drawing
+        if (android.os.Build.VERSION.SDK_INT >= 24 && isInPictureInPictureMode) { super.onPause(); return }
+        pacer.stop(); view.onPause(); app.glActive = false; super.onPause()
+    }
+    override fun onStop() { if (android.os.Build.VERSION.SDK_INT >= 24 && isInPictureInPictureMode) { pacer.stop(); view.onPause(); app.glActive = false }; super.onStop() }
     override fun onWindowFocusChanged(hasFocus: Boolean) { super.onWindowFocusChanged(hasFocus); if (hasFocus) hideSystemBars() }
 
     @Suppress("DEPRECATION")

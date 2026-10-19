@@ -39,6 +39,7 @@ class App : GLSurfaceView.Renderer {
     lateinit var fan: Fan; private set
     lateinit var furniture: Furniture; private set
     lateinit var decor: Decor; private set
+    lateinit var jasper: Jasper; private set
     /** Set by MainActivity before the GL thread starts (for raw model files). */
     lateinit var res: android.content.res.Resources
     private var lastCalendarCheck = 0f
@@ -82,6 +83,8 @@ class App : GLSurfaceView.Renderer {
                 furniture = Furniture(room); furniture.build()
                 decor = Decor(room, res); decor.build()
                 room.extraBatchExcluded.addAll(decor.stringBulbs)
+                jasper = Jasper(room, env); jasper.build()
+                room.extraDynamicRoots += jasper.dogGroup
                 decor.buildKenney()   // the HTML's GLB models finish loading after everything else
                 room.extraBatchExcluded.addAll(desk.lavaBlobs)
             }
@@ -128,6 +131,7 @@ class App : GLSurfaceView.Renderer {
         desk.update(t)
         fan.update(dt)
         decor.update(t)
+        jasper.update(t, dt)
         room.updateAc(t, dt)
         if (t - lastCalendarCheck > 60f) { lastCalendarCheck = t; furniture.refreshCalendar() }
         if (t - lastClockDraw > 1f) { lastClockDraw = t; bedroom.drawAlarmClock(env.currentHour()) }
@@ -201,6 +205,7 @@ class App : GLSurfaceView.Renderer {
             "ac" -> room.toggleAcUnit()
             "lamp" -> furniture.toggleLamp()
             "string" -> decor.cycleStringLights()
+            "dog" -> jasper.petDog(lastT)
         }
     }
     fun toggleFanLight() {

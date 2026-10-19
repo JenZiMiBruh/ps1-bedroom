@@ -24,6 +24,13 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.9", "Jasper", listOf(
+            "Jasper the German Shepherd: black & tan pixel fur, ice-blue eyes, his left one half brown",
+            "He wanders between his favourite spots: the rug, the door, the TV, the desk and any sunbeam on the floor",
+            "Hops up on the bed to sleep at night and when there's a storm",
+            "Jointed like a toy: he walks, sits and lies down, breathes, looks around, and his tail hangs and wags",
+            "Tap him to pet him: tail wag and a head tilt (a sleeping Jasper wakes up)"
+        )),
         Entry("0.8", "String lights, gadgets and furniture-kit models", listOf(
             "String lights along the top of the back and right walls: tap a bulb for warm white, rainbow or off",
             "Succulent and cactus on the windowsill",

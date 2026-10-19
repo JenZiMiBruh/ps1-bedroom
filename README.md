@@ -13,10 +13,10 @@
 ![Release](https://img.shields.io/badge/📅%20RELEASE-October%2021%2C%202026-ff3ea5?style=for-the-badge&labelColor=1a1033)
 ![Google Play](https://img.shields.io/badge/GOOGLE%20PLAY-before%20the%20end%20of%202026-22c55e?style=for-the-badge&logo=googleplay&logoColor=white&labelColor=1a1033)
 
-![Native build](https://img.shields.io/badge/native%20build-v0.8-a78bfa?style=flat-square&labelColor=1a1033)
+![Native build](https://img.shields.io/badge/native%20build-v0.9-a78bfa?style=flat-square&labelColor=1a1033)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.0-7f52ff?style=flat-square&logo=kotlin&logoColor=white&labelColor=1a1033)
 ![OpenGL ES](https://img.shields.io/badge/OpenGL%20ES-3.0-5586a4?style=flat-square&logo=opengl&logoColor=white&labelColor=1a1033)
-![APK](https://img.shields.io/badge/APK-~810%20KB-ef4444?style=flat-square&labelColor=1a1033)
+![APK](https://img.shields.io/badge/APK-~820%20KB-ef4444?style=flat-square&labelColor=1a1033)
 ![Free](https://img.shields.io/badge/free-no%20ads%2C%20no%20account-3b82f6?style=flat-square&labelColor=1a1033)
 
 <sub><a href="#-release-dates">Release dates</a> &nbsp;·&nbsp; <a href="#-why-native">Why native</a> &nbsp;·&nbsp; <a href="#-progress">Progress</a> &nbsp;·&nbsp; <a href="#-changelog">Changelog</a> &nbsp;·&nbsp; <a href="#%EF%B8%8F-how-its-built">How it's built</a> &nbsp;·&nbsp; <a href="../../tree/main">Current web-based app (main)</a></sub>
@@ -47,7 +47,7 @@ The current Android app runs the game inside a web view. It works, but a browser
 | 🌙 **Sound while you sleep** | Synthesised live in the browser: can crackle or clip on long nights | Native mixer in a proper media service: clean all night |
 | 🌡️ **Heat** | Browser + WebGL overhead | A renderer that makes **zero garbage per frame**, merges furniture that never moves into a few big draws, and only redraws shadows when something moves |
 | 🔋 **Battery** | Frame-rate caps | 60 fps cap → **30 fps after 12 s idle → 20 fps after 2 min**, plus Android's real thermal sensor: the app backs off *before* the phone has to throttle |
-| 📦 **Size** | ~600 KB | **~810 KB** so far, with every texture still drawn in code |
+| 📦 **Size** | ~600 KB | **~820 KB** so far, with every texture still drawn in code |
 | 🎮 **Look** | three.js + PS1 shaders | **1:1 port**: the same vertex wobble, affine textures, dither, light rays and weathering, number for number |
 
 ## 🛠️ Progress
@@ -67,11 +67,11 @@ The port follows the web version section by section and is checked against it as
 - **Bed corner**: bookcase bed with the space comforter, LED clock radio showing the room's time, office chair, wall shelf with the cat photo (tap for night-vision eyes)
 - **Ceiling fan**: spinning blades, glowing shade, pull chains (tap to toggle the fan and the light)
 - **More of the room**: dresser with the boombox, nightstand reading lamp, wastebasket, backpack, the 2001 wall calendar, posters, string lights (warm / rainbow), windowsill plants, Discman, Game Kid Advance, Noka, Tamagotchu, Kenney furniture-kit models
+- **Jasper**: the German Shepherd with the split-colour eye, wandering between his favourite spots, sleeping on the bed at night, wagging when you pet him
 - **In-app changelog**: tap the version tag in the corner
 
 ### 🔨 In progress / up next
 
-- 🐕 **Jasper**, wandering between his favourite spots
 - 📺 **The CRT TV and PlayStation**: channels, the console with working buttons and lid, the game shelf, the VCR tapes, the GTA collection
 - 🌦️ **Weather**: rain and snow particles, lightning, the window glass with raindrops
 - 🏞️ **All 15 places** outside the window
@@ -86,6 +86,7 @@ Newest first. The same list is in the app (tap the version tag in the bottom-lef
 
 | Build | What changed |
 |---|---|
+| **0.9** | Jasper: pixel-fur German Shepherd with the half-brown eye, favourite spots, bed at night and in storms, walking / sitting / lying poses, petting |
 | **0.8** | String lights (warm / rainbow), windowsill succulent and cactus, Kenney furniture-kit models, Discman, Game Kid Advance, Noka, Tamagotchu; office chair backrest fixed |
 | **0.7** | Ceiling fan with spinning blades and pull chains, AC louvre, dresser with boombox, nightstand reading lamp, wastebasket, backpack, wall calendar, posters |
 | **0.6** | The bed, clock radio, office chair, wall shelf with the cat photo; baseboard all the way round; in-app changelog |

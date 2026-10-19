@@ -109,16 +109,18 @@ class Jasper(private val room: Room, private val env: Environment) {
         dogPart(dogBody, 0.3f, 0.09f, 0.5f, dogDark, 0f, 0.135f, -0.07f)           // black saddle
         dogPart(dogBody, 0.22f, 0.2f, 0.06f, dogCream, 0f, -0.03f, 0.43f)          // chest bib
         dogPart(dogBody, 0.2f, 0.05f, 0.46f, dogCream, 0f, -0.14f, 0.0f)           // belly
-        // Neck leans forward from the shoulders into the head, both ends buried (inside the chest and the skull)
-        dogPart(dogBody, 0.11f, 0.28f, 0.11f, dogTan, 0f, 0.129f, 0.384f, 0.72f)    // neck (native fix v0.29: thinner, and its top-back corner ends inside the head's neck stub even with the head turned)
-        dogPart(dogBody, 0.17f, 0.04f, 0.17f, PS1.material(color = 0xb91c1c), 0f, 0.17f, 0.42f, 0.72f) // collar (follows the neck)
+        val collarMat = PS1.material(color = 0xb91c1c)   // (made here, in the HTML's order, for the grime map)
         val tagTex = createCanvasTex(8, 8) { ctx, _, _ -> ctx.fillStyle = "#d4a017"; ctx.fillRect(1, 1, 6, 6); ctx.fillStyle = "#8a6a10"; ctx.fillRect(3, 3, 2, 2) }.tex
-        dogPart(dogBody, 0.05f, 0.05f, 0.012f, PS1.material(map = tagTex, color = 0xffffff), 0f, 0.09f, 0.49f) // tag hanging from the collar
+        val tagMat = PS1.material(map = tagTex, color = 0xffffff)
         // Head: block skull, cheeks, snout with a black mask and nose, upright ears
         dogHead.position.set(0f, 0.33f, 0.52f)
         dogBody.add(dogHead)
         dogPart(dogHead, 0.22f, 0.2f, 0.22f, dogTan, 0f, 0f, 0f)                    // skull
-        dogPart(dogHead, 0.16f, 0.16f, 0.18f, dogTan, 0f, -0.1f, -0.03f)            // neck stub (deeper at the back: v0.29): turns with the head, so the joint never opens or pokes through
+        // Neck (native fix v0.30): it belongs to the HEAD and slopes back down into the chest, so it turns with the skull
+        // and the joint at the top can never open or poke through. Its lower end stays buried in the chest at any head angle.
+        dogPart(dogHead, 0.13f, 0.24f, 0.12f, dogTan, 0f, -0.135f, -0.06f, 0.49f)
+        dogPart(dogHead, 0.155f, 0.035f, 0.145f, collarMat, 0f, -0.15f, -0.07f, 0.49f) // collar
+        dogPart(dogHead, 0.05f, 0.05f, 0.012f, tagMat, 0f, -0.185f, 0.02f) // tag hanging from the collar
         dogPart(dogHead, 0.2f, 0.06f, 0.2f, dogDark, 0f, 0.09f, -0.01f)            // dark crown
         dogPart(dogHead, 0.13f, 0.1f, 0.16f, dogDark, 0f, -0.05f, 0.18f)           // snout (black mask)
         dogPart(dogHead, 0.11f, 0.035f, 0.13f, dogCream, 0f, -0.105f, 0.15f)       // lower jaw

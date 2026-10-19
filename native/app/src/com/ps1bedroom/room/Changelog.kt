@@ -24,6 +24,14 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.30", "Jasper's neck, for real, and the last of the port", listOf(
+            "Fixed properly: Jasper's neck is now part of his head and slopes back into his chest, so nothing pokes out of the back of his head at any angle",
+            "Fixed: the Screen cutout choices now visibly change the screen on every phone (Keep clear leaves a black bar, Fill runs the room under the camera)",
+            "The elevated train outside has its rumble and clack again",
+            "The focus timer rings its soft bell when it's time to switch",
+            "The sleep timer fades the sound out over its last minute, turns it off, and lets the phone's screen go to sleep",
+            "WinBeats on the PC plays My Music through the boombox player"
+        )),
         Entry("0.29", "Notch support and fixes", listOf(
             "New in Menu → Display: Screen cutout. Fill the screen (the room runs under the notch or hole-punch, buttons stay clear), fill everything, or keep clear. It tells you what your phone has: notch, hole-punch, curved edges, rounded corners",
             "Fixed: the menu sliders can be dragged again (the menu was redrawing itself under your finger)",

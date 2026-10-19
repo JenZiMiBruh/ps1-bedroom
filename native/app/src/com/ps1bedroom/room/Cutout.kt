@@ -47,16 +47,16 @@ class Cutout(private val act: Activity, private val root: FrameLayout, private v
     fun apply(m: String, save: Boolean = true) {
         mode = if (MODES.containsKey(m)) m else "fill"
         if (save) prefs.edit().putString("cutoutMode", mode).apply()
+        // v0.30: the window ALWAYS runs edge to edge and the modes do their own layout, so each one visibly differs on
+        // every phone (switching the window's own cutout mode at runtime didn't reliably change anything)
         if (Build.VERSION.SDK_INT >= 28) {
             val lp = act.window.attributes
-            lp.layoutInDisplayCutoutMode = when (mode) {
-                "clear" -> WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_NEVER
-                else -> if (Build.VERSION.SDK_INT >= 30) WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS else WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
-            }
-            act.window.attributes = lp
+            val want = if (Build.VERSION.SDK_INT >= 30) WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS else WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+            if (lp.layoutInDisplayCutoutMode != want) { lp.layoutInDisplayCutoutMode = want; act.window.attributes = lp }
         }
+        if (Build.VERSION.SDK_INT >= 30) act.window.setDecorFitsSystemWindows(false)
         root.requestApplyInsets()
-        insetAll()
+        layoutForMode()
     }
 
     private fun readInsets(ins: WindowInsets) {
@@ -92,6 +92,13 @@ class Cutout(private val act: Activity, private val root: FrameLayout, private v
             if (rc != null && rc.radius > 0) { parts += "rounded corners"; val k = (rc.radius * 0.3f).toInt(); safe.top = maxOf(safe.top, k); safe.bottom = maxOf(safe.bottom, k) }
         }
         info = if (parts.isEmpty()) "No notch or hole-punch on this screen: nothing to do." else parts.joinToString(" · ").replaceFirstChar { it.uppercase() }
+        layoutForMode()
+    }
+
+    /** Keep clear: the whole view (the room too) moves off the cutout and leaves a black bar. Fill: only the UI moves. */
+    private fun layoutForMode() {
+        if (mode == "clear") root.setPadding(safe.left, safe.top, safe.right, safe.bottom) else root.setPadding(0, 0, 0, 0)
+        root.setBackgroundColor(android.graphics.Color.BLACK)
         insetAll()
     }
 

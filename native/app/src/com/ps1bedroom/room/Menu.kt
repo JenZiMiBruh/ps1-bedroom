@@ -503,7 +503,7 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
         check("Fade the screen to black when it ends", s.sleepDim) { c -> post { s.sleepDim = c; s.changed() } }
         h4("Focus timer")
         chips(listOf("off" to "Off", "short" to "25 min + 5 break", "long" to "50 min + 10 break").map { (k, l) -> Triple(l, s.focus.mode == k, { post { s.setFocus(k) } }) })
-        note("Work in focused blocks with short breaks. A soft bell rings when it's time to switch (with the audio update).")
+        note("Work in focused blocks with short breaks. A soft bell rings when it's time to switch.")
         val al = app.alarm
         h4("⏰ Sunrise alarm", if (al.on) al.time else "Off")
         check("On", al.on) { c -> post { al.set(on = c); app.sfx("ui"); app.toast(if (c) "⏰ Alarm set for ${al.time}. The room starts to glow 20 minutes before." else "⏰ Alarm off"); s.changed() } }

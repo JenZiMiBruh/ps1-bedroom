@@ -222,17 +222,22 @@ class Settings(private val app: App, private val ctx: Context) {
         val left = maxOf(0L, sleepEnd - System.currentTimeMillis())
         return "${left / 60000}:${((left % 60000) / 1000).toString().padStart(2, '0')}"
     }
+    private var sleepFading = false
     private fun sleepTick() {
         if (sleepEnd == 0L) return
         val left = sleepEnd - System.currentTimeMillis()
+        if (left <= 60000 && !sleepFading) { sleepFading = true; app.sound.sleepFade(maxOf(5.0, left / 1000.0)) }
         if (left <= 0) {
             sleepEnd = 0L
-            // (the sound fades out over the last minute once the audio is ported)
+            if (app.sound.playing) app.toggleAudio()
+            app.hud?.later(1500) { app.postOrRun { sleepFading = false; app.sound.setMasterVolume(app.sound.masterVolume) } }
+            // The point of a sleep timer is that the phone goes to sleep too: hand the screen back to Android's timeout
+            app.keepScreenOn?.invoke(false)
             if (sleepDim) { sleeping = true; applyFps(); app.hud?.showSleeping(true) }
             changed()
         }
     }
-    fun wake() { sleeping = false; applyFps() }
+    fun wake() { sleeping = false; applyFps(); app.keepScreenOn?.invoke(true) }
     /** One tap: lights down, fan on, you in bed, a 45-minute timer. */
     fun startSleepMode() {
         if (!app.sound.playing) app.toggleAudio()
@@ -266,6 +271,7 @@ class Settings(private val app: App, private val ctx: Context) {
             val (work, rest) = FOCUS_MODES.getValue(focus.mode)!!.let { it[0] to it[1] }
             focus.phase = if (focus.phase == "work") "break" else "work"
             focus.end = System.currentTimeMillis() + (if (focus.phase == "work") work else rest) * 60000L
+            app.sound.focusChime(focus.phase == "break")
             app.toast(if (focus.phase == "break") "☕ BREAK TIME: $rest minutes. Stretch, pet Jasper, look out the window." else "🎯 BACK TO IT: $work minutes of focus.")
         }
     }

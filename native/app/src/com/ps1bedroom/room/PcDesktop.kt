@@ -287,9 +287,9 @@ class PcDesktop(private val act: Activity, private val root: FrameLayout, privat
             addView(disp, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dpi(54f)))
             val btns = LinearLayout(act).apply { orientation = LinearLayout.HORIZONTAL }
             fun ampBtn(t: String, fn: () -> Unit) = text(t, 0xffdddddd.toInt(), 12f, face = COURIER).apply { setBackgroundColor(0xff3a4252.toInt()); setPadding(dpi(8f), dpi(4f), dpi(8f), dpi(4f)); setOnClickListener { fn() } }
-            btns.addView(ampBtn("▶ Play") { app.post { if (app.extras.radioStation == 0) app.extras.cycleRadio(app.furniture.radioDisplayMat); app.settings.changed() }; handler.postDelayed({ renderAmp() }, 80) })
-            btns.addView(ampBtn("■ Stop") { app.post { while (app.extras.radioStation != 0) app.extras.cycleRadio(app.furniture.radioDisplayMat); app.settings.changed() }; handler.postDelayed({ renderAmp() }, 80) }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginStart = dpi(4f) })
-            btns.addView(ampBtn("⏭ Next") { app.post { app.extras.cycleRadio(app.furniture.radioDisplayMat); if (app.extras.radioStation == 0) app.extras.cycleRadio(app.furniture.radioDisplayMat); app.settings.changed() }; handler.postDelayed({ renderAmp() }, 80) }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginStart = dpi(4f) })
+            btns.addView(ampBtn("▶ Play") { app.post { app.myMusic.mediaControl("play") }; handler.postDelayed({ renderAmp() }, 80) })
+            btns.addView(ampBtn("■ Stop") { app.post { app.myMusic.setRadioStation(0) }; handler.postDelayed({ renderAmp() }, 80) }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginStart = dpi(4f) })
+            btns.addView(ampBtn("⏭ Next") { app.post { app.myMusic.mediaControl("next") }; handler.postDelayed({ renderAmp() }, 80) }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginStart = dpi(4f) })
             addView(btns, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = dpi(6f); bottomMargin = dpi(6f) })
             addView(ampList)
             addView(text("Plays on the boombox speakers. Add your own songs in Menu → Sound → My Music.", 0xff888888.toInt(), 11f, face = COURIER), LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = dpi(4f) })
@@ -427,7 +427,7 @@ class PcDesktop(private val act: Activity, private val root: FrameLayout, privat
     private val chatter = Runnable { if (online && isOpen && !awayOn.isChecked) buddySays(BUDDIES[rnd.nextInt(BUDDIES.size)]); scheduleBuddyChatter() }
     private fun scheduleBuddyChatter() { handler.removeCallbacks(chatter); handler.postDelayed(chatter, (25000 + rnd.nextDouble() * 35000).toLong()) }
 
-    // ---- WinBeats: the boombox stations (My Music joins them with the audio update) ----
+    // ---- WinBeats: the boombox stations and My Music, through the same player as the boombox ----
     private fun renderAmp() {
         ampList.removeAllViews()
         val st = app.extras.radioStation
@@ -436,7 +436,7 @@ class PcDesktop(private val act: Activity, private val root: FrameLayout, privat
             val cur = st == i
             ampList.addView(text("$i. 📻 ${n.substringBefore(':')}", if (cur) Color.WHITE else 0xff00ff3c.toInt(), 12f, face = COURIER).apply {
                 setPadding(dpi(4f), dpi(2f), dpi(4f), dpi(2f)); if (cur) setBackgroundColor(0xff0a3d8f.toInt())
-                setOnClickListener { app.post { var guard = 0; while (app.extras.radioStation != i && guard++ < 5) app.extras.cycleRadio(app.furniture.radioDisplayMat); app.settings.changed() }; handler.postDelayed({ renderAmp() }, 80) }
+                setOnClickListener { app.post { app.myMusic.setRadioStation(i); if (i == app.myMusic.MY_MUSIC_STATION) app.myMusic.mediaControl("play") }; handler.postDelayed({ renderAmp() }, 80) }
             })
         }
         ampNow.text = if (st > 0) app.extras.RADIO_STATIONS[st].substringBefore(':') else "Stopped"

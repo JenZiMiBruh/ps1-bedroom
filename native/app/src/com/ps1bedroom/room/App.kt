@@ -52,6 +52,8 @@ class App : GLSurfaceView.Renderer {
     @Volatile var pickMusic: ((Boolean) -> Unit)? = null
     /** YouTube is playing on the bedroom TV (YouTubeTv); the TV's own channel sound steps aside. */
     @Volatile var ytActive = false
+    /** Keeps the screen on while the room is in use; the sleep timer hands it back to Android (set by the activity). */
+    @Volatile var keepScreenOn: ((Boolean) -> Unit)? = null
     /** Notch / hole-punch handling (made by the activity). */
     var cutout: Cutout? = null
     /** 1.3: achievements and the sunrise alarm (made by the activity). */
@@ -271,6 +273,7 @@ class App : GLSurfaceView.Renderer {
             ps1.sfx = { sound.sfx(it) }; ps1.stopBootSound = { sound.stopPs1BootSound() }; library.sfx = { sound.sfx(it) }
             env.envHooks += { sound.updateLayered() }
             weatherFx.onThunder = { sound.thunderclap() }
+            exterior.onTrainPass = { sound.trainPass() }
             player.onStep = { onRug -> sound.sfx(if (onRug) "stepRug" else "step") }
             player.sfx = { sound.sfx(it) }
             jasper.onSound = { kind, at -> sound.dogSound(kind, at) }; jasper.toast = { toast(it) }

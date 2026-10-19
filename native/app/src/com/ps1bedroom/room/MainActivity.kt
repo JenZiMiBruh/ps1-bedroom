@@ -42,6 +42,7 @@ class MainActivity : Activity() {
         MediaService.onControl = { cmd -> app.postOrRun { app.mediaCommand(cmd) } }
         MediaService.onSeek = { ms -> app.postOrRun { app.sound.musicStream?.seek(ms / 1000.0); app.publishMedia() } }
         app.cutout = Cutout(this, root, view)
+        app.keepScreenOn = { on -> runOnUiThread { if (on) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) } }
         app.hud = Hud(this, root, app).also { it.attachMenu() }
         setContentView(root)
         pacer = FramePacer(this, view, app)

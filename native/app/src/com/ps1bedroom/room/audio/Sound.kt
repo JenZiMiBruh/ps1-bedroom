@@ -1077,6 +1077,41 @@ class Sound(private val app: App) {
             for (i in 0 until 5) sp.triggerAttackRelease(tr(scale[((h + i * 3) % 5).toInt()] + (6 + i % 2)), 0.05, now + 0.6 + i * 0.06)
         }
     }
+    /** HTML 4241 playTrainPass: the elevated train rumbling and clacking past (through the window, like the cars). */
+    fun trainPass() {
+        if (!ready || !playing) return
+        ctx.sync {
+            val t = ctx.currentTime + 0.05
+            val noise = Noise(ctx, "brown")
+            val low = filt(320.0, "lowpass", 0.7)
+            val env = gain(0.0)
+            noise.chain(low, env, passBus)
+            env.gain.setValueAtTime(0.0, t)
+            env.gain.linearRampToValueAtTime(0.75, t + 2.5)
+            env.gain.linearRampToValueAtTime(0.75, t + 4.5)
+            env.gain.linearRampToValueAtTime(0.0, t + 8.5)
+            val clack = MembraneSynth(ctx, 0.01, 2.0, Envelope(ctx, 0.001, 0.07, 0.0, 0.02))
+            clack.volume.value = -14.0
+            clack.chain(env)
+            for (i in 0 until 22) clack.triggerAttackRelease(if (i % 2 == 1) "A1" else "F1", 0.05, t + 0.8 + i * 0.32 + (i % 2) * 0.08, 0.6)
+            noise.start(t); noise.stop(t + 8.8)
+            pendingDispose += (t + 10.0) to { noise.dispose(); low.dispose(); env.dispose(); clack.dispose() }
+        }
+    }
+    /** HTML 15991 focusChime: a soft three-note bell, rising for a break, falling to go back to work. */
+    fun focusChime(up: Boolean) {
+        if (!ready || !playing) return
+        ctx.sync {
+            val t = ctx.currentTime + 0.05
+            val bell = PolySynth(ctx) { FMSynth(ctx, 3.01, 5.0, envelope = Envelope(ctx, 0.002, 1.2, 0.0, 1.0)) }
+            bell.volume.value = -14.0
+            bell.chain(master)
+            (if (up) listOf("C6", "E6", "G6") else listOf("G5", "E5", "C5")).forEachIndexed { i, n -> bell.triggerAttackRelease(n, 1.0, t + i * 0.22, 0.6) }
+            pendingDispose += (t + 4.0) to { bell.dispose() }
+        }
+    }
+    /** The sleep timer's last minute: everything fades out (HTML: the destination volume ramps to -60 dB). */
+    fun sleepFade(secs: Double) { if (ready) ctx.sync { trim.gain.rampTo(0.001, secs) } }   // -60 dB; setMasterVolume restores it
     fun birdChorus(n: Int) { if (!ready) return; ctx.sync { for (i in 0 until n) birdCall(ctx.currentTime + 0.1 + i * 0.9) } }
     @Suppress("unused") private fun unusedMesh(m: Mesh) = m
     @Suppress("unused") private val placesRef = Places.OUTSIDE_ENVS

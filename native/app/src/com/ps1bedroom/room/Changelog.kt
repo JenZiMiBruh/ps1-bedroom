@@ -24,6 +24,10 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.26", "Jasper's coat and steadier textures", listOf(
+            "Choose Jasper's coat in Menu → Room: black & tan, sable, black & silver, black & red, all black, white, or your own colours (saved)",
+            "Far-away walls, carpet and posters no longer shimmer as you move: textures that never change get mip levels (still crunchy up close)"
+        )),
         Entry("0.25", "Share cards and daily surprises", listOf(
             "Photo mode has a 💌 CARD button: a postcard of your room with the place, time, weather and temperature, saved to Pictures",
             "Something new turns up in the room every day (a package, cold pizza, a note from mom...): tap it to find it"

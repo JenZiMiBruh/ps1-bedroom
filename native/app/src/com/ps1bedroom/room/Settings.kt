@@ -345,7 +345,7 @@ class Settings(private val app: App, private val ctx: Context) {
         put("jitter", app.jitterBase.toDouble()); put("affine", app.renderer.ps1Uniforms.affineStrength.toDouble()); put("dither", app.renderer.post.ditherStrength.toDouble())
         put("volumetric", env.userVolumetricSetting.toDouble()); put("sway", app.swayAmount.toDouble()); put("ao", app.aoBase.toDouble())
         put("tempUnit", tempUnit); put("fpsChoice", fpsChoice); put("ecoIdle", ecoIdle)
-        put("poster", app.extras.posterChoice); put("colors", JSONObject(app.extras.roomColors as Map<*, *>)); put("decor", app.extras.decorMode); put("heater", app.extras.heaterMode)
+        put("poster", app.extras.posterChoice); put("colors", JSONObject(app.extras.roomColors as Map<*, *>)); put("decor", app.extras.decorMode); put("jasper", JSONObject().put("preset", app.jasper.colorPreset).put("coat", app.jasper.colors.coat).put("dark", app.jasper.colors.dark).put("light", app.jasper.colors.light)); put("heater", app.extras.heaterMode)
         put("outside", app.sky.outsideEnv); put("startScreen", startScreenEnabled); put("tutorialSeen", tutorialSeen); put("sleepDim", sleepDim)
     }
     fun saveNow() {
@@ -401,6 +401,11 @@ class Settings(private val app: App, private val ctx: Context) {
             app.extras.setPoster(s.optString("poster", "none"))
             s.optJSONObject("colors")?.let { c -> for (part in c.keys()) app.extras.setRoomColor(part, c.getString(part)) }
             app.extras.decorMode = s.optString("decor", "auto"); app.extras.applyDecor()
+            s.optJSONObject("jasper")?.let { j ->
+                val k = j.optString("preset", "classic")
+                val p = Jasper.PRESETS[k] ?: Jasper.Preset("Custom", j.optString("coat", "#b97a3e"), j.optString("dark", "#1b1410"), j.optString("light", "#d9b27a"))
+                app.jasper.applyColors(p, if (Jasper.PRESETS.containsKey(k)) k else "custom")
+            }
             s.optString("outside", "city").let { if (it != "city") app.places.setOutsideEnv(it) }
             val heater = s.optString("heater", "auto"); var guard = 0
             while (app.extras.heaterMode != heater && guard++ < 3) app.extras.cycleHeater()

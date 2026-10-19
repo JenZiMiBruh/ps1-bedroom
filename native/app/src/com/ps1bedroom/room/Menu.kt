@@ -440,6 +440,17 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
             h4(title)
             chips(app.extras.colorOptions(part).map { (k, l) -> Triple(l, app.extras.roomColors[part] == k, { post { app.extras.setRoomColor(part, k); s.changed() } }) })
         }
+        h4("Jasper's coat")
+        val dog = app.jasper
+        chips(Jasper.PRESETS.map { (k, p) -> Triple(p.name, dog.colorPreset == k, { post { dog.applyColors(p, k); app.sfx("ui"); s.changed() } }) })
+        details("Custom colours") {
+            val swatches = listOf("#1d1b1a", "#3a2a1c", "#5a3a22", "#8a6a45", "#b97a3e", "#a3532a", "#d9b27a", "#a8a6a0", "#d6d4cf", "#ece7dc", "#f8f5ee", "#6b7280")
+            for ((part, label) in listOf("coat" to "Coat", "dark" to "Saddle & mask", "light" to "Chest & paws")) {
+                val cur = when (part) { "coat" -> dog.colors.coat; "dark" -> dog.colors.dark; else -> dog.colors.light }
+                note(label, true)
+                chips(swatches.map { hex -> Triple(if (hex.equals(cur, true)) "● $hex" else hex, hex.equals(cur, true), { post { dog.setPart(part, hex); app.sfx("ui"); s.changed() } }) })
+            }
+        }
         h4("Decorations")
         chips(listOf("auto" to "Auto (by date)", "off" to "None", "halloween" to "Halloween", "winter" to "Winter holidays", "valentine" to "Valentine's", "summer" to "Summer").map { (k, l) ->
             Triple(l + (if (k == "auto" && app.extras.decorMode == "auto") " · ${app.extras.activeDecor()}" else ""), app.extras.decorMode == k, { post { app.extras.decorMode = k; app.extras.applyDecor(); s.changed() } })

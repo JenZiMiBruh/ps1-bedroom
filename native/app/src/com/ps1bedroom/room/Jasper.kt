@@ -178,8 +178,17 @@ class Jasper(private val room: Room, private val env: Environment) {
         ctx.fillStyle = "#ffffff"; ctx.fillRect(4, 2, 1, 1)            // catch-light
     }
 
-    fun applyColors(p: Preset) {
+    /** jasperColors: the chosen preset (or "custom") and its three colours. */
+    var colors = PRESETS.getValue("classic"); private set
+    var colorPreset = "classic"; private set
+    fun applyColors(p: Preset, key: String = PRESETS.entries.firstOrNull { it.value === p }?.key ?: "custom") {
+        colors = p; colorPreset = key
         dogTan.color.setStyle(p.coat); dogDark.color.setStyle(p.dark); dogCream.color.setStyle(p.light)
+    }
+    /** One part's colour from the custom swatches ("coat", "dark" or "light"). */
+    fun setPart(part: String, hex: String) {
+        val c = colors
+        applyColors(Preset("Custom", if (part == "coat") hex else c.coat, if (part == "dark") hex else c.dark, if (part == "light") hex else c.light), "custom")
     }
 
     // ---- Favourite spots, chosen by the time, the weather and what you're doing ----

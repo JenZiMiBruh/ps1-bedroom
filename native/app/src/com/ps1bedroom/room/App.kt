@@ -56,6 +56,7 @@ class App : GLSurfaceView.Renderer {
     lateinit var achievements: Achievements
     lateinit var alarm: Alarm
     lateinit var surprises: Surprises; private set
+    private val steadyTextures by lazy { SteadyTextures(scene) }
     private val YT_CORNERS = arrayOf(Vec3(-0.395f, 0.3f, -0.015f), Vec3(0.395f, 0.3f, -0.015f), Vec3(-0.395f, -0.3f, -0.015f), Vec3(0.395f, -0.3f, -0.015f))
     private val ytPts = FloatArray(8); private val ytTmp = Vec3(); private val ytView = Vec3(); private val ytC = Vec3(); private val ytN = Vec3()
     /** ytPlaceOverlay: the TV glass's 4 corners on screen, snapped like the PS1 vertex shader snaps the TV. */
@@ -271,6 +272,7 @@ class App : GLSurfaceView.Renderer {
         phone.update(t)
         myMusic.tick()
         achievements.tick()
+        steadyTextures.tick()
         alarm.tick(); bedroom.alarmSet = alarm.on
         // The monitor redraws ~6x a second, only while the PC is on and the screen is in view
         desk.monScreen.updateMatrixWorld(); SPHERE_MONITOR_C.setFromMatrixPosition(desk.monScreen.matrixWorld)

@@ -24,6 +24,10 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.25", "Share cards and daily surprises", listOf(
+            "Photo mode has a 💌 CARD button: a postcard of your room with the place, time, weather and temperature, saved to Pictures",
+            "Something new turns up in the room every day (a package, cold pizza, a note from mom...): tap it to find it"
+        )),
         Entry("0.24", "Achievements and the sunrise alarm", listOf(
             "18 achievements to unlock as you live in the room, each with its own trophy card, confetti and fanfare (list in Menu → About)",
             "Sunrise alarm (Menu → Timers): the room fills with warm light for 20 minutes, then your music or birdsong wakes you",

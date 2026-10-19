@@ -70,6 +70,7 @@ class Overlays(private val act: Activity, private val root: FrameLayout, private
         photoBar.addView(done)
         photoBar.addView(shutter, LinearLayout.LayoutParams(dpi(67f), dpi(67f)).apply { marginStart = dpi(10f); marginEnd = dpi(10f) })
         photoBar.addView(hide)
+        photoBar.addView(pill("💌 CARD", TEXT).apply { setOnClickListener { makeShareCard() } }, LinearLayout.LayoutParams(-2, -2).apply { marginStart = dpi(8f) })
         root.addView(flash, MATCH)
         root.addView(photoBar, FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply { bottomMargin = dpi(16f) })
     }
@@ -85,14 +86,46 @@ class Overlays(private val act: Activity, private val root: FrameLayout, private
         photoBar.visibility = View.GONE
         app.hud?.setUiHidden(false)
     }
+    /** makeShareCard: a postcard of your room (place, time, weather) saved to Pictures. */
+    private fun makeShareCard() {
+        app.sfx("recStop")
+        flash.visibility = View.VISIBLE; flash.alpha = 0.85f
+        flash.animate().alpha(0f).setDuration(400).withEndAction { flash.visibility = View.GONE }.start()
+        app.requestPhoto { shot ->
+            // (GL thread) the caption, then the drawing on a worker
+            val e = Places.OUTSIDE_ENVS[app.sky.outsideEnv]
+            val s = app.settings
+            val line = "${e?.icon ?: ""} ${e?.name ?: ""} · ${app.env.formatHour(app.env.hour)} · ${app.env.W.label} · ${s.formatTemp(s.currentTempC())}"
+            Thread {
+                val W = 1080; val H = 1350
+                val card = Bitmap.createBitmap(W, H, Bitmap.Config.ARGB_8888)
+                val c = android.graphics.Canvas(card)
+                c.drawColor(android.graphics.Color.rgb(11, 10, 26))
+                val sc = maxOf(W.toFloat() / shot.width, 1000f / shot.height); val w = shot.width * sc; val h = shot.height * sc
+                c.save(); c.clipRect(40f, 40f, W - 40f, 1040f)
+                c.drawBitmap(shot, null, android.graphics.RectF((W - w) / 2, 40 + (1000 - h) / 2, (W + w) / 2, 40 + (1000 + h) / 2), android.graphics.Paint().apply { isFilterBitmap = false })
+                c.restore()
+                val p = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+                p.style = android.graphics.Paint.Style.STROKE; p.strokeWidth = 6f; p.color = android.graphics.Color.rgb(255, 62, 165); c.drawRect(40f, 40f, W - 40f, 1040f, p)
+                p.style = android.graphics.Paint.Style.FILL
+                p.color = android.graphics.Color.rgb(255, 210, 125); p.textSize = 74f; p.typeface = android.graphics.Typeface.create(android.graphics.Typeface.SANS_SERIF, android.graphics.Typeface.BOLD); c.drawText("PS1 BEDROOM", 40f, 1140f, p)
+                p.color = android.graphics.Color.rgb(232, 228, 255); p.textSize = 36f; p.typeface = android.graphics.Typeface.DEFAULT; c.drawText(line, 40f, 1205f, p)
+                p.color = android.graphics.Color.rgb(185, 180, 230); p.textSize = 28f; c.drawText("A cozy 2001 bedroom that lives on your real clock and weather", 40f, 1255f, p)
+                p.color = android.graphics.Color.rgb(255, 62, 165); p.textSize = 28f; p.typeface = android.graphics.Typeface.create(android.graphics.Typeface.MONOSPACE, android.graphics.Typeface.BOLD); c.drawText("galloade.itch.io/ps1-bedroom", 40f, 1305f, p)
+                val ok = save(card, "ps1-bedroom-card")
+                app.toast(if (ok) "💌 Share card saved to Pictures / PS1 Bedroom" else "💌 Could not save the card")
+                if (ok) app.achievements.achieve("sharer")
+            }.start()
+        }
+    }
     private fun takePhoto() {
         flash.visibility = View.VISIBLE; flash.alpha = 0.85f
         flash.animate().alpha(0f).setDuration(400).withEndAction { flash.visibility = View.GONE }.start()
         app.achievements.achieve("photographer")
         app.requestPhoto { bmp -> Thread { val ok = save(bmp); app.toast(if (ok) "📷 Saved to Pictures / PS1 Bedroom" else "📷 Could not save the photo") }.start() }
     }
-    private fun save(bmp: Bitmap): Boolean = try {
-        val name = "ps1-bedroom-${SimpleDateFormat("yyyyMMddHHmm", Locale.US).format(Date())}.png"
+    private fun save(bmp: Bitmap, prefix: String = "ps1-bedroom"): Boolean = try {
+        val name = "$prefix-${SimpleDateFormat("yyyyMMddHHmmss", Locale.US).format(Date())}.png"
         if (Build.VERSION.SDK_INT >= 29) {
             val cv = ContentValues().apply {
                 put(MediaStore.Images.Media.DISPLAY_NAME, name); put(MediaStore.Images.Media.MIME_TYPE, "image/png")

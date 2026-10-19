@@ -175,8 +175,8 @@ class AchievementPop(private val act: Activity, private val root: FrameLayout) {
 }
 
 /** HTML 17350-17385: the sunrise alarm. The room slowly brightens for 20 minutes before it, then music or birdsong. */
-class Alarm(private val app: App, ctx: Context) {
-    private val prefs = ctx.getSharedPreferences("ps1bedroom", Context.MODE_PRIVATE)
+class Alarm(private val app: App, val context: Context) {
+    private val prefs = context.getSharedPreferences("ps1bedroom", Context.MODE_PRIVATE)
     var on = prefs.getBoolean("alarm.on", false); private set
     var time = prefs.getString("alarm.time", "07:00")!!; private set
     var music = prefs.getBoolean("alarm.music", true); private set

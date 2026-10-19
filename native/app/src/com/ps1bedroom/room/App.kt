@@ -55,6 +55,7 @@ class App : GLSurfaceView.Renderer {
     /** 1.3: achievements and the sunrise alarm (made by the activity). */
     lateinit var achievements: Achievements
     lateinit var alarm: Alarm
+    lateinit var surprises: Surprises; private set
     private val YT_CORNERS = arrayOf(Vec3(-0.395f, 0.3f, -0.015f), Vec3(0.395f, 0.3f, -0.015f), Vec3(-0.395f, -0.3f, -0.015f), Vec3(0.395f, -0.3f, -0.015f))
     private val ytPts = FloatArray(8); private val ytTmp = Vec3(); private val ytView = Vec3(); private val ytC = Vec3(); private val ytN = Vec3()
     /** ytPlaceOverlay: the TV glass's 4 corners on screen, snapped like the PS1 vertex shader snaps the TV. */
@@ -224,6 +225,7 @@ class App : GLSurfaceView.Renderer {
             built = true
             myMusic.onChanged = { hud?.refreshMenu() }
             scene.add(alarm.light)
+            surprises = Surprises(this, alarm.context); surprises.build()
             jasper.onPet = { achievements.petted() }
             library.onInserted = { achievements.achieve("gamer") }
             myMusic.load()
@@ -390,6 +392,7 @@ class App : GLSurfaceView.Renderer {
             "monitor" -> openPc()
             "phone" -> if (phone.ringing) phone.answer() else { toast("📞 56k V.90 MODEM: \"MOM HANG UP THE PHONE! I'M IN A STARCRAFT MATCH!\""); sfx("phone") }
             "door" -> toast("🚧 UNDER CONSTRUCTION: The rest of the house is still being built. Check back in a future update!")
+            "surprise" -> surprises.find()
             "discman" -> toast("💿 SONIX D-SPIN Discman: 45-second anti-skip! A burned mix CD is still inside.")
             "gba" -> toast("🎮 GAME KID ADVANCE: The battery light is red. Of course it is.")
             "brickphone" -> toast("📱 NOKA 3310: 1 new text message. You have 2 bars and a high score in Snake.")

@@ -57,7 +57,9 @@ class Material(
     /** three.js ShaderMaterial: draw with this program instead of the PS1 one */
     @JvmField var shader: CustomShader? = null,
     /** three.js AdditiveBlending (glows that brighten what is behind them) */
-    @JvmField var additive: Boolean = false
+    @JvmField var additive: Boolean = false,
+    /** three.js alphaTest: fragments less opaque than this are discarded (cut-out sprites) */
+    @JvmField var alphaTest: Float = 0f
 )
 
 /** makePS1Material from the HTML, same defaults and the same grime / macro rules. */
@@ -71,7 +73,7 @@ object PS1 {
         color: Int = 0xffffff, map: Texture? = null, emissive: Int = 0x000000, emissiveIntensity: Float? = null,
         emissiveMap: Texture? = null, transparent: Boolean = false, opacity: Float = 1f, side: Int = FRONT_SIDE,
         polygonOffset: Boolean = false, polygonOffsetFactor: Float = 0f, polygonOffsetUnits: Float = 0f,
-        depthWrite: Boolean = true, noMacro: Boolean = false
+        depthWrite: Boolean = true, noMacro: Boolean = false, alphaTest: Float = 0f
     ): Material {
         var m = map
         // Flat-coloured surfaces get a subtle weathering map; glowing and see-through parts stay clean
@@ -84,7 +86,7 @@ object PS1 {
             color = Color(color), map = m, emissive = Color(emissive), emissiveIntensity = emissiveIntensity ?: 1f, emissiveMap = emissiveMap,
             transparent = transparent, opacity = opacity, side = side, depthWrite = depthWrite,
             polygonOffset = polygonOffset, polygonOffsetFactor = polygonOffsetFactor, polygonOffsetUnits = polygonOffsetUnits,
-            macro = macro
+            macro = macro, alphaTest = alphaTest
         )
     }
 

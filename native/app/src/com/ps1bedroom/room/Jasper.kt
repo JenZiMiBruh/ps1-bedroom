@@ -110,16 +110,15 @@ class Jasper(private val room: Room, private val env: Environment) {
         dogPart(dogBody, 0.22f, 0.2f, 0.06f, dogCream, 0f, -0.03f, 0.43f)          // chest bib
         dogPart(dogBody, 0.2f, 0.05f, 0.46f, dogCream, 0f, -0.14f, 0.0f)           // belly
         // Neck leans forward from the shoulders into the head, both ends buried (inside the chest and the skull)
-        // (native fix: 3 cm lower than the HTML, so the neck's top-back corner is buried 3 cm inside the skull instead of breaking
-        //  out of the back of his head; the bottom stays inside the chest)
-        dogPart(dogBody, 0.17f, 0.34f, 0.17f, dogTan, 0f, 0.215f, 0.434f, 0.72f)    // neck
-        dogPart(dogBody, 0.2f, 0.04f, 0.2f, PS1.material(color = 0xb91c1c), 0f, 0.17f, 0.394f, 0.72f) // collar (follows the neck)
+        dogPart(dogBody, 0.13f, 0.30f, 0.13f, dogTan, 0f, 0.137f, 0.391f, 0.72f)    // neck (native fix v0.15: thinner and shorter, its top stays inside the head's neck stub)
+        dogPart(dogBody, 0.17f, 0.04f, 0.17f, PS1.material(color = 0xb91c1c), 0f, 0.17f, 0.42f, 0.72f) // collar (follows the neck)
         val tagTex = createCanvasTex(8, 8) { ctx, _, _ -> ctx.fillStyle = "#d4a017"; ctx.fillRect(1, 1, 6, 6); ctx.fillStyle = "#8a6a10"; ctx.fillRect(3, 3, 2, 2) }.tex
-        dogPart(dogBody, 0.05f, 0.05f, 0.012f, PS1.material(map = tagTex, color = 0xffffff), 0f, 0.075f, 0.489f) // tag hanging from the collar
+        dogPart(dogBody, 0.05f, 0.05f, 0.012f, PS1.material(map = tagTex, color = 0xffffff), 0f, 0.09f, 0.49f) // tag hanging from the collar
         // Head: block skull, cheeks, snout with a black mask and nose, upright ears
         dogHead.position.set(0f, 0.33f, 0.52f)
         dogBody.add(dogHead)
         dogPart(dogHead, 0.22f, 0.2f, 0.22f, dogTan, 0f, 0f, 0f)                    // skull
+        dogPart(dogHead, 0.16f, 0.14f, 0.15f, dogTan, 0f, -0.1f, -0.02f)            // neck stub: turns with the head, so the joint never opens or pokes through
         dogPart(dogHead, 0.2f, 0.06f, 0.2f, dogDark, 0f, 0.09f, -0.01f)            // dark crown
         dogPart(dogHead, 0.13f, 0.1f, 0.16f, dogDark, 0f, -0.05f, 0.18f)           // snout (black mask)
         dogPart(dogHead, 0.11f, 0.035f, 0.13f, dogCream, 0f, -0.105f, 0.15f)       // lower jaw

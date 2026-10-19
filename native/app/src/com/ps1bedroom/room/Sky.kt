@@ -134,6 +134,8 @@ void main() {
     var sunX = -99f; var sunY = -99f; var moonX = -99f; var moonY = -99f
     var lightningFlash = 0f
     var outsideEnv = "city"
+    /** The 15 places outside the window (set once they are built). */
+    var placesPaint: PlacesPaint? = null
 
     // ---- 3D layers ----
     val skyBoxGroup = Group()
@@ -467,7 +469,7 @@ void main() {
         ringObj.tex.needsUpdate()
     }
 
-    // Side walls of the sky box: a plain continuation of each place's horizon (other places come with the places phase)
+    // Side walls of the sky box: a plain continuation of each place's horizon (same heights as the back wall)
     private fun paintSideHorizon(ctx: Canvas2D, w: Int, h: Int) {
         val e = outsideEnv
         val r = makeRng(e.length * 31 + 7)
@@ -486,7 +488,7 @@ void main() {
         if (e == "city" || e == "neon" || e == "neighborhood") {
             cityRow(214, 20, 70, T(intArrayOf(10, 15, 32), intArrayOf(70, 84, 108), 0.35), false)
             cityRow(232, 10, 50, T(intArrayOf(6, 9, 22), intArrayOf(38, 48, 66), 0.1), true)
-        }
+        } else placesPaint?.paintSideHorizonPlace(ctx, w, h, r, ::cityRow)
     }
 
     // ---- The cached backdrop: clouds strip, skyline, lit windows (rebuilt when the time / weather moves on) ----
@@ -523,7 +525,7 @@ void main() {
             cctx.globalCompositeOperation = "source-over"
         }
         paintSideSky()
-        if (outsideEnv != "city") { cityStaticDirty = false; return } // (the other places are painted by the places phase)
+        if (outsideEnv != "city") { placesPaint?.paintLandscape(ctx, w, h); cityStaticDirty = false; return }
         // Far skyline: hazy, lighter (atmospheric perspective)
         fun hazeMix(c1: IntArray, c2: IntArray, k: Double) = IntArray(3) { i -> (c1[i] + (c2[i] - c1[i]) * k).toInt() }
         val nightBldg = intArrayOf(10, 15, 32); val dayBldg = intArrayOf(70, 84, 108)
@@ -589,6 +591,7 @@ void main() {
         val w = SKY_W; val h = SKY_H
         ctx.clearRect(0, 0, w, h)
         ctx.drawImage(cityStaticCache, 0, 0)
+        if (outsideEnv != "city") placesPaint?.paintLandscapeLive(ctx, t)
         dome.time = t
         val night = 1 - env.daylight
         val clearSky = max(0.0, 1 - W.cloud * 1.15)

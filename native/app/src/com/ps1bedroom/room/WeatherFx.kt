@@ -88,6 +88,8 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
     private var glassKey = ""
     private val groundCanvasObj: CanvasTex
     private val windowGlowMat: Material
+    /** The ground below the window (hidden 40 floors up). */
+    val outdoorGround: Mesh
 
     /** The whole-sky flash; the sky reads it, the room lights spike with it. */
     var lightningFlash = 0f; private set
@@ -125,7 +127,7 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
 
         // Seasonal ground below the window (grass, flowering grass, fallen leaves, snow; darker when wet)
         groundCanvasObj = createCanvasTex(128, 128, 7f, 5f) { _, _, _ -> }
-        val outdoorGround = Mesh(Geo.plane(26f, 13f, 8, 4), Material(map = groundCanvasObj.tex, ps1 = false)) // MeshLambertMaterial
+        outdoorGround = Mesh(Geo.plane(26f, 13f, 8, 4), Material(map = groundCanvasObj.tex, ps1 = false)) // MeshLambertMaterial
         outdoorGround.rotation.x = (-PI / 2).toFloat()
         outdoorGround.position.set(0.8f, 0.32f, -9.8f)
         scene.add(outdoorGround)

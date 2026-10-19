@@ -379,6 +379,19 @@ class Exterior(private val group: Group, private val env: Environment, private v
         return Vehicle(g, type, dir, 1.7 + rnd.nextDouble() * 0.9, beam, snow, type.len + (if (type.box) 0.3f else 0f))
     }
 
+
+    // ---- Shared with the places outside the window (HTML parkedCar, bldgTex1-3, the skyscraper billboard) ----
+    val buildingTextures get() = listOf(bldgTex1, bldgTex2, bldgTex3)
+    fun parkedVehicle(kind: String): Group {
+        val v = buildVehicle(VEHICLE_TYPES.firstOrNull { it.kind == kind } ?: VEHICLE_TYPES[0], 1)
+        v.beam.visible = false; v.snow.visible = false
+        return v.g
+    }
+    private var placesAd: Ad? = null
+    fun drawNextPlacesAd(ctx: Canvas2D) { val a = pickAd(listOfNotNull(placesAd)); placesAd = a; drawAd(ctx, a, 128, 48) }
+    /** Everything of the city (setOutsideEnv hides it elsewhere); the trees show wherever the place has trees. */
+    fun cityParts(): List<Pair<com.ps1bedroom.room.engine.Object3D, Boolean>> = group.children.map { o -> o to exteriorTrees.any { it.first === o } }
+
     // How busy the highway is right now (0..1): rush hours, a quiet middle of the night, fewer cars in storms
     private fun trafficDensity(): Double {
         val h = env.hour

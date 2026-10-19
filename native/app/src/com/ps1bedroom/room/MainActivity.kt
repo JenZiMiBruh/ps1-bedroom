@@ -70,8 +70,8 @@ class MainActivity : Activity() {
             }
             MotionEvent.ACTION_POINTER_DOWN -> if (e.pointerCount >= 2) {
                 wasPinching = true
-                // Test shortcut until the menus: three fingers on the left half step the time, on the right half the weather
-                if (e.pointerCount == 3) { if (e.getX(2) < view.width / 2f) app.debugNextTimePreset() else app.debugNextWeather() }
+                // Test shortcut until the menus: three fingers on the left third step the time, the middle third the place outside, the right third the weather
+                if (e.pointerCount == 3) { val fx = e.getX(2) / view.width; if (fx < 1 / 3f) app.debugNextTimePreset() else if (fx < 2 / 3f) app.debugNextPlace() else app.debugNextWeather() }
                 lastDist = hypot(e.getX(0) - e.getX(1), e.getY(0) - e.getY(1))
                 lastMidX = (e.getX(0) + e.getX(1)) / 2; lastMidY = (e.getY(0) + e.getY(1)) / 2
             }

@@ -42,6 +42,7 @@ class App : GLSurfaceView.Renderer {
     lateinit var jasper: Jasper; private set
     lateinit var extras: Extras; private set
     lateinit var weatherFx: WeatherFx; private set
+    lateinit var places: Places; private set
     lateinit var tv: Tv; private set
     lateinit var ps1: Ps1; private set
     lateinit var library: GameLibrary; private set
@@ -116,6 +117,10 @@ class App : GLSurfaceView.Renderer {
                 room.extraDynamicRoots += jasper.dogGroup
                 extras = Extras(room, env, tv, desk, bedroom); extras.build(); tv.tapes = extras
                 room.extraDynamicRoots.addAll(extras.dynamicRoots())
+                places = Places(room, env, sky, exterior, weatherFx) { renderer.shadowsNeedUpdate = true }   // HTML 14241: the places outside
+                room.extraDynamicRoots.addAll(places.dynamicRoots())
+                sky.placesPaint = places.paint
+                weatherFx.outsideGroundPaint = { c, w, h -> places.paint.outsideGroundPaint(c, w, h) }
                 decor.buildKenney()   // the HTML's GLB models finish loading after everything else
                 room.extraBatchExcluded.addAll(desk.lavaBlobs)
             }
@@ -158,9 +163,11 @@ class App : GLSurfaceView.Renderer {
         handleTaps()
         env.tick(System.currentTimeMillis())
         if (debugPresetStep) { debugPresetStep = false; debugPreset = (debugPreset + 1) % env.TIME_PRESETS.size; env.setTimePreset(env.TIME_PRESETS[debugPreset].first) }
+        if (debugPlaceStep) { debugPlaceStep = false; val keys = Places.OUTSIDE_ENVS.keys.toList(); places.setOutsideEnv(keys[(keys.indexOf(sky.outsideEnv) + 1) % keys.size]) }
         if (debugWeatherStep) { debugWeatherStep = false; val keys = Environment.WEATHER_KINDS.keys.toList(); env.weatherKind = keys[(keys.indexOf(env.weatherKind) + 1) % keys.size]; env.applyEnvironmentSettings() }
         weatherFx.update(t, dt)
         exterior.update(t, dt, sky.outsideEnv)
+        places.update(t, dt)
         desk.update(t)
         fan.update(dt)
         decor.update(t)
@@ -279,6 +286,8 @@ class App : GLSurfaceView.Renderer {
     @Volatile private var debugPresetStep = false
     @Volatile private var debugWeatherStep = false
     fun debugNextWeather() { debugWeatherStep = true }
+    @Volatile private var debugPlaceStep = false
+    fun debugNextPlace() { debugPlaceStep = true }
     private var debugPreset = -1
     fun debugNextTimePreset() { debugPresetStep = true }
 

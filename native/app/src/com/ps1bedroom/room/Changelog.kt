@@ -24,6 +24,14 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.15", "15 places outside the window", listOf(
+            "Downtown, a 40th-floor skyscraper, Neon City, the neighborhood, suburbs, a backyard, a trailer park, Arizona, a desert canyon, a tropical island, a beach boardwalk, a lake, a forest, the mountains and a farm",
+            "Each place has its own painted horizon, 3D yard (houses, fences, palms, cacti, docks, a barn...), PS1-style sprite trees and its own ground",
+            "Live details: the Ferris wheel and lighthouse, trains on the neon el, helicopters and street traffic far below, a smoking volcano, a windmill, swings and wind chimes, tumbleweeds",
+            "Everything follows the season, the time and the weather: bare trees in winter, porch lights and neon at night, puddles in the rain",
+            "Test shortcut until the menus: a three-finger tap in the middle of the screen changes the place (left: time, right: weather)",
+            "Fixed: Jasper's head no longer clips or flickers when he turns it (the neck now turns with his head)"
+        )),
         Entry("0.14", "Weather", listOf(
             "Rain outside the window with splashes on the sill and the ground, heavier and more slanted in a storm",
             "Snow that drifts and blows sideways in a blizzard; falling leaves in fall and blossoms in spring",

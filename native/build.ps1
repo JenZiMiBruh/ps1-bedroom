@@ -43,9 +43,10 @@ $gen = @(Get-ChildItem -Recurse "$out\gen" -Filter *.java | ForEach-Object FullN
 if ($gen.Count) { Run "$java\javac.exe" (@('-source', '8', '-target', '8', '-Xlint:-options', '-nowarn', '-encoding', 'UTF-8', '-bootclasspath', $aj, '-cp', "$out\classes", '-d', "$out\classes") + $gen) }
 
 Write-Host '3/6 dex'
-$classes = @(Get-ChildItem -Recurse "$out\classes" -Filter *.class | ForEach-Object FullName)
-Run "$java\java.exe" (@('-cp', "$bt\lib\d8.jar", 'com.android.tools.r8.D8', '--release', '--min-api', '24',
-  '--lib', $aj, '--output', "$out\dex") + $classes + @($stdlib))
+# One jar instead of every .class on the command line (Windows caps a command line at 32K characters)
+Run "$java\jar.exe" @('cf', "$out\classes.jar", '-C', "$out\classes", '.')
+Run "$java\java.exe" @('-cp', "$bt\lib\d8.jar", 'com.android.tools.r8.D8', '--release', '--min-api', '24',
+  '--lib', $aj, '--output', "$out\dex", "$out\classes.jar", $stdlib)
 
 Write-Host '4/6 package'
 Push-Location "$out\dex"

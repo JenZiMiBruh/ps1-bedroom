@@ -99,6 +99,7 @@ in vec3 vInstColor;
 out vec4 fragColor;
 uniform vec3 diffuse;
 uniform float opacity;
+uniform float uAlphaTest;
 uniform vec3 emissive;
 uniform int uHasMap;
 uniform int uHasEmissiveMap;
@@ -157,6 +158,7 @@ void main() {
   diffuseColor.rgb *= vInstColor;
   vec2 affineUv = vAffineUv / vAffineW;
   if (uHasMap == 1) diffuseColor *= texture(map, affineUv);
+  if (diffuseColor.a < uAlphaTest) discard;
   if (uMacro == 1) {
     float macroV = macroNoise(vMacroPos * 0.85) * 0.6 + macroNoise(vMacroPos * 2.9 + 7.0) * 0.4;
     diffuseColor.rgb *= 0.85 + 0.3 * macroV;

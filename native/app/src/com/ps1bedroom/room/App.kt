@@ -43,6 +43,9 @@ class App : GLSurfaceView.Renderer {
     lateinit var extras: Extras; private set
     lateinit var weatherFx: WeatherFx; private set
     lateinit var places: Places; private set
+    lateinit var monitor: Monitor; private set
+    private var lastMonitorUpdate = 0f
+    private val SPHERE_MONITOR_C = Vec3()
     /** Walk / sit / lie down (HTML playerMode); the on-screen UI that drives it. */
     val player: Player = Player(camera, { toast(it) }) { postureChanged() }
     private fun postureChanged() { hud?.postureChanged(player.mode, player.pullChairLabel()) }
@@ -112,6 +115,7 @@ class App : GLSurfaceView.Renderer {
             room.onBuildInterior = {
                 library = GameLibrary(room); library.camera = camera
                 desk = Desk(room, tex, library); desk.build()
+                monitor = Monitor(tex.monCanvasObj, desk.monScreenMat, room, desk.pcLedMat, env); monitor.update(0f)
                 ps1 = Ps1(room, tv); ps1.library = library; library.ps1 = ps1
                 ps1.build(desk.matJewelPlastic); tv.ps1 = ps1
                 library.buildGtaShelf(desk.matJewelPlastic)   // HTML 6242, after the hookups
@@ -190,6 +194,10 @@ class App : GLSurfaceView.Renderer {
         exterior.update(t, dt, sky.outsideEnv)
         places.update(t, dt)
         desk.update(t)
+        monitor.tick(t)
+        // The monitor redraws ~6x a second, only while the PC is on and the screen is in view
+        desk.monScreen.updateMatrixWorld(); SPHERE_MONITOR_C.setFromMatrixPosition(desk.monScreen.matrixWorld)
+        if (monitor.pcPoweredOn && t - lastMonitorUpdate > 0.16f && renderer.sphereInView(SPHERE_MONITOR_C, 0.6f)) { monitor.update(t); lastMonitorUpdate = t }
         fan.update(dt)
         decor.update(t)
         jasper.update(t, dt)
@@ -302,6 +310,8 @@ class App : GLSurfaceView.Renderer {
             "heater" -> extras.cycleHeater()
             "poster" -> extras.cyclePoster()
             "boombox", "bbscreen" -> extras.cycleRadio(furniture.radioDisplayMat)
+            "pc" -> { monitor.setPower(!monitor.pcPoweredOn); toast(if (monitor.pcPoweredOn) "💾 Rebooting HP Pavilion... Windows 98 / XP ScanDisk complete." else "⚠️ \"DO NOT TURN OFF!\" You just killed a 48-hour Napster download at 99%!") }
+            "monitor" -> openPc()
             "phone" -> toast("📞 56k V.90 MODEM: \"MOM HANG UP THE PHONE! I'M IN A STARCRAFT MATCH!\"")
             "door" -> toast("🚧 UNDER CONSTRUCTION: The rest of the house is still being built. Check back in a future update!")
             "discman" -> toast("💿 SONIX D-SPIN Discman: 45-second anti-skip! A burned mix CD is still inside.")
@@ -327,6 +337,13 @@ class App : GLSurfaceView.Renderer {
     fun putBackHeld() = library.putBackHeld()
     fun tvNextChannel() = tv.cycleBedroomTvChannel(lastT)
     fun tvPower() = tv.toggleBedroomTv(lastT)
+    fun monitorNextChannel() = toast(monitor.cycleChannel())
+    /** Tap the monitor: sit down at the desk and use the PC (PcDesktop). */
+    fun openPc() {
+        if (!monitor.pcPoweredOn) { toast("🖥 The PC is off. Tap the tower to boot it up."); return }
+        if (player.mode != "chair" || player.chairSpot != 1) player.goToChairSpot(1) { setPlayerMode("orbit") }
+        hud?.openPc()
+    }
     // ---- Photo mode: the next frame is read back from the screen ----
     @Volatile private var photoCallback: ((android.graphics.Bitmap) -> Unit)? = null
     fun requestPhoto(cb: (android.graphics.Bitmap) -> Unit) { photoCallback = cb }

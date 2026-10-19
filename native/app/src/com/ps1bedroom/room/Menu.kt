@@ -365,7 +365,8 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
         val tv = app.tv
         tiles(listOf(
             Triple(if (tv.bedroomTvOn) "TV: ${Tv.TV_CHANNEL_NAMES[tv.bedroomTvChannel].substringBefore(':')}" else "TV CHANNEL", tv.bedroomTvOn, { post { app.tvNextChannel(); s.changed() } }),
-            Triple(if (app.extras.radioStation > 0) "RADIO: ${app.extras.RADIO_STATIONS[app.extras.radioStation].substringBefore(':')}" else "RADIO: OFF", app.extras.radioStation > 0, { post { app.extras.cycleRadio(app.furniture.radioDisplayMat); s.changed() } })
+            Triple(if (app.extras.radioStation > 0) "RADIO: ${app.extras.RADIO_STATIONS[app.extras.radioStation].substringBefore(':')}" else "RADIO: OFF", app.extras.radioStation > 0, { post { app.extras.cycleRadio(app.furniture.radioDisplayMat); s.changed() } }),
+            Triple("PC SCREEN", app.monitor.pcPoweredOn, { post { app.monitorNextChannel(); s.changed() } })
         ))
         note("The full soundscape (the room, the weather, the city, the radio and My Music) arrives with the audio update. YouTube on the TV and the PC screen come with the PC update.", true)
     }
@@ -388,6 +389,7 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
             Triple("CEILING FAN: ${if (app.fan.fanSpinning) "ON" else "OFF"}", app.fan.fanSpinning, { post { app.fan.toggleCeilingFanSpin(); s.changed() } }),
             Triple("AC UNIT: ${if (app.room.acUnitOn) "ON" else "OFF"}", app.room.acUnitOn, { post { app.room.toggleAcUnit(); s.changed() } }),
             Triple("BEDROOM TV: ${if (app.tv.bedroomTvOn) "ON" else "OFF"}", app.tv.bedroomTvOn, { post { app.tvPower(); s.changed() } }),
+            Triple("🖥 USE THE PC", false, { close(); post { app.openPc() } }),
             Triple("DOOR: CLOSED", false, { post { app.toast("🚧 UNDER CONSTRUCTION: The rest of the house is still being built. Check back in a future update!") } })
         ))
         h4("Poster above the desk")

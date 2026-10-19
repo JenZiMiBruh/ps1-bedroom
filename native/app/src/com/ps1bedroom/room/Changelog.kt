@@ -24,6 +24,14 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.19", "The PC", listOf(
+            "The monitor comes alive: the XP desktop with its WinBeats equalizer and taskbar clock, plus four 2001-02 game parodies (Menu → Sound → PC SCREEN cycles them); its glow tints the desk",
+            "Tap the tower to switch the PC off and on (\"DO NOT TURN OFF!\")",
+            "Tap the monitor to roll up to the desk and use the PC: the island wallpaper and 24 desktop icons (each one a joke)",
+            "Messenger with five buddies who chat back once you dial in, an away message, the Dial-Up connection",
+            "WinBeats plays the boombox stations, and a full game of Minesweeper (long-press or flag mode to flag)",
+            "The green start button logs off; Android back works too"
+        )),
         Entry("0.18", "Start screen, how-to and photo mode", listOf(
             "The PS1-style start screen: PRESS START, the four-colour diamond on white, then the licence screen (tap to skip; turn it off in Display)",
             "The five-card how-to on first launch (and in About → HOW TO)",

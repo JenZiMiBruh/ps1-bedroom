@@ -336,7 +336,7 @@ class Settings(private val app: App, private val ctx: Context) {
         put("skyStyle", env.skyStyle); put("realisticMoon", env.realisticMoon); put("city", cityName); put("lat", env.lat); put("lon", env.lon); put("lonKnown", env.lonKnown)
         put("blinds", app.room.blindsOpenState); put("fanLight", app.fanLightOn); put("fanSpin", app.fan.fanSpinning); put("ac", app.room.acUnitOn)
         put("lamp", app.furniture.lampOn); put("string", app.decor.stringLightsMode); put("tv", app.tv.bedroomTvOn)
-        put("tvCh", if (app.tv.bedroomTvChannel == Tv.PS1_TV_CHANNEL) 0 else app.tv.bedroomTvChannel); put("radio", app.extras.radioStation)
+        put("pcCh", app.monitor.currentChannel); put("tvCh", if (app.tv.bedroomTvChannel == Tv.PS1_TV_CHANNEL) 0 else app.tv.bedroomTvChannel); put("radio", app.extras.radioStation)
         put("master", masterVolume.toDouble()); put("quality", qualityMode); put("vibe", vibeMode); put("res", app.resShort)
         put("jitter", app.jitterBase.toDouble()); put("affine", app.renderer.ps1Uniforms.affineStrength.toDouble()); put("dither", app.renderer.post.ditherStrength.toDouble())
         put("volumetric", env.userVolumetricSetting.toDouble()); put("sway", app.swayAmount.toDouble()); put("ao", app.aoBase.toDouble())
@@ -376,6 +376,7 @@ class Settings(private val app: App, private val ctx: Context) {
             s.optInt("string", 0).let { if (it > 0) app.decor.setStringLights(it) }
             if (!s.optBoolean("tv", true) && app.tv.bedroomTvOn) app.tv.toggleBedroomTv(0f)
             s.optInt("tvCh", 0).let { if (it in 1 until Tv.PS1_TV_CHANNEL) app.tv.setChannel(it) }
+            app.monitor.setChannel(s.optInt("pcCh", 0))
             repeat(s.optInt("radio", 0)) { app.extras.cycleRadio(app.furniture.radioDisplayMat) }
             masterVolume = s.optDouble("master", 0.85).toFloat()
             app.jitterBase = s.optDouble("jitter", 160.0).toFloat()

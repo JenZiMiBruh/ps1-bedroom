@@ -217,6 +217,8 @@ class Hud(private val act: Activity, private val root: FrameLayout, private val 
     // ---- Top bar + menu sheet (Menu.kt), the sleep overlay ----
     val menu: Menu by lazy { Menu(act, root, app) }
     val overlays: Overlays by lazy { Overlays(act, root, app) }
+    val pcDesktop: PcDesktop by lazy { PcDesktop(act, root, app) }
+    fun openPc() = act.runOnUiThread { menu.close(); pcDesktop.show() }
     private var uiHidden = false
     /** Photo mode: everything but the photo bar goes away. */
     fun setUiHidden(h: Boolean) {
@@ -242,6 +244,7 @@ class Hud(private val act: Activity, private val root: FrameLayout, private val 
     private var currentMode = "orbit"
     /** Android back: close the menu, then stand up / leave first person. */
     fun back(): Boolean {
+        if (pcDesktop.isOpen) { pcDesktop.close(); return true }
         if (overlays.back()) return true
         if (menu.isOpen) { menu.close(); return true }
         if (currentMode != "orbit") { app.post { app.setPlayerMode("orbit") }; return true }

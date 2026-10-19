@@ -93,6 +93,8 @@ class Player(private val camera: PerspectiveCamera, private val toast: (String) 
         onModeChanged()
     }
 
+    /** openPc: roll the chair up to the desk and sit down. */
+    fun goToChairSpot(i: Int, resetOrbit: () -> Unit) { chairSpot = i; seatLookYaw = 0f; seatLookPitch = 0f; setMode("chair", resetOrbit) }
     // Rolls the chair to the next (+1) or previous (-1) spot: TV -> DESK -> WINDOW
     fun moveChair(step: Int, resetOrbit: () -> Unit) {
         chairSpot = (chairSpot + step + CHAIR_SPOTS.size) % CHAIR_SPOTS.size

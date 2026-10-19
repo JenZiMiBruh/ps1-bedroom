@@ -29,6 +29,7 @@ class Desk(private val room: Room, private val tex: Textures, private val librar
     lateinit var pcLedMat: Material
     lateinit var hddLedMat: Material
     lateinit var monScreen: Mesh
+    lateinit var monScreenMat: Material
     private val rnd = Random.Default
     private lateinit var lavaGlassMat: Material
     private lateinit var blobMat: Material
@@ -271,7 +272,7 @@ class Desk(private val room: Room, private val tex: Textures, private val librar
         monCrtBack.position.set(-0.08f, 2.14f, -0.41f); monCrtBack.castShadow = true; deskGroup.add(monCrtBack)
         val monPowerLed = Mesh(Geo.box(0.024f, 0.016f, 0.02f), PS1.material(color = 0x22c55e, emissive = 0x22c55e, emissiveIntensity = 1.0f))
         monPowerLed.position.set(0.15f, 1.71f, -0.102f); deskGroup.add(monPowerLed)
-        val monScreenMat = PS1.material(map = tex.desktop, emissive = 0xffffff, emissiveMap = tex.desktop, emissiveIntensity = 0.95f,
+        monScreenMat = PS1.material(map = tex.desktop, emissive = 0xffffff, emissiveMap = tex.desktop, emissiveIntensity = 0.95f,
             polygonOffset = true, polygonOffsetFactor = -2f, polygonOffsetUnits = -2f)
         monScreen = Mesh(Geo.plane(0.98f, 0.80f, 4, 4), monScreenMat)
         monScreen.position.set(-0.08f, 2.155f, -0.112f)

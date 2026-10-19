@@ -9,14 +9,13 @@
 <p>A cozy ambience app that looks like a PlayStation game from 2001.<br>Leave it on while you study, work, game or fall asleep.</p>
 
 [![Play in your browser](https://img.shields.io/badge/▶%20PLAY-in%20your%20browser-ff3ea5?style=for-the-badge&logo=googlechrome&logoColor=white&labelColor=1a1033)](https://jenzimibruh.github.io/ps1-bedroom/play/)
-[![Download APK](https://img.shields.io/badge/⬇%20DOWNLOAD-Android%20APK-7ff3ff?style=for-the-badge&logo=android&logoColor=white&labelColor=1a1033)](../../releases/latest)
+[![Android: native app Oct 21](https://img.shields.io/badge/📱%20ANDROID-native%20app%20Oct%2021-7ff3ff?style=for-the-badge&logo=android&logoColor=white&labelColor=1a1033)](../../issues/29)
 [![itch.io](https://img.shields.io/badge/ALSO%20ON-itch.io-fa5c5c?style=for-the-badge&logo=itchdotio&logoColor=white&labelColor=1a1033)](https://galloade.itch.io/ps1-bedroom)
-[![Coming soon: native Android](https://img.shields.io/badge/📣%20COMING%20SOON-native%20Android%20app-a78bfa?style=for-the-badge&logo=kotlin&logoColor=white&labelColor=1a1033)](../../issues/29)
 
 [![Version](https://img.shields.io/github/v/release/JenZiMiBruh/ps1-bedroom?style=flat-square&label=version&color=a78bfa&labelColor=1a1033)](../../releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/JenZiMiBruh/ps1-bedroom/total?style=flat-square&label=downloads&color=ffd23f&labelColor=1a1033)](../../releases)
-![Android 7+](https://img.shields.io/badge/Android-7.0%2B-22c55e?style=flat-square&logo=android&logoColor=white&labelColor=1a1033)
-![APK](https://img.shields.io/badge/APK-~600%20KB-ef4444?style=flat-square&labelColor=1a1033)
+![Native Android](https://img.shields.io/badge/native%20Android-Oct%2021%2C%202026-22c55e?style=flat-square&logo=android&logoColor=white&labelColor=1a1033)
+![Google Play](https://img.shields.io/badge/Google%20Play-before%20end%20of%202026-22c55e?style=flat-square&logo=googleplay&logoColor=white&labelColor=1a1033)
 ![Free](https://img.shields.io/badge/free-no%20ads%2C%20no%20account-3b82f6?style=flat-square&labelColor=1a1033)
 ![three.js](https://img.shields.io/badge/three.js-r128-white?style=flat-square&logo=three.js&logoColor=white&labelColor=1a1033)
 
@@ -33,9 +32,10 @@
 <br>
 
 > [!IMPORTANT]
-> ### 📣 Coming soon: a true native Android app
+> ### 📣 Coming October 21, 2026: a true native Android app
 > PS1 Bedroom is being rebuilt from scratch in **Kotlin + OpenGL ES**: the same room 1:1, with **sleep-friendly audio** (no more crackle or clipping overnight), a **cooler, lighter renderer** and better battery life for all-night use.
-> The engine, sky, city and most of the furniture are already in. [Read the announcement →](../../issues/29) · [Follow the `native` branch →](../../tree/native)
+> **Releases October 21, 2026** here on GitHub, and comes to **Google Play before the end of 2026**. The old web-view APKs have been taken down because they weren't optimized enough; until the native app lands, play in your browser.
+> [Read the announcement →](../../issues/29) · [Follow the `native` branch →](../../tree/native)
 
 ## 🆕 New in 1.3.5 — Clear Skies
 
@@ -128,13 +128,14 @@
 
 ### 📱 Android
 
-[![Download APK](https://img.shields.io/badge/⬇%20PS1--Bedroom--v1.3.5.apk-7ff3ff?style=for-the-badge&logo=android&logoColor=white&labelColor=1a1033)](../../releases/latest)
+[![Native app Oct 21](https://img.shields.io/badge/📅%20NATIVE%20APP-October%2021%2C%202026-7ff3ff?style=for-the-badge&logo=android&logoColor=white&labelColor=1a1033)](../../issues/29)
 
-1. Download the APK from the **[latest release](../../releases/latest)**
-2. Open it and tap **Install** (allow installs from your browser if asked)
-3. If Play Protect warns you, tap **Install anyway**. It's just not from the Play Store
+The Android app is being rebuilt as a **true native app** (Kotlin + OpenGL ES): cooler, lighter and sleep-friendly.
 
-Installs over your current version and keeps your settings.
+- 📅 **October 21, 2026**: native APK here on GitHub Releases
+- ▶️ **Google Play** before the end of 2026
+
+The old web-view APKs were taken down because they weren't optimized enough. Until then, play in your browser (it works on phones too). Follow along on the [`native` branch](../../tree/native).
 
 </td>
 <td width="50%" valign="top">
@@ -156,6 +157,8 @@ Also on **[itch.io](https://galloade.itch.io/ps1-bedroom)**.
 <br>
 
 ## 📱 Made for Android
+
+<sub>These come back in the native Android app (October 21, 2026).</sub>
 
 | | |
 |---|---|

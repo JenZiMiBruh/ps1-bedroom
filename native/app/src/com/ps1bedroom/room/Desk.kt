@@ -27,6 +27,7 @@ class Desk(private val room: Room, private val tex: Textures, private val librar
     val lavaBlobs = ArrayList<Mesh>()
     private val blobSpeed = ArrayList<Float>(); private val blobOffset = ArrayList<Float>()
     lateinit var pcLedMat: Material
+    lateinit var hddLedMat: Material
     lateinit var monScreen: Mesh
     private val rnd = Random.Default
     private lateinit var lavaGlassMat: Material
@@ -175,7 +176,11 @@ class Desk(private val room: Room, private val tex: Textures, private val librar
         pcTowerGroup.add(stickyNoteMesh); room.registerInteractable(stickyNoteMesh, "pc")
         pcLedMat = PS1.material(color = 0x22ff55, emissive = 0x22ff55, emissiveIntensity = 1.0f)
         val pcLed = Mesh(Geo.box(0.026f, 0.026f, 0.02f), pcLedMat)
-        pcLed.position.set(-0.14f, -0.09f, 0.482f); pcTowerGroup.add(pcLed)
+        pcLed.position.set(0.17f, -0.09f, 0.487f); pcTowerGroup.add(pcLed) // native fix: clear of the floppy slot
+        // Amber drive-activity LED beside it (flickers while the PC is on)
+        hddLedMat = PS1.material(color = 0xffb020, emissive = 0xffa000, emissiveIntensity = 0.9f)
+        val hddLed = Mesh(Geo.box(0.026f, 0.026f, 0.02f), hddLedMat)
+        hddLed.position.set(0.17f, -0.125f, 0.487f); pcTowerGroup.add(hddLed)
 
         // ---- 4. 900MHz cordless phone & charging cradle ----
         val phoneGroup = Group()
@@ -224,10 +229,12 @@ class Desk(private val room: Room, private val tex: Textures, private val librar
         pocketScreen.rotation.x = (-PI / 2).toFloat(); pocketScreen.rotation.z = -0.25f
         pocketScreen.position.set(-0.69f, 1.535f, 0.45f); deskGroup.add(pocketScreen)
         val cableCurve = CatmullRomCurve3(listOf(
-            doubleArrayOf(-0.97, 1.91, 0.29), doubleArrayOf(-0.86, 1.68, 0.38), doubleArrayOf(-0.90, 1.51, 0.50),
+            doubleArrayOf(-0.92, 1.91, 0.30), doubleArrayOf(-0.89, 1.80, 0.36), doubleArrayOf(-0.86, 1.68, 0.38), doubleArrayOf(-0.90, 1.51, 0.50),
             doubleArrayOf(-0.50, 1.51, 0.58), doubleArrayOf(-0.62, 1.515, 0.45)))
         val cableMesh = Mesh(GeoCurves.tube(cableCurve, 18, 0.011f, 6), PS1.material(color = 0x090b10))
         cableMesh.castShadow = true; deskGroup.add(cableMesh)
+        val plug = Mesh(Geo.box(0.036f, 0.02f, 0.04f), PS1.material(color = 0x1f2937)) // USB plug seated in the third front port
+        plug.position.set(-0.92f, 1.91f, 0.31f); deskGroup.add(plug)
 
         // ---- 6. Multimedia monitor with side speaker grilles & OSD buttons ----
         val monPedestalBase = Mesh(Geo.cylinder(0.24f, 0.28f, 0.045f, 12), PS1.material(color = 0x8a95a8))
@@ -346,6 +353,7 @@ class Desk(private val room: Room, private val tex: Textures, private val librar
 
     /** Lava blobs rise and fall inside the tapered glass (from the HTML's animate loop). */
     fun update(t: Float) {
+        hddLedMat.emissiveIntensity = if (pcLedMat.emissiveIntensity > 0.5f && sin(t * 23f) * sin(t * 7.3f) > 0.1f) 1.1f else 0.08f
         for (idx in lavaBlobs.indices) {
             val blob = lavaBlobs[idx]
             val cycle = sin(t * blobSpeed[idx] + blobOffset[idx])

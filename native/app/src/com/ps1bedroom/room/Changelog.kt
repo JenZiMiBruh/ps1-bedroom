@@ -24,6 +24,16 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.16", "Walk, sit and lie down", listOf(
+            "The bottom dock: Walk, Sit, Bed and Free cam (Sound, Sleep and Photo arrive with the menus)",
+            "Walk around the room in first person with the on-screen joystick; drag to look, pinch to zoom",
+            "Sit in the office chair and roll it between the TV, the desk and the window (\"CHAIR →\"), or tap the chair",
+            "Lie on the bed propped up on the pillows (tap the bed)",
+            "Crosshair, pop-up messages when you tap things, and a PUT GAME BACK button while you hold a game",
+            "Dust in the light beam now takes the colour of the sun or moon light instead of always blue",
+            "PC tower: the power LED no longer clips into the floppy slot, a flickering amber drive LED, the MP3 cable plugs into the third front port, and the HP and Intel badges sit on the lower panel",
+            "The version tag moved to the top-right corner"
+        )),
         Entry("0.15.1", "Fixes", listOf(
             "Fixed: 0.15 crashed on launch while building the places outside the window"
         )),
@@ -152,7 +162,7 @@ object Changelog {
 
     private fun dp(a: Activity, v: Float) = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, v, a.resources.displayMetrics).toInt()
 
-    /** Small version tag in the bottom-left corner; tapping it opens the changelog. */
+    /** Small version tag in the top-right corner (the dock is along the bottom); tapping it opens the changelog. */
     fun addVersionTag(activity: Activity, root: FrameLayout) {
         val tag = TextView(activity).apply {
             text = "NATIVE v${entries.first().version}"
@@ -163,8 +173,8 @@ object Changelog {
             background = GradientDrawable().apply { setColor(Color.argb(150, 8, 10, 24)); cornerRadius = dp(activity, 8f).toFloat(); setStroke(dp(activity, 1f), Color.argb(120, 167, 139, 250)) }
             setOnClickListener { show(activity) }
         }
-        val lp = FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM or Gravity.START)
-        lp.setMargins(dp(activity, 12f), 0, 0, dp(activity, 12f))
+        val lp = FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.TOP or Gravity.END)
+        lp.setMargins(0, dp(activity, 12f), dp(activity, 12f), 0)
         root.addView(tag, lp)
     }
 

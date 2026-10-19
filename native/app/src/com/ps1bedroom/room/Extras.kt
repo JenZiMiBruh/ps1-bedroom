@@ -58,6 +58,7 @@ class Extras(private val room: Room, private val env: Environment, private val t
     var heaterMode = "auto"; private set
     private var heaterOn = false
     private var heaterGlow = 0f
+    val heaterGroup = Group()
 
     // ---- Poster, room colours, decorations ----
     private lateinit var posterObj: CanvasTex
@@ -150,7 +151,7 @@ class Extras(private val room: Room, private val env: Environment, private val t
 
         // ---- Space heater by the bed: glowing coils, a warm orange light ----
         PS1.syncGrime(321)
-        val heater = Group()
+        val heater = heaterGroup
         heater.position.set(1.2f, 0f, 1.38f); heater.rotation.y = (-PI / 2 + 0.5).toFloat()
         scene.add(heater)
         fun heaterPart(geo: Geometry, mat: Material, x: Float, y: Float, z: Float): Mesh { val m = Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true; heater.add(m); room.registerInteractable(m, "heater"); return m }

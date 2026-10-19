@@ -34,6 +34,8 @@ class MainActivity : Activity() {
         val root = android.widget.FrameLayout(this)
         root.addView(view)
         Changelog.addVersionTag(this, root)
+        app.density = resources.displayMetrics.density
+        app.hud = Hud(this, root, app)
         setContentView(root)
         pacer = FramePacer(this, view, app)
         hideSystemBars()

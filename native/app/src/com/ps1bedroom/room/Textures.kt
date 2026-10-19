@@ -152,12 +152,11 @@ class Textures {
         // Vertical recessed groove in lower bezel
         ctx.fillStyle = "#2a303c"; ctx.fillRect(w / 2 - 4, 154, 8, 90)
         // Blue HP Pavilion badge
-        ctx.fillStyle = "#1d4ed8"; ctx.fillRect(w / 2 - 13, 178, 26, 20)
-        ctx.strokeStyle = "#93c5fd"; ctx.lineWidth = 1f; ctx.strokeRect(w / 2 - 13, 178, 26, 20)
-        ctx.fillStyle = "#ffffff"; ctx.font = "bold 11px sans-serif"; ctx.fillText("hp", w / 2 - 7, 192)
-        // Intel Inside & Windows OEM case badges
-        ctx.fillStyle = "#0284c7"; ctx.fillRect(20, 162, 16, 13)
-        ctx.fillStyle = "#eab308"; ctx.fillRect(20, 179, 16, 12)
+        ctx.fillStyle = "#1d4ed8"; ctx.fillRect(w / 2 - 13, 204, 26, 20)
+        ctx.strokeStyle = "#93c5fd"; ctx.lineWidth = 1f; ctx.strokeRect(w / 2 - 13, 204, 26, 20)
+        ctx.fillStyle = "#ffffff"; ctx.font = "bold 11px sans-serif"; ctx.fillText("hp", w / 2 - 7, 218)
+        // Intel Inside case badge (native fix: below the front ports, where nothing covers it)
+        ctx.fillStyle = "#0284c7"; ctx.fillRect(22, 206, 16, 13)
     }.tex
 
     val keyboard = createCanvasTex(128, 64, weather = Weather(seed = 44.0, blotch = 0.22, speckle = 0.14, edge = 0.2, smudges = 4, warm = 0.15)) { ctx, w, h ->

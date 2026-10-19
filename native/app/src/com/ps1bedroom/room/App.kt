@@ -43,6 +43,15 @@ class App : GLSurfaceView.Renderer {
     lateinit var extras: Extras; private set
     lateinit var weatherFx: WeatherFx; private set
     lateinit var places: Places; private set
+    /** Walk / sit / lie down (HTML playerMode); the on-screen UI that drives it. */
+    val player: Player = Player(camera, { toast(it) }) { postureChanged() }
+    private fun postureChanged() { hud?.postureChanged(player.mode, player.pullChairLabel()) }
+    @Volatile var hud: Hud? = null
+    fun toast(msg: String) { hud?.toast(msg); Unit }
+    private val posted = java.util.concurrent.ConcurrentLinkedQueue<() -> Unit>()
+    /** Runs [fn] on the GL thread at the start of the next frame (UI buttons). */
+    fun post(fn: () -> Unit) = posted.add(fn)
+    private var lastHeld: Int? = null
     lateinit var tv: Tv; private set
     lateinit var ps1: Ps1; private set
     lateinit var library: GameLibrary; private set
@@ -105,6 +114,7 @@ class App : GLSurfaceView.Renderer {
                 room.extraDynamicRoots += ps1.ps1LidPivot
                 bedroom = Bedroom(room); bedroom.build()
                 room.extraDynamicRoots += bedroom.chairGroup
+                player.chairGroup = bedroom.chairGroup
                 fan = Fan(room); fan.build()
                 room.extraDynamicRoots += fan.fanBladesGroup; room.extraDynamicRoots += fan.fanPullChain; room.extraDynamicRoots += fan.lightPullChain
                 com.ps1bedroom.room.engine.PS1.syncGrime(256)   // HTML 8225: weather and season FX
@@ -120,6 +130,7 @@ class App : GLSurfaceView.Renderer {
                 places = Places(room, env, sky, exterior, weatherFx) { renderer.shadowsNeedUpdate = true }   // HTML 14241: the places outside
                 room.extraDynamicRoots.addAll(places.dynamicRoots())
                 sky.placesPaint = places.paint
+                player.obstacles = listOf(tv.tvStandGroup to 0.7f, bedroom.chairGroup to 0.5f, jasper.dogGroup to 0.45f, extras.heaterGroup to 0.45f)
                 weatherFx.outsideGroundPaint = { c, w, h -> places.paint.outsideGroundPaint(c, w, h) }
                 decor.buildKenney()   // the HTML's GLB models finish loading after everything else
                 room.extraBatchExcluded.addAll(desk.lavaBlobs)
@@ -159,6 +170,7 @@ class App : GLSurfaceView.Renderer {
         val dt = minOf(0.05f, if (lastT < 0f) 0f else t - lastT)
         lastT = t
         applyPerfLevel()
+        while (true) { val fn = posted.poll() ?: break; fn() }
         applyInput()
         handleTaps()
         env.tick(System.currentTimeMillis())
@@ -177,6 +189,8 @@ class App : GLSurfaceView.Renderer {
         tv.updateLight(t)
         ps1.update(dt)
         library.update(t, dt)
+        if (library.heldGame != lastHeld) { lastHeld = library.heldGame; hud?.holdingGame(lastHeld != null) }
+        if (player.updateChair(dt)) renderer.shadowsNeedUpdate = true
         updateGtaTvFeed(t)
         // The TV redraws ~6x a second (the PlayStation ~16x) and only while it is on and on screen, as in the HTML
         if (tv.bedroomTvOn && t - lastTvUpdate > (if (tv.bedroomTvChannel == Tv.PS1_TV_CHANNEL) 0.06f else 0.16f) && renderer.sphereInView(SPHERE_TV_C, 0.7f)) { tv.updateBedroomTvScreen(t); lastTvUpdate = t }
@@ -190,16 +204,22 @@ class App : GLSurfaceView.Renderer {
             sky.updateCitySkyline(t)
             lastSkylineUpdate = t
         }
-        controls.update()
-        // Keep the free camera inside the room
-        camera.position.x = max(Room.MIN_X + 0.2f, min(Room.MAX_X - 0.2f, camera.position.x))
-        camera.position.y = max(Room.MIN_Y + 0.25f, min(Room.MAX_Y - 0.2f, camera.position.y))
-        camera.position.z = max(Room.MIN_Z + 0.2f, min(Room.MAX_Z - 0.2f, camera.position.z))
-        basePos.copy(camera.position)
-        // Camera breathing (the HTML's orbit sway)
-        if (swayAmount > 0.001f) {
-            camera.position.x += sin(t * 0.55f) * 0.035f * swayAmount
-            camera.position.y += cos(t * 0.42f) * 0.025f * swayAmount
+        // Camera modes: orbit, first-person walk, sitting in the chair, or lying on the bed
+        if (player.mode == "orbit") {
+            controls.update()
+            // Keep the free camera inside the room
+            camera.position.x = max(Room.MIN_X + 0.2f, min(Room.MAX_X - 0.2f, camera.position.x))
+            camera.position.y = max(Room.MIN_Y + 0.25f, min(Room.MAX_Y - 0.2f, camera.position.y))
+            camera.position.z = max(Room.MIN_Z + 0.2f, min(Room.MAX_Z - 0.2f, camera.position.z))
+            basePos.copy(camera.position)
+            // Camera breathing (the HTML's orbit sway)
+            if (swayAmount > 0.001f) {
+                camera.position.x += sin(t * 0.55f) * 0.035f * swayAmount
+                camera.position.y += cos(t * 0.42f) * 0.025f * swayAmount
+            }
+        } else {
+            player.updateCamera(t, dt, swayAmount)
+            basePos.copy(camera.position)
         }
         renderer.post.time = t
         renderer.render(scene, camera)
@@ -270,8 +290,29 @@ class App : GLSurfaceView.Renderer {
             "heater" -> extras.cycleHeater()
             "poster" -> extras.cyclePoster()
             "boombox", "bbscreen" -> extras.cycleRadio(furniture.radioDisplayMat)
+            "phone" -> toast("📞 56k V.90 MODEM: \"MOM HANG UP THE PHONE! I'M IN A STARCRAFT MATCH!\"")
+            "door" -> toast("🚧 UNDER CONSTRUCTION: The rest of the house is still being built. Check back in a future update!")
+            "discman" -> toast("💿 SONIX D-SPIN Discman: 45-second anti-skip! A burned mix CD is still inside.")
+            "gba" -> toast("🎮 GAME KID ADVANCE: The battery light is red. Of course it is.")
+            "brickphone" -> toast("📱 NOKA 3310: 1 new text message. You have 2 bars and a high score in Snake.")
+            "tama" -> toast("🥚 TAMAGOTCHU: Your pet is hungry. Again. It has been hungry since 1998.")
+            "box" -> toast("📦 A box of old stuff: Pogs, a Tamagotchi with dead batteries, a Furby that still talks at night.")
+            "dresser" -> toast("🗄️ DRESSER: Stuffed with band tees, a Tamagotchi with dead batteries and a stack of GamePro magazines.")
+            "chair" -> if (player.mode != "chair") setPlayerMode("chair") else pullChair()
+            "bed" -> setPlayerMode(if (player.mode == "bed") "walk" else "bed")
+        }
+        when (tag) {
+            "cat" -> toast("🐱 MIDNIGHT CAT: *Low-Bit PS1 Meow* (Night-vision eyes toggled!)")
+            "ps1Body" -> toast("🎮 PLAYSTATION: Click POWER (left), RESET (small) or OPEN (right) on top, or the lid itself.")
         }
     }
+    fun setPlayerMode(mode: String) = player.setMode(mode) {
+        camera.position.copy(defaultCamPos)
+        controls.target.copy(defaultTarget)
+        controls.update()
+    }
+    fun pullChair() = player.moveChair(1) { setPlayerMode("orbit") }
+    fun putBackHeld() = library.putBackHeld()
     fun toggleFanLight() {
         fanLightOn = !fanLightOn
         room.fanLight.intensity = if (fanLightOn) 1.85f else 0.0f
@@ -295,15 +336,23 @@ class App : GLSurfaceView.Renderer {
     private val lock = Any()
     private var dragX = 0f; private var dragY = 0f; private var pinch = 1f; private var panX = 0f; private var panY = 0f; private var wheel = 0f
     @Volatile var viewHeight = 1f
+    @Volatile var density = 1f
     fun onDrag(dx: Float, dy: Float) = synchronized(lock) { dragX += dx; dragY += dy }
     fun onPinch(ratio: Float) = synchronized(lock) { pinch *= ratio }
     fun onPan(dx: Float, dy: Float) = synchronized(lock) { panX += dx; panY += dy }
     fun onWheel(d: Float) = synchronized(lock) { wheel += d }
     private fun applyInput() = synchronized(lock) {
-        if (dragX != 0f || dragY != 0f) controls.rotateBy(dragX, dragY, viewHeight)
-        if (pinch != 1f) controls.dollyBy(pinch)
-        if (panX != 0f || panY != 0f) controls.panBy(panX, panY, viewHeight)
-        if (wheel != 0f) controls.wheel(wheel)
+        if (player.mode != "orbit") {
+            // First person: one finger looks around, two fingers pinch-zoom the field of view
+            val k = 1f / density // the HTML turns 0.0045 rad per CSS pixel
+            if (dragX != 0f || dragY != 0f) player.look(dragX * k, dragY * k)
+            if (pinch != 1f) player.pinchZoom(pinch)
+        } else {
+            if (dragX != 0f || dragY != 0f) controls.rotateBy(dragX, dragY, viewHeight)
+            if (pinch != 1f) controls.dollyBy(pinch)
+            if (panX != 0f || panY != 0f) controls.panBy(panX, panY, viewHeight)
+            if (wheel != 0f) controls.wheel(wheel)
+        }
         dragX = 0f; dragY = 0f; pinch = 1f; panX = 0f; panY = 0f; wheel = 0f
     }
 }

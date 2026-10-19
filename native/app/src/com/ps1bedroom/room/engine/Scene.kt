@@ -104,12 +104,13 @@ class PerspectiveCamera(@JvmField var fov: Float, @JvmField var aspect: Float, @
     @JvmField val matrixWorldInverse = Mat4()
     @JvmField val up = Vec3(0f, 1f, 0f)
     private val target = Vec3()
+    private val lookM = Mat4()
     fun updateProjectionMatrix() { projectionMatrix.makePerspective(fov, aspect, near, far); projectionMatrixInverse.invert(projectionMatrix) }
 
     /** Cameras look down -Z: rotation so -Z faces the target. */
     fun lookAtTarget(t: Vec3) {
         target.copy(t)
-        val m = Mat4().lookAt(position, target, up)
+        val m = lookM.lookAt(position, target, up)
         m.toEulerXYZ(rotation)
     }
 

@@ -45,6 +45,7 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
     private val dustGroup = Group()
     private val dustMesh: InstancedMesh
     private val dustMotes: List<Mote>
+    private val dustWhite = com.ps1bedroom.room.engine.Color(0xffffff)
     private val beamOrigin = Vec3(0.8f, 2.6f, -2.95f)
     private val beamDir = Vec3(); private val beamSide = Vec3(); private val beamUp = Vec3()
 
@@ -264,6 +265,9 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
         if (env.currentSeason == "spring") recolorLeaves(SPRING_PETAL_COLS)
         fireflyGroup.visible = env.currentSeason == "summer" && (env.currentTime == "night" || env.currentTime == "dusk") && env.currentWeather == "clear"
         windowGlowMat.color.copy(room.moonLight.color)
+        // Dust motes catch whatever is shining in: warm sunlight, orange at sunset, cool moonlight (native: the HTML keeps them blue)
+        dustMesh.material.color.copy(room.moonLight.color).lerp(dustWhite, 0.35f)
+        dustMesh.material.emissive.copy(room.moonLight.color)
         // Kept faint: it sits over the whole view outside, and stronger values wash out the scenery (fog still thickens it)
         val glowBase = 0.1f + 0.08f * env.daylight.toFloat()
         val glowWeather = if (env.currentWeather == "foggy") 1.4f else if (env.currentWeather == "storm") 0.55f else if (precip) 0.75f else 1f

@@ -13,7 +13,7 @@
 ![Release](https://img.shields.io/badge/📅%20RELEASE-October%2021%2C%202026-ff3ea5?style=for-the-badge&labelColor=1a1033)
 ![Google Play](https://img.shields.io/badge/GOOGLE%20PLAY-before%20the%20end%20of%202026-22c55e?style=for-the-badge&logo=googleplay&logoColor=white&labelColor=1a1033)
 
-![Native build](https://img.shields.io/badge/native%20build-v0.12-a78bfa?style=flat-square&labelColor=1a1033)
+![Native build](https://img.shields.io/badge/native%20build-v0.13-a78bfa?style=flat-square&labelColor=1a1033)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.0-7f52ff?style=flat-square&logo=kotlin&logoColor=white&labelColor=1a1033)
 ![OpenGL ES](https://img.shields.io/badge/OpenGL%20ES-3.0-5586a4?style=flat-square&logo=opengl&logoColor=white&labelColor=1a1033)
 ![APK](https://img.shields.io/badge/APK-~900%20KB-ef4444?style=flat-square&labelColor=1a1033)
@@ -71,11 +71,11 @@ The port follows the web version section by section and is checked against it as
 - **CRT TV**: the MAGNAVOLT set on its media cart with the VCR, seven live channels, scanlines and glow; tap to flip channels or power it off
 - **PlayStation**: power, reset and a hinged lid, the disc spinning up, the boot screens and Bandi-coot Rush on the TV, the controller and real cable hookups to the TV and a power strip
 - **Game library**: 11 PS1 games and every GTA with hand-drawn covers; pick one up and swap the disc; each game plays on the TV in its own style, GTA III to VI as a 3D drive
+- **VCR tapes and room extras**: four tapes to swap into the VCR (commercials, a kung-fu movie, an ocean video), the answering machine, glow-in-the-dark constellations on the ceiling, the space heater, a choice of posters, wall / carpet / sheet colours, seasonal decorations by date, boombox stations
 - **In-app changelog**: tap the version tag in the corner
 
 ### 🔨 In progress / up next
 
-- 📼 **The VCR tapes** you can put in the deck
 - 🌦️ **Weather**: rain and snow particles, lightning, the window glass with raindrops
 - 🏞️ **All 15 places** outside the window
 - 🔊 **Native audio**: the full soundscape, sleep timer fade, lock-screen controls
@@ -89,6 +89,7 @@ Newest first. The same list is in the app (tap the version tag in the bottom-lef
 
 | Build | What changed |
 |---|---|
+| **0.13** | VCR tapes you can swap in, answering machine, glow-in-the-dark ceiling constellations, space heater, poster choices, room colours, seasonal decorations, boombox stations |
 | **0.12** | The game library: PS1 shelf and the GTA collection, pick up / swap discs, every game playable on the TV including a 3D chase-cam drive for GTA III–VI; Jasper's neck fixed |
 | **0.11** | The PlayStation: buttons, lid, spinning disc, boot screens, system menu and Bandi-coot Rush on the TV, DualShock, cable hookups; fan bracket flicker and chair lever fixed |
 | **0.10.1** | Fixes: stray "CH 03" on the TV static removed; the fan light's glass shade now sits snugly in its collar |

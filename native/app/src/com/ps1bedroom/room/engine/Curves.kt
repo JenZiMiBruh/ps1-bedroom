@@ -189,6 +189,50 @@ object GeoCurves {
         return Geometry(pos.toFloatArray(), nrm.toFloatArray(), uv.toFloatArray(), idx.toIntArray())
     }
 
+    /**
+     * three.js ShapeGeometry for the star-shaped outlines used here (stars, hearts): a fan from [cx, cy] instead of
+     * earcut, which covers the same area; UVs are the raw x / y like three's.
+     */
+    fun shape(outline: List<FloatArray>, cx: Float = 0f, cy: Float = 0f): Geometry {
+        val n = outline.size
+        val pos = FloatArray((n + 1) * 3); val nrm = FloatArray((n + 1) * 3); val uv = FloatArray((n + 1) * 2)
+        pos[0] = cx; pos[1] = cy; uv[0] = cx; uv[1] = cy
+        for (i in 0 until n) { pos[(i + 1) * 3] = outline[i][0]; pos[(i + 1) * 3 + 1] = outline[i][1]; uv[(i + 1) * 2] = outline[i][0]; uv[(i + 1) * 2 + 1] = outline[i][1] }
+        for (i in 0..n) nrm[i * 3 + 2] = 1f
+        // keep the winding counter-clockwise (front face toward +Z)
+        var area = 0f
+        for (i in 0 until n) { val a = outline[i]; val b = outline[(i + 1) % n]; area += a[0] * b[1] - b[0] * a[1] }
+        val idx = IntArray(n * 3)
+        for (i in 0 until n) { val a = i + 1; val b = (i + 1) % n + 1; idx[i * 3] = 0; if (area >= 0) { idx[i * 3 + 1] = a; idx[i * 3 + 2] = b } else { idx[i * 3 + 1] = b; idx[i * 3 + 2] = a } }
+        return Geometry(pos, nrm, uv, idx)
+    }
+
+    /** three.js r128 RingGeometry. */
+    fun ring(innerRadius: Float, outerRadius: Float, thetaSegments: Int = 8, phiSegments: Int = 1, thetaStart: Float = 0f, thetaLength: Float = (Math.PI * 2).toFloat()): Geometry {
+        val pos = ArrayList<Float>(); val nrm = ArrayList<Float>(); val uv = ArrayList<Float>()
+        var radius = innerRadius
+        val radiusStep = (outerRadius - innerRadius) / phiSegments
+        for (j in 0..phiSegments) {
+            for (i in 0..thetaSegments) {
+                val segment = thetaStart + i.toFloat() / thetaSegments * thetaLength
+                val x = radius * cos(segment); val y = radius * sin(segment)
+                pos += x; pos += y; pos += 0f; nrm += 0f; nrm += 0f; nrm += 1f
+                uv += (x / outerRadius + 1) / 2; uv += (y / outerRadius + 1) / 2
+            }
+            radius += radiusStep
+        }
+        val idx = ArrayList<Int>()
+        for (j in 0 until phiSegments) {
+            val level = j * (thetaSegments + 1)
+            for (i in 0 until thetaSegments) {
+                val segment = i + level
+                val a = segment; val b = segment + thetaSegments + 1; val c = segment + thetaSegments + 2; val d = segment + 1
+                idx += a; idx += b; idx += d; idx += b; idx += c; idx += d
+            }
+        }
+        return Geometry(pos.toFloatArray(), nrm.toFloatArray(), uv.toFloatArray(), idx.toIntArray())
+    }
+
     /** three.js r128 IcosahedronGeometry. */
     fun icosahedron(radius: Float = 1f, detail: Int = 0): Geometry {
         val t = (1 + sqrt(5.0)) / 2

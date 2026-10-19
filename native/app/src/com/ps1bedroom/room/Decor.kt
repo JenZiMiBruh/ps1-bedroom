@@ -31,7 +31,7 @@ class Decor(private val room: Room, private val res: Resources) {
     private lateinit var stringGlowA: PointLight
     private lateinit var stringGlowB: PointLight
     var stringLightsMode = 0; private set   // 0 off · 1 warm · 2 rainbow
-    private var stringLightsOn = false
+    var stringLightsOn = false; private set
     /** Built at the end of the room: the HTML's models load asynchronously, after everything else (grime 686+). */
     val kenneyRoots = ArrayList<Object3D>()
 

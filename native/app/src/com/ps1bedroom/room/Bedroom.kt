@@ -32,7 +32,7 @@ class Bedroom(private val room: Room) {
     var catEyesGlowing = false; private set
 
     // ---- Textures (HTML 1531-1655) ----
-    private val spaceBedTex = createCanvasTex(256, 256, 2f, 2f, Weather(seed = 45.0, blotch = 0.24, speckle = 0.09)) { ctx, w, h ->
+    val spaceBedTex = createCanvasTex(256, 256, 2f, 2f, Weather(seed = 45.0, blotch = 0.24, speckle = 0.09)) { ctx, w, h ->
         ctx.fillStyle = "#06102e"; ctx.fillRect(0, 0, w, h)
         // Subtle purple/blue cosmic nebula clouds
         val neb1 = ctx.createRadialGradient(70, 90, 8, 70, 90, 68)

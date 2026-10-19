@@ -206,6 +206,34 @@ class Canvas2D(@JvmField val width: Int, @JvmField val height: Int) {
     }
 
     // ---- Images and pixels ----
+    /** ctx.filter for drawImage: CSS hue-rotate(deg) / saturate(x) / brightness(x), applied left to right. */
+    var filter = "none"
+        set(v) {
+            field = v
+            if (v == "none" || v.isBlank()) { imgPaint.colorFilter = null; return }
+            val m = android.graphics.ColorMatrix()
+            for (f in Regex("""([a-z-]+)\(([-0-9.]+)(deg)?\)""").findAll(v)) {
+                val k = f.groupValues[2].toFloat()
+                val step = android.graphics.ColorMatrix()
+                when (f.groupValues[1]) {
+                    "brightness" -> step.setScale(k, k, k, 1f)
+                    "saturate" -> step.set(floatArrayOf(
+                        0.213f + 0.787f * k, 0.715f - 0.715f * k, 0.072f - 0.072f * k, 0f, 0f,
+                        0.213f - 0.213f * k, 0.715f + 0.285f * k, 0.072f - 0.072f * k, 0f, 0f,
+                        0.213f - 0.213f * k, 0.715f - 0.715f * k, 0.072f + 0.928f * k, 0f, 0f, 0f, 0f, 0f, 1f, 0f))
+                    "hue-rotate" -> {
+                        val a = Math.toRadians(k.toDouble()); val c = kotlin.math.cos(a).toFloat(); val s = kotlin.math.sin(a).toFloat()
+                        step.set(floatArrayOf(
+                            0.213f + c * 0.787f - s * 0.213f, 0.715f - c * 0.715f - s * 0.715f, 0.072f - c * 0.072f + s * 0.928f, 0f, 0f,
+                            0.213f - c * 0.213f + s * 0.143f, 0.715f + c * 0.285f + s * 0.140f, 0.072f - c * 0.072f - s * 0.283f, 0f, 0f,
+                            0.213f - c * 0.213f - s * 0.787f, 0.715f - c * 0.715f + s * 0.715f, 0.072f + c * 0.928f + s * 0.072f, 0f, 0f, 0f, 0f, 0f, 1f, 0f))
+                    }
+                    else -> continue
+                }
+                m.postConcat(step)
+            }
+            imgPaint.colorFilter = android.graphics.ColorMatrixColorFilter(m)
+        }
     fun drawImage(src: Canvas2D, dx: Number, dy: Number) = drawImage(src.bitmap, dx, dy, src.width, src.height)
     fun drawImage(src: Canvas2D, dx: Number, dy: Number, dw: Number, dh: Number) = drawImage(src.bitmap, dx, dy, dw, dh)
     fun drawImage(src: Bitmap, dx: Number, dy: Number, dw: Number, dh: Number) {

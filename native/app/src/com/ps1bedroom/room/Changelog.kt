@@ -24,6 +24,15 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.13", "Tapes, stars and the little things", listOf(
+            "Tap a VHS tape on the TV cart to put it in the VCR: Taped Off TV '99 (old commercials), Kung Fu Midnight and Ocean Dreams, each with a PLAY counter and tracking band",
+            "Answering machine on the desk with a message light",
+            "Glow-in-the-dark stars on the ceiling: the Big Dipper, Orion and Cassiopeia plus a moon sticker; they charge up in the light and glow when it's dark",
+            "Space heater by the bed: the coils glow orange on winter nights (tap for auto / on / off)",
+            "Poster frame above the desk: tap to cycle five original posters",
+            "Seasonal decorations come out by date: a jack-o'-lantern and paper bats for Halloween, a little tree in winter, hearts for Valentine's, a box fan in summer",
+            "Room colours (walls, carpet, sheets) are ready for the settings menu; tap the boombox to change stations"
+        )),
         Entry("0.12", "The game library", listOf(
             "11 PS1 games on the hutch shelf and every Grand Theft Auto on the wall shelf, each with its own hand-drawn cover, spine and back",
             "Tap a case to pick it up (it rides in front of you), then tap the PlayStation: the lid pops, the discs swap, and it boots the new game",

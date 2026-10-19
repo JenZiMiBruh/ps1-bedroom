@@ -40,6 +40,7 @@ class App : GLSurfaceView.Renderer {
     lateinit var furniture: Furniture; private set
     lateinit var decor: Decor; private set
     lateinit var jasper: Jasper; private set
+    lateinit var extras: Extras; private set
     lateinit var tv: Tv; private set
     lateinit var ps1: Ps1; private set
     lateinit var library: GameLibrary; private set
@@ -109,6 +110,8 @@ class App : GLSurfaceView.Renderer {
                 room.extraBatchExcluded.addAll(decor.stringBulbs)
                 jasper = Jasper(room, env); jasper.build()
                 room.extraDynamicRoots += jasper.dogGroup
+                extras = Extras(room, env, tv, desk, bedroom); extras.build(); tv.tapes = extras
+                room.extraDynamicRoots.addAll(extras.dynamicRoots())
                 decor.buildKenney()   // the HTML's GLB models finish loading after everything else
                 room.extraBatchExcluded.addAll(desk.lavaBlobs)
             }
@@ -156,6 +159,7 @@ class App : GLSurfaceView.Renderer {
         fan.update(dt)
         decor.update(t)
         jasper.update(t, dt)
+        extras.update(t, dt, fanLightOn, furniture.lampOn, decor.stringLightsOn)
         jasper.bedroomTvOn = tv.bedroomTvOn
         tv.updateLight(t)
         ps1.update(dt)
@@ -230,6 +234,7 @@ class App : GLSurfaceView.Renderer {
         if (library.swapping && (isPs1Tag || tag.startsWith("gamebox:"))) return // let the disc swap finish
         if (library.heldGame != null && isPs1Tag) { library.insertHeldGame(lastT); return } // holding a game + tapping the console = put it in
         if (tag.startsWith("gamebox:")) { library.tapCase(tag.substringAfter(':').toInt()); return }
+        if (tag.startsWith("vhs:")) { extras.insertTape(tag.substringAfter(':').toInt(), lastT); return }
         when (tag) {
             "blinds" -> room.cycleWindowBlinds()
             "switch" -> toggleFanLight()
@@ -247,6 +252,10 @@ class App : GLSurfaceView.Renderer {
             "ps1Reset" -> ps1.resetPress(lastT)
             "ps1Open" -> ps1.lidToggle(lastT, true)
             "ps1Pad" -> ps1.padPress(lastT)
+            "machine" -> {} // the answering machine plays its messages with the audio phase
+            "heater" -> extras.cycleHeater()
+            "poster" -> extras.cyclePoster()
+            "boombox", "bbscreen" -> extras.cycleRadio(furniture.radioDisplayMat)
         }
     }
     fun toggleFanLight() {

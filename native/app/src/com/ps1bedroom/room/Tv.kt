@@ -41,6 +41,9 @@ class Tv(private val room: Room, private val env: Environment) {
     var ps1On = false
     /** The console (it draws its own picture on A/V 1). */
     var ps1: Ps1? = null
+    /** The VCR tapes (Extras): channel 2 plays whichever is in the deck. */
+    var tapes: Extras? = null
+    val vhsLabelMats = ArrayList<Material>()
     /** Switch the channel directly (the PlayStation puts the TV on A/V 1 and back). */
     /** The GTA chase-cam feed replaces the drawn picture while a 3D-era game is playing (null = back to the canvas). */
     fun useFeed(tex: com.ps1bedroom.room.engine.Texture?) {
@@ -112,7 +115,8 @@ class Tv(private val room: Room, private val env: Environment) {
             room.registerInteractable(tape, "vhs:$i")
             tape.position.set(-0.25f, 0.168f + i * 0.027f, 0.08f); tape.rotation.y = (i - 1) * 0.06f; tape.castShadow = true
             tvStandGroup.add(tape)
-            val label = Mesh(Geo.box(0.16f, 0.018f, 0.002f), PS1.material(color = 0xffffff, map = PS1.grimeTextures[0]))
+            val labelMat = PS1.material(color = 0xffffff, map = PS1.grimeTextures[0]); vhsLabelMats += labelMat
+            val label = Mesh(Geo.box(0.16f, 0.018f, 0.002f), labelMat)
             label.position.set(0f, 0f, 0.056f)
             tape.add(label); room.registerInteractable(label, "vhs:$i")
         }
@@ -278,7 +282,7 @@ class Tv(private val room: Room, private val env: Environment) {
                 val tick = "LOCAL TIME ${env.formatHour(env.hour)} · SUNSET ${env.formatHour(env.sunset % 24)} · MOON ${(env.moonIllum * 100).roundToInt()}% · BAROMETER 29.92 IN   "
                 ctx.fillText(tick + tick, 6 - ((t * 18) % (tick.length * 4.3)), 90)
             }
-            2 -> { // VHS sci-fi / horror movie with tracking bars (the tapes you can insert come with the VCR tapes)
+            2 -> if (tapes?.drawTapeVideo(ctx, w, h, t) != true) { // VHS: ALIEN NIGHT (other tapes draw themselves)
                 ctx.fillStyle = "#05140c"; ctx.fillRect(0, 0, w, h)
                 ctx.fillStyle = "#14532d"; ctx.beginPath(); ctx.moveTo(64, 14); ctx.lineTo(24, 88); ctx.lineTo(104, 88); ctx.closePath(); ctx.fill()
                 ctx.fillStyle = "#86efac"; ctx.beginPath(); ctx.arc(64, 24 + sin(t * 3) * 3, 12, 0, PI * 2); ctx.fill()

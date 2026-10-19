@@ -39,10 +39,15 @@ class MainActivity : Activity() {
         setContentView(root)
         pacer = FramePacer(this, view, app)
         app.pacer = pacer
+        app.onAudioState = { on -> runOnUiThread { if (on) { askNotifications(); MediaService.start(this) } else MediaService.stop(this) } }
+        // (straight away: the GL thread, which runs posted work, is paused while the app is in the background)
+        MediaService.onPause = { if (app.sound.playing) app.toggleAudio() }
         hideSystemBars()
     }
 
     override fun onResume() { super.onResume(); view.onResume(); pacer.interacted(); pacer.start(); hideSystemBars() }
+    private fun askNotifications() { if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 7) }
+    override fun onDestroy() { MediaService.stop(this); app.sound.shutdown(); super.onDestroy() }
     @Deprecated("Activity back handling")
     override fun onBackPressed() { if (app.hud?.back() != true) @Suppress("DEPRECATION") super.onBackPressed() }
     override fun onPause() { pacer.stop(); view.onPause(); super.onPause() }

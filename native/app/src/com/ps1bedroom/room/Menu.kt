@@ -360,15 +360,21 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
         note("Cinematic keeps the moon gliding low across your window all night. Real astronomy puts it exactly where it is in the sky (some nights it won't be up). Either way the phase matches tonight's real moon.")
     }
     private fun buildSound() {
-        bigToggle("AUDIO: COMING SOON", false) { app.toast("🔈 The soundscape is coming with the audio update.") }
-        slider("Master volume", 0, 100, 1, (s.masterVolume * 100).roundToInt(), { "$it%" }) { v -> post { s.masterVolume = v / 100f; s.changed() } }
+        val snd = app.sound
+        bigToggle(if (snd.playing) "AUDIO: ON" else "AUDIO: OFF", snd.playing) { post { app.toggleAudio() } }
+        slider("Master volume", 0, 100, 1, (snd.masterVolume * 100).roundToInt(), { "$it%" }) { v -> post { snd.setMasterVolume(v / 100.0); s.changed() } }
         val tv = app.tv
         tiles(listOf(
-            Triple(if (tv.bedroomTvOn) "TV: ${Tv.TV_CHANNEL_NAMES[tv.bedroomTvChannel].substringBefore(':')}" else "TV CHANNEL", tv.bedroomTvOn, { post { app.tvNextChannel(); s.changed() } }),
-            Triple(if (app.extras.radioStation > 0) "RADIO: ${app.extras.RADIO_STATIONS[app.extras.radioStation].substringBefore(':')}" else "RADIO: OFF", app.extras.radioStation > 0, { post { app.extras.cycleRadio(app.furniture.radioDisplayMat); s.changed() } }),
-            Triple("PC SCREEN", app.monitor.pcPoweredOn, { post { app.monitorNextChannel(); s.changed() } })
+            Triple(if (tv.bedroomTvOn) "TV: ${Tv.TV_CHANNEL_NAMES[tv.bedroomTvChannel].substringBefore(':')}" else "TV CHANNEL", tv.bedroomTvOn, { post { app.tvNextChannel(); app.sfx("tvChannel"); s.changed() } }),
+            Triple(if (app.extras.radioStation > 0) "RADIO: ${app.extras.RADIO_STATIONS[app.extras.radioStation].substringBefore(':')}" else "RADIO: OFF", app.extras.radioStation > 0, { post { app.extras.cycleRadio(app.furniture.radioDisplayMat); app.sfx("radioTune"); s.changed() } }),
+            Triple("PC SCREEN", app.monitor.pcPoweredOn, { post { val on = app.monitor.pcPoweredOn; app.monitorNextChannel(); app.sfx(if (on) "monitorChannel" else "pcOn"); s.changed() } })
         ))
-        note("The full soundscape (the room, the weather, the city, the radio and My Music) arrives with the audio update. YouTube on the TV and the PC screen come with the PC update.", true)
+        note("My Music and YouTube on the TV arrive with the next updates.", true)
+        details("Mixer") {
+            for ((k, label) in listOf("pc" to "PC tower fan & HDD", "fan" to "Ceiling fan", "ac" to "Wall AC", "livtv" to "Living room TV (muffled)", "bedtv" to "Bedroom TV & PS1",
+                    "weather" to "Rain, wind & storms", "nature" to "Outdoors: city, birds, crickets", "pcspk" to "PC speakers", "sfx" to "Clicks, PS1 drive, lava lamp", "radio" to "Boombox radio"))
+                slider(label, 0, 150, 5, ((snd.vol[k] ?: 1.0) * 100).roundToInt(), { "$it%" }) { v -> post { snd.vol[k] = v / 100.0; snd.updateLayered(); s.changed() } }
+        }
     }
     private fun buildRoom() {
         val blindLabels = arrayOf("SLATTED", "TILTED OPEN", "ROLLED UP", "CLOSED")
@@ -389,6 +395,7 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
             Triple("CEILING FAN: ${if (app.fan.fanSpinning) "ON" else "OFF"}", app.fan.fanSpinning, { post { app.fan.toggleCeilingFanSpin(); s.changed() } }),
             Triple("AC UNIT: ${if (app.room.acUnitOn) "ON" else "OFF"}", app.room.acUnitOn, { post { app.room.toggleAcUnit(); s.changed() } }),
             Triple("BEDROOM TV: ${if (app.tv.bedroomTvOn) "ON" else "OFF"}", app.tv.bedroomTvOn, { post { app.tvPower(); s.changed() } }),
+            Triple("LIVING RM TV: ${if (app.sound.livingRoomTvOn) "ON" else "OFF"}", app.sound.livingRoomTvOn, { post { app.sound.livingRoomTvOn = !app.sound.livingRoomTvOn; app.sfx("ui"); app.sound.updateLayered(); s.changed() } }),
             Triple("🖥 USE THE PC", false, { close(); post { app.openPc() } }),
             Triple("DOOR: CLOSED", false, { post { app.toast("🚧 UNDER CONSTRUCTION: The rest of the house is still being built. Check back in a future update!") } })
         ))

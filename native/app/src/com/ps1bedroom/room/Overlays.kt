@@ -183,13 +183,14 @@ class Overlays(private val act: Activity, private val root: FrameLayout, private
     }
     /** Shown on launch unless it's turned off in Display. */
     fun showBoot(enabled: Boolean) {
-        if (!enabled) { bootStage = 3; if (!app.settings.peek("tutorialSeen", false)) startTutorial(); return }
+        if (!enabled) { bootStage = 3; app.post { app.startAudioIfWanted() }; if (!app.settings.peek("tutorialSeen", false)) startTutorial(); return }
         root.addView(boot, MATCH)
     }
     private fun later(ms: Long, fn: () -> Unit) { val r = Runnable(fn); bootTimers += r; boot.postDelayed(r, ms) }
     private fun startFromBoot() {
         if (bootStage == 1 || bootStage == 2) { finishBoot(); return }
         if (bootStage != 0) return
+        app.post { app.startAudioIfWanted() }
         bootStage = 1
         press.animate().alpha(0f).setDuration(600).start()
         white.visibility = View.VISIBLE

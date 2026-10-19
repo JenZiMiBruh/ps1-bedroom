@@ -44,6 +44,22 @@ class App : GLSurfaceView.Renderer {
     lateinit var weatherFx: WeatherFx; private set
     lateinit var places: Places; private set
     lateinit var monitor: Monitor; private set
+    /** The sound engine (HTML Tone.js soundscape). */
+    val sound = com.ps1bedroom.room.audio.Sound(this)
+    fun sfx(name: String) = sound.sfx(name)
+    /** toggleAmbienceAudio: the first time builds the engine. */
+    /** The activity starts / stops the media service with this. */
+    @Volatile var onAudioState: ((Boolean) -> Unit)? = null
+    fun toggleAudio() {
+        val first = !sound.ready
+        sound.toggle()
+        if (first && sound.playing) toast("🔊 SOUND ON: every sound is placed in the room. Walk around and listen!")
+        hud?.audioChanged(sound.playing)
+        onAudioState?.invoke(sound.playing)
+        settings.changed()
+    }
+    /** The start screen (or launch without it) turns the sound on if it was on last time. */
+    fun startAudioIfWanted() { if (sound.wantAudio && !sound.playing) toggleAudio() }
     private var lastMonitorUpdate = 0f
     private val SPHERE_MONITOR_C = Vec3()
     /** Walk / sit / lie down (HTML playerMode); the on-screen UI that drives it. */
@@ -89,6 +105,7 @@ class App : GLSurfaceView.Renderer {
     var swayAmount = 0.4f
     private val basePos = Vec3()
     private var lastT = -1f
+    val lastFrameT get() = lastT
     private var startMs = 0L
     private var built = false
     val isBuilt get() = built
@@ -165,6 +182,11 @@ class App : GLSurfaceView.Renderer {
             startMs = SystemClock.uptimeMillis()
             built = true
             settings.restore()   // the HTML's applySavedSettings, once everything exists
+            ps1.sfx = { sound.sfx(it) }; ps1.stopBootSound = { sound.stopPs1BootSound() }; library.sfx = { sound.sfx(it) }
+            env.envHooks += { sound.updateLayered() }
+            weatherFx.onThunder = { sound.thunderclap() }
+            player.onStep = { onRug -> sound.sfx(if (onRug) "stepRug" else "step") }
+            player.sfx = { sound.sfx(it) }
             hud?.refreshMenu(); hud?.refreshStatus()
         }
     }
@@ -184,6 +206,7 @@ class App : GLSurfaceView.Renderer {
         applyPerfLevel()
         while (true) { val fn = posted.poll() ?: break; fn() }
         if (built) settings.heartbeat()
+        if (built) { sound.updateListener(); sound.periodic(lastT.coerceAtLeast(0f)); sound.tick() }
         applyInput()
         handleTaps()
         env.tick(System.currentTimeMillis())
@@ -327,6 +350,25 @@ class App : GLSurfaceView.Renderer {
             "cat" -> toast("🐱 MIDNIGHT CAT: *Low-Bit PS1 Meow* (Night-vision eyes toggled!)")
             "ps1Body" -> toast("🎮 PLAYSTATION: Click POWER (left), RESET (small) or OPEN (right) on top, or the lid itself.")
         }
+        // The HTML plays these from inside each toggle
+        when (tag) {
+            "blinds" -> sfx("blinds")
+            "switch" -> { sfx("lightSwitch"); sfx("lightChain") }
+            "fan" -> sfx("lightChain")
+            "fanspin" -> sfx("fanChain")
+            "ac" -> sfx(if (room.acUnitOn) "acOn" else "acOff")
+            "tv" -> sfx("tvChannel")
+            "tvPower" -> sfx(if (tv.bedroomTvOn) "tvOn" else "tvOff")
+            "lavalamp" -> sfx("lavaSwitch")
+            "cat" -> sfx(if (bedroom.catEyesGlowing) "meow" else "purr")
+            "pc" -> sfx(if (monitor.pcPoweredOn) "pcOn" else "pcOff")
+            "phone" -> sfx("phone")
+            "door", "discman", "brickphone", "tama", "box", "dresser" -> sfx("caseClick")
+            "gba" -> sfx("ps1Button")
+            "boombox", "bbscreen" -> sfx("radioTune")
+            "heater", "poster", "lamp", "string" -> sfx("ui")
+        }
+        sound.updateLayered()
     }
     fun setPlayerMode(mode: String) = player.setMode(mode) {
         camera.position.copy(defaultCamPos)

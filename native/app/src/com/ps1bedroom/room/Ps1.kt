@@ -245,26 +245,38 @@ class Ps1(private val room: Room, private val tv: Tv) {
         if (!tv.bedroomTvOn) tv.toggleBedroomTv(t)
         tv.updateBedroomTvScreen(t)
     }
-    private fun startBoot(t: Float) { bootStart = t } // (the spin-up and boot jingle come with the audio phase)
+    /** Sound hooks (Sound.sfx / stopPs1BootSound), set by the app. */
+    var sfx: (String) -> Unit = {}
+    var stopBootSound: () -> Unit = {}
+    private fun startBoot(t: Float) {
+        bootStart = t
+        stopBootSound() // a reboot cuts off the previous boot jingle
+        if (!lidOpen) { sfx("ps1Spin"); sfx("ps1Boot") }
+    }
     fun powerToggle(t: Float) {
         press("power")
         ps1On = !ps1On
         tv.ps1On = ps1On
         ps1LedMat.emissiveIntensity = if (ps1On) 1.0f else 0.0f
+        sfx("ps1Power")
+        if (!ps1On) stopBootSound()
         if (ps1On) { switchTvToPs1(t); startBoot(t) }
         else if (tv.bedroomTvChannel == Tv.PS1_TV_CHANNEL) { tv.setChannel(tvChannelBeforePs1); tv.updateBedroomTvScreen(t) }
     }
     fun resetPress(t: Float) {
         press("reset")
+        sfx("ps1Reset")
         if (!ps1On) return
         switchTvToPs1(t); startBoot(t)
     }
     fun lidToggle(t: Float, fromButton: Boolean) {
         if (fromButton) press("open")
         lidOpen = !lidOpen
+        sfx(if (lidOpen) "ps1LidOpen" else "ps1LidClose")
+        if (lidOpen) stopBootSound()
         if (ps1On && !lidOpen) startBoot(t)
     }
-    fun padPress(t: Float) { padPressAt = t }
+    fun padPress(t: Float) { padPressAt = t; sfx("ps1Pad") }
     /** Seconds into the game loop (after the boot and title screens). */
     fun gameTime(t: Float) = t - bootStart - PS1_BOOT_SECONDS - 4
     /** The disc swap drives the lid directly. */

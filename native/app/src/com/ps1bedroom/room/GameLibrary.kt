@@ -199,6 +199,7 @@ class GameLibrary(private val room: Room) {
         }
     }
     private fun releaseFromInteractables(mesh: Mesh) { room.interactables.remove(mesh) }
+    var sfx: (String) -> Unit = {}
 
     fun pickUpGame(gi: Int) {
         if (heldGame != null) putBackHeld()
@@ -206,6 +207,7 @@ class GameLibrary(private val room: Room) {
         inHand[gi] = false
         releaseFromInteractables(caseMeshes[gi]!!)
         flyCase(gi, HAND, 0.45f, 0.15f)
+        sfx("casePickup")
     }
     /** Every case back on its own shelf spot in the original order (the game in the console stays on the floor). */
     fun sortGameShelves() {
@@ -220,12 +222,14 @@ class GameLibrary(private val room: Room) {
             flyCase(gi, target, 0.7f + moved * 0.06f, 0.45f)
             moved++
         }
+        sfx(if (moved > 0) "casePutBack" else "ui")
     }
     fun putBackHeld() {
         val gi = heldGame ?: return
         heldGame = null
         inHand[gi] = false
         flyCase(gi, slotOf[gi], 0.5f, 0.2f)
+        sfx("casePutBack")
     }
     /** Tap on a case: the empty one beside the console stays put; any other is picked up. */
     fun tapCase(gi: Int) { if (slotOf[gi] != FLOOR_SLOT) pickUpGame(gi) }
@@ -247,18 +251,19 @@ class GameLibrary(private val room: Room) {
         releaseFromInteractables(caseMeshes[old]!!)
         flyCase(old, shelfSlot, 1.3f, 0.9f)
         insertAnim = InsertAnim(t, gi, old)
+        sfx("caseOpen")
     }
     private fun updateInsertAnim(t: Float) {
         val a = insertAnim ?: return
         val e = t - a.start
         val disc = ps1.disc; val home = ps1.discHome
-        if (a.stage == 0 && e > 0.3f) { a.stage = 1; ps1.setLid(true) }
+        if (a.stage == 0 && e > 0.3f) { a.stage = 1; ps1.setLid(true); sfx("ps1LidOpen") }
         if (a.stage == 1) {
             // Old disc rises out of the tray and shrinks away into its case
             val k = min(1f, max(0f, (e - 0.55f) / 0.45f))
             disc.position.set(home.x - k * 0.3f, home.y + sin(k * PI.toFloat() * 0.8f) * 0.3f, home.z + k * 0.15f)
             val s = 1 - k * 0.9f; disc.scale.set(s, s, s)
-            if (e > 1.0f) { a.stage = 2; ps1.showDiscLabel(discLabelTex(ALL_GAMES[a.gi])) }
+            if (e > 1.0f) { a.stage = 2; ps1.showDiscLabel(discLabelTex(ALL_GAMES[a.gi])); sfx("discOut") }
         }
         if (a.stage == 2) {
             // New disc arcs from its case on the floor into the tray
@@ -267,9 +272,9 @@ class GameLibrary(private val room: Room) {
             val s = k * k * (3 - 2 * k)
             disc.position.set(from.x + (home.x - from.x) * s, from.y + 0.05f + (home.y - from.y - 0.05f) * s + sin(PI.toFloat() * s) * 0.32f, from.z + (home.z - from.z) * s)
             val sc = 0.4f + 0.6f * s; disc.scale.set(sc, sc, sc)
-            if (k >= 1) { a.stage = 3; disc.position.copy(home); disc.scale.set(1f, 1f, 1f) }
+            if (k >= 1) { a.stage = 3; disc.position.copy(home); disc.scale.set(1f, 1f, 1f); sfx("discIn") }
         }
-        if (a.stage == 3 && e > 1.95f) { a.stage = 4; ps1.setLid(false) }
+        if (a.stage == 3 && e > 1.95f) { a.stage = 4; ps1.setLid(false); sfx("ps1LidClose") }
         if (a.stage == 4 && e > 2.25f) {
             insertedGame = a.gi
             insertAnim = null

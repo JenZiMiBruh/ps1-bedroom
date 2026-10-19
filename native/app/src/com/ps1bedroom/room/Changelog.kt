@@ -24,6 +24,16 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.20", "Sound", listOf(
+            "A native sound engine (no WebView, no Tone.js): synths, noise, filters, envelopes, delay, reverb and a bus compressor, mixed on its own audio thread",
+            "Every source is placed in the room and pans as you turn: the PC tower's fan and hard drive, the ceiling fan, the AC, the CRT, the lava lamp, the PlayStation's disc drive",
+            "Weather through the window: rain, rain on the glass, downpours, wind, thunder after the lightning; crickets, birds, owls, frogs, leaves, the city hum, fog horns",
+            "All the music: the PC's five channels, the TV's channels and tapes, both boombox stations, and every game's own soundtrack and title jingle",
+            "The living room TV muffled through the door, each place outside with its own sounds and critters (coyotes, gulls, loons, the ice-cream truck...)",
+            "Every tap has its sound, plus footsteps, the chair and the bed",
+            "Menu → Sound: audio on / off, master volume and the full mixer; the dock's speaker button toggles it",
+            "Keeps playing with the screen off or in other apps (with a notification and a Pause button)"
+        )),
         Entry("0.19", "The PC", listOf(
             "The monitor comes alive: the XP desktop with its WinBeats equalizer and taskbar clock, plus four 2001-02 game parodies (Menu → Sound → PC SCREEN cycles them); its glow tints the desk",
             "Tap the tower to switch the PC off and on (\"DO NOT TURN OFF!\")",

@@ -82,7 +82,7 @@ class Hud(private val act: Activity, private val root: FrameLayout, private val 
         dockBtn("bed", "🛏", "Bed") { app.post { app.setPlayerMode("bed") } }
         dockBtn("orbit", "🎥", "Free") { app.post { app.setPlayerMode("orbit") } }
         dock.addView(dockSep.apply { setBackgroundColor(LINE) }, LinearLayout.LayoutParams(dpi(2f), LinearLayout.LayoutParams.MATCH_PARENT).apply { setMargins(dpi(3f), dpi(4f), dpi(7f), dpi(4f)) })
-        dockBtn("audio", "🔈", "Sound") { menu.open("sound") }
+        dockBtn("audio", "🔈", "Sound") { app.post { app.toggleAudio() } }
         dockBtn("timer", "☾", "Sleep") { menu.open("timer") }
         dockBtn("photo", "📷", "Photo") { menu.close(); overlays.enterPhotoMode() }
         root.addView(dock, FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply { bottomMargin = dpi(10f) })
@@ -240,6 +240,8 @@ class Hud(private val act: Activity, private val root: FrameLayout, private val 
     }
     fun refreshMenu() = act.runOnUiThread { menu.build(); dockBtns["timer"]?.let { b -> val on = app.settings.sleepEnd > 0; b.view.background = if (on) GradientDrawable().apply { setColor(ACTIVE_BG); cornerRadius = dp(10f); setStroke(dpi(2f), PINK) } else if (currentMode == "timer") b.view.background else null } }
     fun refreshStatus() = act.runOnUiThread { menu.refreshStatus() }
+    /** The dock's Sound button mirrors the audio state (🔊 / 🔈). */
+    fun audioChanged(on: Boolean) = act.runOnUiThread { dockBtns["audio"]?.let { b -> b.icon.text = if (on) "🔊" else "🔈"; b.view.background = if (on) GradientDrawable().apply { setColor(ACTIVE_BG); cornerRadius = dp(10f); setStroke(dpi(2f), PINK) } else null; b.label.setTextColor(if (on) Color.WHITE else MUTED) } }
     fun showSleeping(on: Boolean) = act.runOnUiThread { sleepOverlay.visibility = if (on) View.VISIBLE else View.GONE }
     private var currentMode = "orbit"
     /** Android back: close the menu, then stand up / leave first person. */

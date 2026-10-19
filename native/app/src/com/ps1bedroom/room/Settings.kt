@@ -323,7 +323,7 @@ class Settings(private val app: App, private val ctx: Context) {
     }
 
     /** Something the menu shows changed: redraw it and save soon. */
-    fun changed() { app.hud?.refreshMenu(); dirty = true }
+    fun changed() { app.hud?.refreshMenu(); dirty = true; app.sound.updateLayered() }
 
     // ---------- Saved settings ----------
     private val prefs = ctx.getSharedPreferences("ps1bedroom", Context.MODE_PRIVATE)
@@ -337,7 +337,7 @@ class Settings(private val app: App, private val ctx: Context) {
         put("blinds", app.room.blindsOpenState); put("fanLight", app.fanLightOn); put("fanSpin", app.fan.fanSpinning); put("ac", app.room.acUnitOn)
         put("lamp", app.furniture.lampOn); put("string", app.decor.stringLightsMode); put("tv", app.tv.bedroomTvOn)
         put("pcCh", app.monitor.currentChannel); put("tvCh", if (app.tv.bedroomTvChannel == Tv.PS1_TV_CHANNEL) 0 else app.tv.bedroomTvChannel); put("radio", app.extras.radioStation)
-        put("master", masterVolume.toDouble()); put("quality", qualityMode); put("vibe", vibeMode); put("res", app.resShort)
+        put("master", app.sound.masterVolume); put("audioOn", if (app.sound.ready) app.sound.playing else app.sound.wantAudio); put("livingTv", app.sound.livingRoomTvOn); put("mixVer", app.sound.MIX_VERSION); put("vol", JSONObject(app.sound.vol as Map<*, *>)); put("quality", qualityMode); put("vibe", vibeMode); put("res", app.resShort)
         put("jitter", app.jitterBase.toDouble()); put("affine", app.renderer.ps1Uniforms.affineStrength.toDouble()); put("dither", app.renderer.post.ditherStrength.toDouble())
         put("volumetric", env.userVolumetricSetting.toDouble()); put("sway", app.swayAmount.toDouble()); put("ao", app.aoBase.toDouble())
         put("tempUnit", tempUnit); put("fpsChoice", fpsChoice); put("ecoIdle", ecoIdle)
@@ -378,7 +378,10 @@ class Settings(private val app: App, private val ctx: Context) {
             s.optInt("tvCh", 0).let { if (it in 1 until Tv.PS1_TV_CHANNEL) app.tv.setChannel(it) }
             app.monitor.setChannel(s.optInt("pcCh", 0))
             repeat(s.optInt("radio", 0)) { app.extras.cycleRadio(app.furniture.radioDisplayMat) }
-            masterVolume = s.optDouble("master", 0.85).toFloat()
+            app.sound.masterVolume = s.optDouble("master", 0.85)
+            app.sound.wantAudio = s.optBoolean("audioOn", true)
+            app.sound.livingRoomTvOn = s.optBoolean("livingTv", true)
+            if (s.optInt("mixVer", 0) == app.sound.MIX_VERSION) s.optJSONObject("vol")?.let { v -> for (k in v.keys()) app.sound.vol[k] = v.getDouble(k) }
             app.jitterBase = s.optDouble("jitter", 160.0).toFloat()
             app.renderer.ps1Uniforms.affineStrength = s.optDouble("affine", 0.85).toFloat()
             app.renderer.post.ditherStrength = s.optDouble("dither", 1.0).toFloat()

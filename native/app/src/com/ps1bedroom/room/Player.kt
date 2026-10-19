@@ -51,6 +51,9 @@ class Player(private val camera: PerspectiveCamera, private val toast: (String) 
     private val lookTarget = Vec3()
     /** Things to walk around instead of through (TV cart, chair, Jasper, heater) with their radius. */
     var obstacles: List<Pair<Object3D, Float>> = emptyList()
+    /** Sound hooks: footsteps (true = on the rug) and posture sounds. */
+    var onStep: (Boolean) -> Unit = {}
+    var sfx: (String) -> Unit = {}
 
     fun postureLabel() = when (mode) { "walk" -> "WALKING (1ST PERSON)"; "chair" -> CHAIR_SPOTS[chairSpot].label; "bed" -> "LAYING ON BED"; else -> "FREE CAM" }
     fun pullChairLabel() = "CHAIR → ${CHAIR_SPOTS[(chairSpot + 1) % CHAIR_SPOTS.size].name}"
@@ -65,6 +68,7 @@ class Player(private val camera: PerspectiveCamera, private val toast: (String) 
             "orbit" -> {
                 camera.up.set(0f, 1f, 0f)
                 resetOrbit()
+                sfx(if (prevMode == "bed") "bedRise" else "ui")
                 toast("🎥 FREE CAM: Drag to orbit, pinch to zoom")
             }
             "walk" -> {
@@ -77,16 +81,19 @@ class Player(private val camera: PerspectiveCamera, private val toast: (String) 
                     lookYaw = spot.rot + PI.toFloat()
                 } else lookYaw = 0.25f
                 lookPitch = -0.05f
+                sfx(if (prevMode == "bed") "bedRise" else "step")
                 toast("🚶 WALK MODE: Use the joystick to walk, drag the screen to look.")
             }
             "chair" -> {
                 camera.up.set(0f, 1f, 0f)
                 seatLookYaw = 0f; seatLookPitch = 0f
+                sfx("chairSit")
                 toast("🪑 SEATED: Tap \"CHAIR →\" to roll between the TV, the desk and the window. Drag to look.")
             }
             "bed" -> {
                 camera.up.set(0f, 1f, 0f)
                 seatLookYaw = 0f; seatLookPitch = 0f
+                sfx("bedLay")
                 toast("🛏️ LYING IN BED: Propped up on the pillows looking toward the door. Drag to look around.")
             }
         }
@@ -99,7 +106,7 @@ class Player(private val camera: PerspectiveCamera, private val toast: (String) 
     fun moveChair(step: Int, resetOrbit: () -> Unit) {
         chairSpot = (chairSpot + step + CHAIR_SPOTS.size) % CHAIR_SPOTS.size
         seatLookYaw = 0f; seatLookPitch = 0f
-        if (mode != "chair") setMode("chair", resetOrbit) else onModeChanged()
+        if (mode != "chair") setMode("chair", resetOrbit) else { sfx("chairRoll"); onModeChanged() }
         toast("🪑 Rolled the chair to the ${CHAIR_SPOTS[chairSpot].name.lowercase()}.")
     }
 
@@ -168,7 +175,7 @@ class Player(private val camera: PerspectiveCamera, private val toast: (String) 
                 if (moved) {
                     stepTimer += dt * 7.5f
                     bobY = abs(sin(stepTimer)) * 0.055f
-                    // (the footstep sound comes with the audio phase)
+                    if (sin(stepTimer) > 0.92f && sin(stepTimer - dt * 7.5f) <= 0.92f) onStep(walkPos.x > -2.3f && walkPos.x < 1.9f && walkPos.z > -1.1f && walkPos.z < 2.1f)
                 }
                 camera.up.set(0f, 1f, 0f)
                 camera.position.set(walkPos.x + sin(t * 0.55f) * 0.015f * swayAmount, walkPos.y + bobY + cos(t * 0.42f) * 0.015f * swayAmount, walkPos.z)

@@ -26,6 +26,9 @@ class Fan(private val room: Room) {
     var fanSpinning = true; private set
     private var fanSpinAngle = 0f
     private var fanSpeedCurrent = 1.35f
+    /** For the sound: the real (coasting) blade speed and angle. */
+    val speed get() = fanSpeedCurrent.toDouble()
+    val angle get() = fanSpinAngle.toDouble()
     private var fanChainOffset = 0f
     var lightChainOffset = 0f
     private val PULL_CHAIN_Y = -0.06f

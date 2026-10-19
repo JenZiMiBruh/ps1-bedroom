@@ -323,7 +323,8 @@ class Settings(private val app: App, private val ctx: Context) {
         if (weatherMode == "live" && cityName.isNotEmpty() && liveNextAt in 1..now) fetchLiveWeather(cityName, true)
         focusTick()
         app.hud?.refreshStatus()
-        if (now - lastSaved > 4000) saveNow()
+        // Only re-serialise when something changed (a slow fallback catches anything that forgot to mark it)
+        if ((dirty && now - lastSaved > 4000) || now - lastSaved > 60000) saveNow()
     }
 
     /** Something the menu shows changed: redraw it and save soon. */

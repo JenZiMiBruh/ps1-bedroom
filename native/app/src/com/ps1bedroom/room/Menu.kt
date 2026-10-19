@@ -515,23 +515,25 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
     }
 
     // ================= Status bar =================
+    /** Setting a TextView's text re-measures and re-lays it out even when it is the same: skip that. */
+    private fun TextView.setIfChanged(s: CharSequence) { if (text.toString() != s.toString()) text = s }
     fun refreshStatus() {
         if (!app.isBuilt) return
         val st = s.status()
-        sbViews["time"]?.text = st.time
-        sbViews["temp"]?.text = st.temp
-        sbViews["season"]?.text = st.season
-        sbViews["weather"]?.text = st.weather
-        sbViews["place"]?.text = st.place
-        postureView.text = st.posture
+        sbViews["time"]?.setIfChanged(st.time)
+        sbViews["temp"]?.setIfChanged(st.temp)
+        sbViews["season"]?.setIfChanged(st.season)
+        sbViews["weather"]?.setIfChanged(st.weather)
+        sbViews["place"]?.setIfChanged(st.place)
+        postureView.setIfChanged(st.posture)
         // Narrow phones hide the posture label (the HTML's max-width: 520px rule)
         val narrow = root.width / act.resources.displayMetrics.density <= 520f
         postureView.visibility = if (narrow) View.GONE else View.VISIBLE
         statusChip.findViewWithTag<View>("psep")?.visibility = postureView.visibility
         timerChip.visibility = if (st.timer != null) View.VISIBLE else View.GONE
-        st.timer?.let { timerChip.text = it }
+        st.timer?.let { timerChip.setIfChanged(it) }
         focusChip.visibility = if (st.focus != null) View.VISIBLE else View.GONE
-        st.focus?.let { focusChip.text = it }
+        st.focus?.let { focusChip.setIfChanged(it) }
     }
     /** Photo mode, sleeping: hide the bars. */
     fun setBarsVisible(v: Boolean) { topbar.visibility = if (v) View.VISIBLE else View.GONE }

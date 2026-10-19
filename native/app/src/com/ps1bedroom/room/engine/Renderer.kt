@@ -202,6 +202,8 @@ class Renderer {
         glBindVertexArray(quadVao); glDrawArrays(GL_TRIANGLES, 0, 6)
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0)
+        // The blit covers the whole window: tell tiled GPUs not to load last frame's pixels back in
+        glInvalidateFramebuffer(GL_FRAMEBUFFER, 1, INVALIDATE_COLOR, 0)
         glViewport(0, 0, screenW, screenH)
         glUseProgram(blitProg)
         glActiveTexture(GL_TEXTURE0); glBindTexture(GL_TEXTURE_2D, postColor)
@@ -331,6 +333,7 @@ class Renderer {
 
     // ---- 2. Scene ----
     private val tmpV = Vec3()
+    private val INVALIDATE_COLOR = intArrayOf(GL_COLOR)
     private lateinit var curCamera: PerspectiveCamera
     private val drawVisitor: (Object3D) -> Unit = { o ->
         if (o is Mesh) {

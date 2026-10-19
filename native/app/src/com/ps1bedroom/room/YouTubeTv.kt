@@ -202,7 +202,7 @@ class YouTubeTv(private val act: Activity, private val root: FrameLayout, privat
         val w = newWeb(); web = w
         screen.addView(w, 0, FrameLayout.LayoutParams(-1, -1))
         w.loadDataWithBaseURL("$ORIGIN/", page(v), "text/html", "utf-8", null)
-        app.ytActive = true
+        app.ytActive = true; lastPts.fill(Float.NaN)   // the first placement always lands
         layer.visibility = View.VISIBLE; screen.visibility = View.INVISIBLE   // until the first placement
         bar.visibility = View.VISIBLE
         closeDialog()
@@ -293,7 +293,11 @@ class YouTubeTv(private val act: Activity, private val root: FrameLayout, privat
         layer.invalidate()
     }
     /** GL thread: corners TL, TR, BL, BR in view pixels (src is in the same order), and the PS1 grid size. */
+    private val lastPts = FloatArray(8); private var lastShow = false
     fun place(pts: FloatArray, visible: Boolean, px: Float) {
+        // A still camera gives the same corners every frame: no UI-thread work then
+        if (visible == lastShow && pts.contentEquals(lastPts)) return
+        System.arraycopy(pts, 0, lastPts, 0, 8); lastShow = visible
         synchronized(pending) { System.arraycopy(pts, 0, pending, 0, 8) }
         pendingShow = visible; pendingPx = px
         layer.removeCallbacks(applyPlacement); layer.post(applyPlacement)

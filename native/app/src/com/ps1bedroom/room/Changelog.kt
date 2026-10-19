@@ -24,6 +24,12 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.27", "Optimization pass, part 1", listOf(
+            "Settings are only written when something changed, instead of re-saving every 4 seconds",
+            "The status bar only re-lays itself out when its text actually changes",
+            "The final screen blit tells the GPU to skip reloading last frame's pixels (saves memory bandwidth on phone GPUs)",
+            "YouTube on the TV does no extra work while the camera is still"
+        )),
         Entry("0.26", "Jasper's coat and steadier textures", listOf(
             "Choose Jasper's coat in Menu → Room: black & tan, sable, black & silver, black & red, all black, white, or your own colours (saved)",
             "Far-away walls, carpet and posters no longer shimmer as you move: textures that never change get mip levels (still crunchy up close)"

@@ -18,11 +18,12 @@ class SteadyTextures(private val scene: Scene) {
     private var nextMs = 0L
     private var stage = 0
     private fun collect(out: MutableSet<Texture>) {
-        scene.traverse { o ->
-            if (o is Mesh) for (m in o.materials) {
-                for (t in arrayOf(m.map, m.emissiveMap)) if (t != null && t.external == null && t.bitmap.width >= 16) out += t
-            }
+        fun add(t: Texture?) { if (t != null && t.external == null && t.bitmap.width >= 16) out += t }
+        fun walk(o: com.ps1bedroom.room.engine.Object3D) {
+            if (o is Mesh) for (i in o.materials.indices) { val m = o.materials[i]; add(m.map); add(m.emissiveMap) }
+            for (i in o.children.indices) walk(o.children[i])
         }
+        walk(scene)
     }
     private val scratch = java.util.Collections.newSetFromMap(IdentityHashMap<Texture, Boolean>())
     private fun sample() {

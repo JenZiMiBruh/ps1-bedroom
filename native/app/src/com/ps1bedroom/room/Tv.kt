@@ -349,7 +349,7 @@ class Tv(private val room: Room, private val env: Environment) {
                     while (x < w) { val v = (rnd.nextDouble() * 215 + 25).toInt(); ctx.fillRectArgb(x, y, 3, 3, (0xff shl 24) or (v shl 16) or (v shl 8) or min(255, v + 20)); x += 3 }
                     y += 3
                 }
-                ctx.fillStyle = "#22c55e"; ctx.font = "bold 9px monospace"; ctx.fillText("CH 03", 8, 16)
+                // (native fix: the HTML also painted a stale "CH 03" here, doubling the real channel number)
             }
         }
         // Channel-change static burst and the green on-screen channel number

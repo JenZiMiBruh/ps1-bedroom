@@ -13,7 +13,7 @@
 ![Release](https://img.shields.io/badge/📅%20RELEASE-October%2021%2C%202026-ff3ea5?style=for-the-badge&labelColor=1a1033)
 ![Google Play](https://img.shields.io/badge/GOOGLE%20PLAY-before%20the%20end%20of%202026-22c55e?style=for-the-badge&logo=googleplay&logoColor=white&labelColor=1a1033)
 
-![Native build](https://img.shields.io/badge/native%20build-v0.10-a78bfa?style=flat-square&labelColor=1a1033)
+![Native build](https://img.shields.io/badge/native%20build-v0.10.1-a78bfa?style=flat-square&labelColor=1a1033)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.0-7f52ff?style=flat-square&logo=kotlin&logoColor=white&labelColor=1a1033)
 ![OpenGL ES](https://img.shields.io/badge/OpenGL%20ES-3.0-5586a4?style=flat-square&logo=opengl&logoColor=white&labelColor=1a1033)
 ![APK](https://img.shields.io/badge/APK-~820%20KB-ef4444?style=flat-square&labelColor=1a1033)
@@ -87,6 +87,7 @@ Newest first. The same list is in the app (tap the version tag in the bottom-lef
 
 | Build | What changed |
 |---|---|
+| **0.10.1** | Fixes: stray "CH 03" on the TV static removed; the fan light's glass shade now sits snugly in its collar |
 | **0.10** | The CRT TV on its media cart: VCR, tapes, seven live channels, channel / power taps; glow-in-the-dark stars, outlet, baseboards matched to the web version |
 | **0.9** | Jasper: pixel-fur German Shepherd with the half-brown eye, favourite spots, bed at night and in storms, walking / sitting / lying poses, petting |
 | **0.8** | String lights (warm / rainbow), windowsill succulent and cactus, Kenney furniture-kit models, Discman, Game Kid Advance, Noka, Tamagotchu; office chair backrest fixed |

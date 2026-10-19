@@ -24,6 +24,10 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.10.1", "Fixes", listOf(
+            "TV static no longer shows a stray \"CH 03\" next to the real channel number",
+            "Ceiling fan light: the glass shade now sits snugly in its brass collar (no more dark notches at the seam)"
+        )),
         Entry("0.10", "The CRT TV", listOf(
             "20\" MAGNAVOLT CRT with domed glass, scanlines, a rolling band and phosphor glow, on the walnut media cart",
             "VCR with the blinking 12:00, VHS tapes and game cases on the shelf, rabbit-ear antennas, A/V jacks",

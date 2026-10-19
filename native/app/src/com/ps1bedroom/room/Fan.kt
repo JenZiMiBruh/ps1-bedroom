@@ -73,13 +73,15 @@ class Fan(private val room: Room) {
         // Light kit: switch cup, brass collar, lathed ribbed frosted glass shade, finial
         val fanLightKitGroup = Group()
         ceilingFanGroup.add(fanLightKitGroup)
-        val fanSwitchCup = Mesh(Geo.cylinder(0.085f, 0.085f, 0.075f, 10), matFanBronze)
+        // (native fix: the HTML's 10-sided collar never lined up with the 12-sided glass, and the glass rim stopped short of it,
+        //  leaving dark notches at the seam; collar and cup are 12-sided now and the rim tucks up inside the collar)
+        val fanSwitchCup = Mesh(Geo.cylinder(0.085f, 0.085f, 0.075f, 12), matFanBronze)
         fanSwitchCup.position.y = -0.085f; fanLightKitGroup.add(fanSwitchCup); room.registerInteractable(fanSwitchCup, "fan")
-        val fanFitterCollar = Mesh(Geo.cylinder(0.095f, 0.125f, 0.042f, 10), matFanBrass)
+        val fanFitterCollar = Mesh(Geo.cylinder(0.095f, 0.125f, 0.042f, 12), matFanBrass)
         fanFitterCollar.position.y = -0.135f; fanLightKitGroup.add(fanFitterCollar); room.registerInteractable(fanFitterCollar, "fan")
         drawFanShadeTexture(false)
         val shadeProfile = listOf(floatArrayOf(0.001f, -0.295f), floatArrayOf(0.065f, -0.290f), floatArrayOf(0.128f, -0.255f),
-            floatArrayOf(0.148f, -0.205f), floatArrayOf(0.122f, -0.150f))
+            floatArrayOf(0.148f, -0.205f), floatArrayOf(0.122f, -0.150f), floatArrayOf(0.11f, -0.138f))
         val fanBulbGlobe = Mesh(GeoCurves.lathe(shadeProfile, 12), PS1.basic(map = shadeObj.tex))
         fanLightKitGroup.add(fanBulbGlobe); room.registerInteractable(fanBulbGlobe, "fan")
         val shadeFinial = Mesh(Geo.cylinder(0.024f, 0.012f, 0.025f, 8), matFanBrass)

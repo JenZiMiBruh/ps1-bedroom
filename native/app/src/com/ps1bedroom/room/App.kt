@@ -262,7 +262,7 @@ class App : GLSurfaceView.Renderer {
             controls.update()
             startMs = SystemClock.uptimeMillis()
             built = true
-            myMusic.onChanged = { hud?.refreshMenu(); publishMedia() }
+            myMusic.onChanged = { hud?.refreshMenu(); hud?.refreshBoombox(); publishMedia() }
             scene.add(alarm.light)
             tv.tempText = { settings.formatTemp(settings.currentTempC()) }
             surprises = Surprises(this, alarm.context); surprises.build()
@@ -429,7 +429,7 @@ class App : GLSurfaceView.Renderer {
             "machine" -> phone.playMessages { ms, fn -> hud?.later(ms, fn) }
             "heater" -> extras.cycleHeater()
             "poster" -> extras.cyclePoster()
-            "boombox", "bbscreen" -> { val n = extras.RADIO_STATIONS.size; var st = (extras.radioStation + 1) % n; if (st == myMusic.MY_MUSIC_STATION && myMusic.tracks.isEmpty()) st = (st + 1) % n; myMusic.setRadioStation(st); if (st == myMusic.MY_MUSIC_STATION) myMusic.mediaControl("play") }
+            "boombox", "bbscreen" -> hud?.openBoombox()   // the boombox player (HTML openBoombox)
             "pc" -> { monitor.setPower(!monitor.pcPoweredOn); toast(if (monitor.pcPoweredOn) "💾 Rebooting HP Pavilion... Windows 98 / XP ScanDisk complete." else "⚠️ \"DO NOT TURN OFF!\" You just killed a 48-hour Napster download at 99%!") }
             "monitor" -> openPc()
             "phone" -> if (phone.ringing) phone.answer() else { toast("📞 56k V.90 MODEM: \"MOM HANG UP THE PHONE! I'M IN A STARCRAFT MATCH!\""); sfx("phone") }
@@ -462,7 +462,7 @@ class App : GLSurfaceView.Renderer {
             "pc" -> sfx(if (monitor.pcPoweredOn) "pcOn" else "pcOff")
             "door", "discman", "brickphone", "tama", "box", "dresser" -> sfx("caseClick")
             "gba" -> sfx("ps1Button")
-            "boombox", "bbscreen" -> sfx("radioTune")
+            "boombox", "bbscreen" -> sfx("ui")
             "lamp", "string" -> sfx("ui")
         }
         sound.updateLayered()

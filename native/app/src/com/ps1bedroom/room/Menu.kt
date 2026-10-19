@@ -224,6 +224,19 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
         }
         body.addView(flow, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = dpi(2f) })
     }
+    /** Colour swatches (the HTML's <input type=color>, as a palette): round chips of the colour itself, the picked one ringed. */
+    private fun swatchRow(colors: List<String>, current: String, onPick: (String) -> Unit) {
+        val flow = FlowLayout(act, dpi(8f))
+        for (hex in colors) {
+            val on = hex.equals(current, true)
+            flow.addView(View(act).apply {
+                background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(Color.parseColor(hex)); setStroke(dpi(if (on) 3f else 1f), if (on) PINK else LINE) }
+                contentDescription = hex
+                setOnClickListener { onPick(hex) }
+            }, ViewGroup.LayoutParams(dpi(34f), dpi(34f)))
+        }
+        body.addView(flow, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = dpi(4f) })
+    }
     /** Grid of tiles (the HTML's .tiles: auto-fill, min 112 px). */
     private fun tiles(items: List<Triple<String, Boolean, () -> Unit>>) {
         val cols = maxOf(2, ((sheet.width.takeIf { it > 0 } ?: dpi(360f)) - dpi(28f)) / dpi(118f))
@@ -454,7 +467,7 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
             for ((part, label) in listOf("coat" to "Coat", "dark" to "Saddle & mask", "light" to "Chest & paws")) {
                 val cur = when (part) { "coat" -> dog.colors.coat; "dark" -> dog.colors.dark; else -> dog.colors.light }
                 note(label, true)
-                chips(swatches.map { hex -> Triple(if (hex.equals(cur, true)) "● $hex" else hex, hex.equals(cur, true), { post { dog.setPart(part, hex); app.sfx("ui"); s.changed() } }) })
+                swatchRow(swatches, cur) { hex -> post { dog.setPart(part, hex); app.sfx("ui"); s.changed() } }
             }
         }
         h4("Decorations")
@@ -488,8 +501,8 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
         app.cutout?.let { co ->
             h4("Screen cutout (notch / hole-punch)")
             note(co.info, true)
-            seg(Cutout.MODES.map { (k, l) -> k to l.substringBefore(',').substringBefore(" (") }, co.mode) { v -> co.apply(v); build() }
-            note(Cutout.MODES.getValue(co.mode) + ". Fill lets the room run under the camera cutout; Keep clear leaves a black bar there instead.", true)
+            seg(Cutout.MODES.map { (k, l) -> k to l }, co.mode) { v -> co.apply(v); build() }
+            note("Full screen runs the room (and the PC screen) right under the camera. Clear when sideways adds a black bar only with the phone turned, where a side camera would cover the PC. Always clear keeps a black bar there all the time.", true)
         }
         check("Show the start screen when the app opens", s.startScreenEnabled) { c -> post { s.startScreenEnabled = c; s.changed() } }
         check("Debug: the free camera can leave the room", s.debugFreeCam) { c -> post { s.debugFreeCam = c } }

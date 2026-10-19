@@ -250,7 +250,12 @@ class Hud(private val act: Activity, private val root: FrameLayout, private val 
     fun showSleeping(on: Boolean) = act.runOnUiThread { sleepOverlay.visibility = if (on) View.VISIBLE else View.GONE }
     private var currentMode = "orbit"
     /** Android back: close the menu, then stand up / leave first person. */
+    /** The boombox player (tap the boombox); made on the UI thread the first time it opens. */
+    @Volatile private var boombox: BoomboxPanel? = null
+    fun openBoombox() = act.runOnUiThread { (boombox ?: BoomboxPanel(act, root, app).also { boombox = it }).open() }
+    fun refreshBoombox() { boombox?.refresh() }
     fun back(): Boolean {
+        boombox?.let { if (it.isOpen) { it.close(); return true } }
         if (pcDesktop.isOpen) { pcDesktop.close(); return true }
         if (app.ytActive || yt.dialogOpen) { if (yt.back()) return true }
         if (overlays.back()) return true

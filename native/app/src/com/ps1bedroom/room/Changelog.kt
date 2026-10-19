@@ -24,6 +24,12 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.31", "The boombox player and fixes", listOf(
+            "Tap the boombox to open its player: the stations and My Music, what's playing with its cover, play / pause / skip, shuffle and repeat, your albums, and adding songs",
+            "Fixed: the flicker at the back of Jasper's head (the dark crown's back face sat exactly on the skull's, so the two fought)",
+            "Fixed: the Screen cutout options no longer squash the room or shift the PC screen. Now: Full screen, Clear when sideways, or Always clear",
+            "Jasper's custom colours are real colour swatches now instead of colour codes"
+        )),
         Entry("0.30", "Jasper's neck, for real, and the last of the port", listOf(
             "Fixed properly: Jasper's neck is now part of his head and slopes back into his chest, so nothing pokes out of the back of his head at any angle",
             "Fixed: the Screen cutout choices now visibly change the screen on every phone (Keep clear leaves a black bar, Fill runs the room under the camera)",

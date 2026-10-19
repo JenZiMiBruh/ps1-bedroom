@@ -121,7 +121,7 @@ class Jasper(private val room: Room, private val env: Environment) {
         dogPart(dogHead, 0.13f, 0.24f, 0.12f, dogTan, 0f, -0.135f, -0.06f, 0.49f)
         dogPart(dogHead, 0.155f, 0.035f, 0.145f, collarMat, 0f, -0.15f, -0.07f, 0.49f) // collar
         dogPart(dogHead, 0.05f, 0.05f, 0.012f, tagMat, 0f, -0.185f, 0.02f) // tag hanging from the collar
-        dogPart(dogHead, 0.2f, 0.06f, 0.2f, dogDark, 0f, 0.09f, -0.01f)            // dark crown
+        dogPart(dogHead, 0.2f, 0.06f, 0.21f, dogDark, 0f, 0.09f, -0.01f)           // dark crown (v0.31: its back sits 5 mm proud of the skull; flush, the two faces flickered)
         dogPart(dogHead, 0.13f, 0.1f, 0.16f, dogDark, 0f, -0.05f, 0.18f)           // snout (black mask)
         dogPart(dogHead, 0.11f, 0.035f, 0.13f, dogCream, 0f, -0.105f, 0.15f)       // lower jaw
         dogPart(dogHead, 0.06f, 0.04f, 0.03f, dogNose, 0f, -0.01f, 0.265f)         // nose

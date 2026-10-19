@@ -200,6 +200,8 @@ class GameLibrary(private val room: Room) {
     }
     private fun releaseFromInteractables(mesh: Mesh) { room.interactables.remove(mesh) }
     var sfx: (String) -> Unit = {}
+    /** A game went into the PlayStation (achievements). */
+    var onInserted: () -> Unit = {}
 
     fun pickUpGame(gi: Int) {
         if (heldGame != null) putBackHeld()
@@ -276,7 +278,7 @@ class GameLibrary(private val room: Room) {
         }
         if (a.stage == 3 && e > 1.95f) { a.stage = 4; ps1.setLid(false); sfx("ps1LidClose") }
         if (a.stage == 4 && e > 2.25f) {
-            insertedGame = a.gi
+            insertedGame = a.gi; onInserted()
             insertAnim = null
             ps1.gameInserted(t)
         }

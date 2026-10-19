@@ -52,6 +52,9 @@ class App : GLSurfaceView.Renderer {
     @Volatile var pickMusic: ((Boolean) -> Unit)? = null
     /** YouTube is playing on the bedroom TV (YouTubeTv); the TV's own channel sound steps aside. */
     @Volatile var ytActive = false
+    /** 1.3: achievements and the sunrise alarm (made by the activity). */
+    lateinit var achievements: Achievements
+    lateinit var alarm: Alarm
     private val YT_CORNERS = arrayOf(Vec3(-0.395f, 0.3f, -0.015f), Vec3(0.395f, 0.3f, -0.015f), Vec3(-0.395f, -0.3f, -0.015f), Vec3(0.395f, -0.3f, -0.015f))
     private val ytPts = FloatArray(8); private val ytTmp = Vec3(); private val ytView = Vec3(); private val ytC = Vec3(); private val ytN = Vec3()
     /** ytPlaceOverlay: the TV glass's 4 corners on screen, snapped like the PS1 vertex shader snaps the TV. */
@@ -220,6 +223,9 @@ class App : GLSurfaceView.Renderer {
             startMs = SystemClock.uptimeMillis()
             built = true
             myMusic.onChanged = { hud?.refreshMenu() }
+            scene.add(alarm.light)
+            jasper.onPet = { achievements.petted() }
+            library.onInserted = { achievements.achieve("gamer") }
             myMusic.load()
             settings.restore()   // the HTML's applySavedSettings, once everything exists
             ps1.sfx = { sound.sfx(it) }; ps1.stopBootSound = { sound.stopPs1BootSound() }; library.sfx = { sound.sfx(it) }
@@ -262,6 +268,8 @@ class App : GLSurfaceView.Renderer {
         monitor.tick(t)
         phone.update(t)
         myMusic.tick()
+        achievements.tick()
+        alarm.tick(); bedroom.alarmSet = alarm.on
         // The monitor redraws ~6x a second, only while the PC is on and the screen is in view
         desk.monScreen.updateMatrixWorld(); SPHERE_MONITOR_C.setFromMatrixPosition(desk.monScreen.matrixWorld)
         if (monitor.pcPoweredOn && t - lastMonitorUpdate > 0.16f && renderer.sphereInView(SPHERE_MONITOR_C, 0.6f)) { monitor.update(t); lastMonitorUpdate = t }

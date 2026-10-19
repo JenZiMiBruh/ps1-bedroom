@@ -36,6 +36,7 @@ class MainActivity : Activity() {
         app.density = resources.displayMetrics.density
         app.settings = Settings(app, this)
         app.myMusic = MyMusic(app, this)
+        app.achievements = Achievements(app, this); app.alarm = Alarm(app, this)
         app.pickMusic = { folder -> runOnUiThread { pickMusic(folder) } }
         app.onNowPlaying = { title, artist, _ -> runOnUiThread { MediaService.nowPlaying = title?.let { if (artist.isNullOrEmpty()) it else "$it · $artist" }; if (app.sound.playing) MediaService.start(this) } }
         MediaService.onControl = { cmd -> app.post { app.myMusic.mediaControl(cmd) } }

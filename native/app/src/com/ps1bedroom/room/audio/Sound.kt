@@ -1058,6 +1058,26 @@ class Sound(private val app: App) {
     /** Paused audio stops the output thread's work entirely after the fade. */
     fun tick() { if (!playing && ready && pauseAt > 0 && System.currentTimeMillis() > pauseAt) { pauseAt = 0; ctx.pauseOutput(true) } }
     fun shutdown() { if (ready) ctx.stop() }
+    // ---- 1.3: the achievement fanfare (shared rising arpeggio + a tail of its own), and the alarm's birdsong ----
+    private var achSynth: PolySynth<Synth>? = null
+    private var achSparkle: Synth? = null
+    fun achievementJingle(h0: Int) {
+        if (!ready || !playing) return
+        ctx.sync {
+            val h = h0.toLong() and 0xffffffffL
+            val poly = achSynth ?: PolySynth(ctx) { Synth(ctx, "square", Envelope(ctx, 0.004, 0.12, 0.25, 0.35)) }.also { p -> p.chain(gain(0.09), master); achSynth = p }
+            val sp = achSparkle ?: Synth(ctx, "triangle", Envelope(ctx, 0.002, 0.08, 0.0, 0.1)).also { s -> s.chain(gain(0.07), master); achSparkle = s }
+            val now = ctx.currentTime + 0.05
+            val key = intArrayOf(0, 2, 5, 7)[(h % 4).toInt()]
+            fun tr(n: String) = AudioCtx.noteHz(n) * Math.pow(2.0, key / 12.0)
+            val scale = arrayOf("C", "D", "E", "G", "A")
+            listOf("C4" to 0.0, "E4" to 0.09, "G4" to 0.18, "C5" to 0.27).forEach { (n, dt) -> poly.triggerAttackRelease(tr(n), 0.09, now + dt) }
+            poly.triggerAttackRelease(tr(scale[((h ushr 3) % 5).toInt()] + "5"), 0.12, now + 0.42)
+            poly.triggerAttackRelease(listOf(tr(scale[((h ushr 6) % 5).toInt()] + "5"), tr("C5"), tr("G4")), 0.5, now + 0.56)
+            for (i in 0 until 5) sp.triggerAttackRelease(tr(scale[((h + i * 3) % 5).toInt()] + (6 + i % 2)), 0.05, now + 0.6 + i * 0.06)
+        }
+    }
+    fun birdChorus(n: Int) { if (!ready) return; ctx.sync { for (i in 0 until n) birdCall(ctx.currentTime + 0.1 + i * 0.9) } }
     @Suppress("unused") private fun unusedMesh(m: Mesh) = m
     @Suppress("unused") private val placesRef = Places.OUTSIDE_ENVS
 }

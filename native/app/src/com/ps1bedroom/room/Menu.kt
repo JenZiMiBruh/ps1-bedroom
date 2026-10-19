@@ -481,13 +481,22 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
         h4("Focus timer")
         chips(listOf("off" to "Off", "short" to "25 min + 5 break", "long" to "50 min + 10 break").map { (k, l) -> Triple(l, s.focus.mode == k, { post { s.setFocus(k) } }) })
         note("Work in focused blocks with short breaks. A soft bell rings when it's time to switch (with the audio update).")
-        note("The sunrise alarm comes with the audio update.", true)
+        val al = app.alarm
+        h4("⏰ Sunrise alarm", if (al.on) al.time else "Off")
+        check("On", al.on) { c -> post { al.set(on = c); app.sfx("ui"); app.toast(if (c) "⏰ Alarm set for ${al.time}. The room starts to glow 20 minutes before." else "⏰ Alarm off"); s.changed() } }
+        val hours = (4..11).flatMap { h -> listOf("%02d:00".format(h), "%02d:30".format(h)) }
+        chips(hours.map { t -> Triple(t, al.time == t, { post { al.set(time = t, on = true); s.changed() } }) })
+        check("Wake to my music (otherwise birdsong)", al.music) { c -> post { al.set(music = c); s.changed() } }
+        note("The room slowly fills with warm light for 20 minutes before your alarm, then your music or birdsong plays. Keep the app open (sleep mode works well).", true)
     }
     private fun buildAbout() {
         h4("PS1 Bedroom", "v${Changelog.entries.first().version}")
         note("A little late-night room to keep you company. Real time, real sky, real weather, a PlayStation full of games, and a soundscape for every corner of the room.")
         note("Made by Daymion Gallo, aka Galloade, aka JenZiMiBruh.")
         tiles(listOf(Triple("📜 CHANGELOG", false, { Changelog.show(act) }), Triple("❓ HOW TO", false, { close(); app.hud?.overlays?.startTutorial() })))
+        val ach = app.achievements
+        h4("🏆 Achievements", "${ach.count} / ${Achievements.LIST.size}")
+        chips(Achievements.LIST.map { (id, a) -> val got = ach.has(id); Triple("${if (got) a[0] else "🔒"} ${a[1]}: ${a[2]}", got, { }) })
     }
 
     private fun hideKeyboard(v: View) {

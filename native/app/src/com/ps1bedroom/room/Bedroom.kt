@@ -341,10 +341,11 @@ class Bedroom(private val room: Room) {
         for ((k, r) in rects) { ctx.fillStyle = if (segs.contains(k)) on else off; ctx.fillRect(x + r[0], y + r[1], r[2], r[3]) }
     }
     /** Shows the room's time (the focus timer and alarm dot come with the timer menu). Cheap to call: redraws only on change. */
+    /** The sunrise alarm is on: a dot lights on the clock. */
+    var alarmSet = false
     fun drawAlarmClock(hour: Double) {
         val hh = floor(hour).toInt() % 24; val mm = floor((hour % 1) * 60).toInt()
         val text = "${(((hh + 11) % 12) + 1).toString().padStart(2, ' ')}:${mm.toString().padStart(2, '0')}"
-        val alarmSet = false
         val key = text + (if (hh >= 12) "p" else "a") + (if (alarmSet) "!" else "")
         if (key == alarmClockShown) return
         alarmClockShown = key

@@ -472,7 +472,7 @@ class PcDesktop(private val act: Activity, private val root: FrameLayout, privat
         if (c.flag) return
         if (firstClick) { placeMines(i); firstClick = false; msStarted = System.currentTimeMillis() }
         if (c.mine) { msOver = true; c.boom = true; cells.forEach { if (it.mine) it.open = true }; msFace.text = "😵" }
-        else { reveal(i); if (cells.all { it.mine || it.open }) { msOver = true; msFace.text = "😎" } }
+        else { reveal(i); if (cells.all { it.mine || it.open }) { msOver = true; msFace.text = "😎"; app.achievements.achieve("minesweeper") } }
         renderMs()
     }
     private val NUMCOL = intArrayOf(0, 0xff0000ff.toInt(), 0xff008000.toInt(), 0xffff0000.toInt(), 0xff000080.toInt(), 0xff800000.toInt(), 0xff008080.toInt(), Color.BLACK, 0xff808080.toInt())

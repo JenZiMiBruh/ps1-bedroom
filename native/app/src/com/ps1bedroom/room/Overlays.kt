@@ -88,6 +88,7 @@ class Overlays(private val act: Activity, private val root: FrameLayout, private
     private fun takePhoto() {
         flash.visibility = View.VISIBLE; flash.alpha = 0.85f
         flash.animate().alpha(0f).setDuration(400).withEndAction { flash.visibility = View.GONE }.start()
+        app.achievements.achieve("photographer")
         app.requestPhoto { bmp -> Thread { val ok = save(bmp); app.toast(if (ok) "📷 Saved to Pictures / PS1 Bedroom" else "📷 Could not save the photo") }.start() }
     }
     private fun save(bmp: Bitmap): Boolean = try {

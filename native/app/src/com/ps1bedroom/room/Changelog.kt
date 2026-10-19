@@ -24,6 +24,12 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.24", "Achievements and the sunrise alarm", listOf(
+            "18 achievements to unlock as you live in the room, each with its own trophy card, confetti and fanfare (list in Menu → About)",
+            "Sunrise alarm (Menu → Timers): the room fills with warm light for 20 minutes, then your music or birdsong wakes you",
+            "The bedside clock shows a dot while the alarm is set",
+            "Sleep mode now also turns the sound on, the TV off, and sends Jasper to the bed"
+        )),
         Entry("0.23", "YouTube on the TV", listOf(
             "Paste a YouTube link (Menu → Sound → YOUTUBE ON TV), or Share a video to PS1 Bedroom, and it plays on the bedroom CRT",
             "The player is pinned to the TV glass in 3D, with scanlines and an optional PS1 pixel grid that wobbles with the TV",

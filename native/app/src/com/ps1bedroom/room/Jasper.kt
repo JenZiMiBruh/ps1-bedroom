@@ -321,7 +321,12 @@ class Jasper(private val room: Room, private val env: Environment) {
     )
 
     /** Tap: tail thumps and a head tilt; a sleeping Jasper opens one eye and lies awake. */
+    /** 1.3 hooks: petting (achievements), sleep mode sends him to bed, the alarm makes him wag. */
+    var onPet: () -> Unit = {}
+    fun goToBed() { dogSpots().firstOrNull { it.name == "bed" }?.let { sendDog(it) } }
+    fun wag(t: Float, secs: Float) { wagUntil = t + secs }
     fun petDog(t: Float) {
+        onPet()
         wagUntil = t + 2.5f
         if (pose == "sleep") { pose = "lie"; toast("🐕 Jasper opens one eye (the half-brown one), yawns, and thumps his tail twice.") }
         else toast("🐕 JASPER: ${DOG_PETS[rnd.nextInt(DOG_PETS.size)]}")

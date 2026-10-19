@@ -235,13 +235,17 @@ class Settings(private val app: App, private val ctx: Context) {
     fun wake() { sleeping = false; applyFps() }
     /** One tap: lights down, fan on, you in bed, a 45-minute timer. */
     fun startSleepMode() {
+        if (!app.sound.playing) app.toggleAudio()
+        if (app.tv.bedroomTvOn) app.tvPower()
+        app.jasper.goToBed()
         if (app.fanLightOn) app.toggleFanLight()
         if (app.furniture.lampOn) app.furniture.toggleLamp()
         if (!app.fan.fanSpinning) app.fan.toggleCeilingFanSpin()
         if (app.decor.stringLightsMode != 1) app.decor.setStringLights(1)
         app.setPlayerMode("bed")
         setSleepTimer(45, true)
-        app.toast("😴 SLEEP MODE: Lights down, fan on. Everything fades out in 45 minutes. Goodnight.")
+        app.toast("😴 SLEEP MODE: lights down, fan on, Jasper's on the bed. Everything fades out in 45 minutes. Sweet dreams.")
+        app.achievements.achieve("sleeper")
     }
 
     // ---------- Focus timer (study / Pomodoro) ----------

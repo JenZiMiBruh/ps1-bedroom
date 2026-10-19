@@ -219,6 +219,7 @@ class Hud(private val act: Activity, private val root: FrameLayout, private val 
     val overlays: Overlays by lazy { Overlays(act, root, app) }
     val pcDesktop: PcDesktop by lazy { PcDesktop(act, root, app) }
     val yt: YouTubeTv by lazy { YouTubeTv(act, root, app) }
+    val achPop: AchievementPop by lazy { AchievementPop(act, root) }
     fun runUi(fn: () -> Unit) = act.runOnUiThread(fn)
     fun openPc() = act.runOnUiThread { menu.close(); pcDesktop.show() }
     private var uiHidden = false

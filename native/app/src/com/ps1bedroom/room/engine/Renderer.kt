@@ -727,8 +727,9 @@ class Renderer {
             val wrap = if (t.wrapRepeat) GL_REPEAT else GL_CLAMP_TO_EDGE
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrap); glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrap)
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, if (t.nearest) GL_NEAREST else GL_LINEAR)
-            if (t.mipmaps) { glGenerateMipmap(GL_TEXTURE_2D); glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST) }
-            else glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, if (t.nearest && !t.linearMin) GL_NEAREST else GL_LINEAR)
+            // (mip levels capped at half size: the room renders at PS1 resolution, so deeper levels blurred small art away)
+            if (t.mipmaps) { glGenerateMipmap(GL_TEXTURE_2D); glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST); glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 1) }
+            else { glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, if (t.nearest && !t.linearMin) GL_NEAREST else GL_LINEAR); glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 1000) }
             t.uploadedVersion = t.version
             curTex0 = -1; curTex1 = -1
         }

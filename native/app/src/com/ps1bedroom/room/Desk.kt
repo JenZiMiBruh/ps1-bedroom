@@ -58,8 +58,10 @@ class Desk(private val room: Room, private val tex: Textures, private val librar
             return mesh
         }
         // Thick wood desktop with organic live-edge front contour
-        addWoodBox(3.15f, 0.09f, 1.45f, 0f, 1.45f, -0.04f, 6)
-        val frontEdgeGeo = Geo.box(3.15f, 0.088f, 0.22f, 24, 2, 2)
+        // v0.34: the top stops where the wavy front lip begins (5 mm hidden overlap) and both are the same thickness;
+        // they used to overlap 7.5 cm with flush end faces, which flickered at the desk's corners
+        addWoodBox(3.15f, 0.09f, 1.38f, 0f, 1.45f, -0.075f, 6)
+        val frontEdgeGeo = Geo.box(3.15f, 0.09f, 0.22f, 24, 2, 2)
         run {
             val p = frontEdgeGeo.positions
             for (i in 0 until frontEdgeGeo.vertexCount) {
@@ -69,7 +71,7 @@ class Desk(private val room: Room, private val tex: Textures, private val librar
             frontEdgeGeo.computeVertexNormals()
         }
         val wavyFrontMesh = Mesh(frontEdgeGeo, matWood)
-        wavyFrontMesh.position.set(0f, 1.448f, 0.72f)
+        wavyFrontMesh.position.set(0f, 1.45f, 0.72f)
         wavyFrontMesh.castShadow = true; wavyFrontMesh.receiveShadow = true
         deskGroup.add(wavyFrontMesh)
         // Desk side panels, keyboard drawer rails, hutch uprights, CD cubby dividers & top hutch shelf

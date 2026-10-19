@@ -144,13 +144,18 @@ float distanceFactor(float d, float cutoff, float decay) {
   if (cutoff > 0.0 && decay > 0.0) return pow(clamp(-d / cutoff + 1.0, 0.0, 1.0), decay);
   return 1.0;
 }
-// BasicShadowMap: one depth comparison
+// v0.34: soft shadows. A 3x3 average of depth comparisons (percentage-closer filtering) instead of one hard
+// comparison: smooth edges, no stair-steps, no speckle. Nine cheap fetches at the room's low internal resolution.
 float shadowAt(sampler2D sm, vec4 coord, float bias) {
   vec3 c = coord.xyz / coord.w;
   c.z += bias;
   bool inFrustum = c.x >= 0.0 && c.x <= 1.0 && c.y >= 0.0 && c.y <= 1.0 && c.z <= 1.0;
   if (!inFrustum) return 1.0;
-  return step(c.z, texture(sm, c.xy).r);
+  vec2 texel = 1.0 / vec2(textureSize(sm, 0));
+  float lit = 0.0;
+  for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++)
+    lit += step(c.z, texture(sm, c.xy + vec2(float(x), float(y)) * texel * 1.25).r);
+  return lit / 9.0;
 }
 void main() {
   vec4 diffuseColor = vec4(diffuse, opacity);

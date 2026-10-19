@@ -334,7 +334,7 @@ class Room(val scene: Scene, val tex: Textures) {
         moonLight = SpotLight(0x5b86ff, 3.6f).apply {
             position.copy(celestialPos); target.position.copy(roomLightTargetPos)
             angle = 0.66f; penumbra = 0.12f; decay = 1.1f; distance = 22.0f
-            castShadow = true; shadow.mapSize = 512; shadow.near = 1.2f; shadow.far = 16.5f; shadow.bias = -0.0012f
+            castShadow = true; shadow.mapSize = 1024; shadow.near = 1.2f; shadow.far = 16.5f; shadow.bias = -0.0016f
         }
         scene.add(moonLight); scene.add(moonLight.target)
 
@@ -350,7 +350,7 @@ class Room(val scene: Scene, val tex: Textures) {
         fanLight = SpotLight(0xffcf87, 0.0f).apply {
             position.set(0.6f, 4.30f, -0.4f); target.position.set(0.6f, 0.0f, -0.4f)
             angle = (PI * 0.46).toFloat(); penumbra = 0.82f; decay = 1.25f; distance = 14.0f
-            castShadow = true; shadow.mapSize = 512; shadow.near = 0.35f; shadow.far = 9.0f; shadow.bias = -0.0015f
+            castShadow = true; shadow.mapSize = 1024; shadow.near = 0.35f; shadow.far = 9.0f; shadow.bias = -0.002f
         }
         scene.add(fanLight); scene.add(fanLight.target)
         fanHemiFill = HemisphereLight(0xffe0b2, 0x3b2d22, 0.0f); scene.add(fanHemiFill)

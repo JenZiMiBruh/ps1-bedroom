@@ -24,6 +24,11 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.34", "Softer shadows and fixes", listOf(
+            "Softer, cleaner shadows: twice the detail, smooth edges instead of stair-steps, and no speckle",
+            "Fixed: the desk's front edge and top no longer flicker where they meet at the corners",
+            "Fixed: small pictures across the room keep their details (the calendar's pumpkin has its face again)"
+        )),
         Entry("0.33", "The door sign", listOf(
             "Fixed: the UNDER CONSTRUCTION sign on the door shows its lettering again (sharper, and it fits on the sign)"
         )),

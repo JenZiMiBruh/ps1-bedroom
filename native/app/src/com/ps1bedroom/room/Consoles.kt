@@ -33,6 +33,15 @@ class Consoles(private val room: Room, private val ps1: Ps1) {
         private val HALF_W = mapOf("ps1" to 0.27f, "ps2" to 0.23f, "ps3" to 0.29f, "ps4" to 0.265f, "ps5" to 0.358f)
     }
     var current = "ps1"; private set
+    /** Where the disc goes in each console (the console groups share the PS1 group's transform, so these are in its space). */
+    class DiscPath(val lid: Boolean, val home: com.ps1bedroom.room.engine.Vec3, val front: com.ps1bedroom.room.engine.Vec3, val scale: Float)
+    private val PATHS = mapOf(
+        "ps2" to DiscPath(true, com.ps1bedroom.room.engine.Vec3(0.0835f, 0.031f, 0f), com.ps1bedroom.room.engine.Vec3(0.0835f, 0.031f, 0f), 0.93f),
+        "ps3" to DiscPath(false, com.ps1bedroom.room.engine.Vec3(0.09f, 0.056f, 0.12f), com.ps1bedroom.room.engine.Vec3(0.09f, 0.056f, 0.43f), 1f),
+        "ps4" to DiscPath(false, com.ps1bedroom.room.engine.Vec3(0.04f, 0.028f, 0.1f), com.ps1bedroom.room.engine.Vec3(0.04f, 0.028f, 0.4f), 1f),
+        "ps5" to DiscPath(false, com.ps1bedroom.room.engine.Vec3(0.18f, 0.04f, 0.04f), com.ps1bedroom.room.engine.Vec3(0.18f, 0.04f, 0.36f), 1f))
+    /** null for the PS1 (its own lid and tray). */
+    fun discPath(): DiscPath? = PATHS[current]
     private val groups = HashMap<String, Group>()
     private lateinit var ps2Lid: Group
     private lateinit var ps2PowerLed: Material; private lateinit var ps2EjectLed: Material; private lateinit var ps2PadLed: Material
@@ -140,7 +149,6 @@ class Consoles(private val room: Room, private val ps1: Ps1) {
                 c.fillStyle = "#2b2d34"; c.font = "bold 9px sans-serif"; c.textAlign = "center"; c.fillText("PS2", 0, 0); c.restore() }
             part(g, Geo.box(0.024f, 0.026f, 0.304f), band, -0.075f, 0.036f, 0f, "ps1Body")
             // the disc in its well (under the lid), and the lid on its hinge at the back
-            cyl(g, 0.11f, 0.002f, PS1.material(color = 0xd4d8e8), 0.0835f, 0.029f, 0f, 24)   // (on top of the well floor)
             ps2Lid = Group(); ps2Lid.position.set(0.0835f, 0.047f, -0.152f); g.add(ps2Lid)
             box(ps2Lid, 0.293f, 0.02f, 0.304f, black, 0f, -0.01f, 0.152f, "ps1Open")
             // front, lower half (z = 0.148): memory card slot + controller port x2, USB x2, the PS logo, POWER, OPEN, the vent grille
@@ -171,32 +179,40 @@ class Consoles(private val room: Room, private val ps1: Ps1) {
         }
 
         // ================= PS3 Slim (CECH-2000): 290 x 65 x 290 mm -> 0.580 x 0.109 x 0.580 =================
+        // From the photos: one matte charcoal dome rounding down at the sides and over the front; the slot sits in a
+        // recessed glossy pocket across the right of the front with a silver lip under it; SONY on the plain left;
+        // the big embossed PS3 at the front right of the top.
         run {
             val g = newGroup("ps3")
-            val matte = PS1.material(color = 0x202125)
-            val gloss = PS1.material(color = 0x0b0c0f)
-            val grey = PS1.material(color = 0x9ca3af)
+            val matte = PS1.material(color = 0x232428)
+            val gloss = PS1.material(color = 0x08090b)
+            val grey = PS1.material(color = 0xa9aeb6)
             feet(g, 0.27f, 0.27f, rubber)
-            // the body, then the top curving down toward the front in steps (higher at the back)
-            box(g, 0.58f, 0.085f, 0.58f, matte, 0f, 0.0465f, 0f, "ps1Body")
-            box(g, 0.57f, 0.008f, 0.54f, matte, 0f, 0.092f, -0.01f, "ps1Body")
-            box(g, 0.55f, 0.008f, 0.47f, matte, 0f, 0.1f, -0.04f, "ps1Body")
-            box(g, 0.52f, 0.006f, 0.38f, matte, 0f, 0.107f, -0.08f, "ps1Body")
-            // the embossed PS3 logo at the front right of the top
-            val logo = tex(48, 16) { c, w, h -> c.fillStyle = "#202125"; c.fillRect(0, 0, w, h); c.fillStyle = "#34363d"; c.font = "bold 12px serif"; c.textAlign = "center"; c.fillText("PS3", w / 2, 13) }
-            part(g, Geo.box(0.11f, 0.002f, 0.036f), logo, 0.15f, 0.0965f, 0.22f)
-            // front (z = 0.29): the recessed glossy band with the slot, the eject triangle and power, the grey lip below
-            box(g, 0.54f, 0.04f, 0.004f, gloss, 0f, 0.05f, 0.2915f)
-            box(g, 0.28f, 0.008f, 0.004f, recess, 0.02f, 0.054f, 0.2945f)
-            box(g, 0.012f, 0.006f, 0.004f, grey, 0.2f, 0.054f, 0.2945f, "ps1Open")
-            box(g, 0.012f, 0.006f, 0.004f, grey, 0.235f, 0.054f, 0.2945f, "ps1Power")
+            box(g, 0.56f, 0.03f, 0.56f, matte, 0f, 0.019f, 0f, "ps1Body")                                    // base, set in a little
+            box(g, 0.58f, 0.05f, 0.58f, matte, 0f, 0.059f, 0f, "ps1Body")                                    // the shell
+            // the dome, in four steps that shrink to the sides and toward the front
+            box(g, 0.575f, 0.008f, 0.565f, matte, 0f, 0.0875f, -0.005f, "ps1Body")
+            box(g, 0.56f, 0.007f, 0.53f, matte, 0f, 0.0945f, -0.02f, "ps1Body")
+            box(g, 0.53f, 0.006f, 0.48f, matte, 0f, 0.1005f, -0.04f, "ps1Body")
+            box(g, 0.48f, 0.005f, 0.4f, matte, 0f, 0.106f, -0.07f, "ps1Body")
+            val logo = tex(48, 12) { c, w, h -> c.fillStyle = "#232428"; c.fillRect(0, 0, w, h); c.fillStyle = "#3a3c43"; c.font = "bold 11px serif"; c.textAlign = "center"; c.fillText("PS3", w / 2, 11) }
+            part(g, Geo.box(0.13f, 0.002f, 0.024f), logo, 0.14f, 0.0925f, 0.26f)
+            // front (z = 0.29): the recessed glossy pocket (with its shadow under the lip) holding the slot, the eject and
+            // power touch marks, the silver lip below; SONY and two USB ports on the plain left
+            box(g, 0.32f, 0.042f, 0.004f, gloss, 0.1f, 0.052f, 0.2915f)
+            box(g, 0.32f, 0.004f, 0.004f, PS1.material(color = 0x000000), 0.1f, 0.072f, 0.2955f)   // 3 mm proud of the pocket (flush would flicker)
+            box(g, 0.24f, 0.006f, 0.004f, PS1.material(color = 0x000000), 0.09f, 0.056f, 0.2945f)
+            box(g, 0.008f, 0.004f, 0.003f, PS1.material(color = 0xe5e7eb), 0.09f, 0.066f, 0.2945f, "ps1Open")
+            box(g, 0.008f, 0.004f, 0.003f, PS1.material(color = 0xe5e7eb), 0.09f, 0.043f, 0.2945f, "ps1Power")
             ps3Led = PS1.material(color = 0x3f1010, emissive = 0xef4444, emissiveIntensity = 0.9f)
-            box(g, 0.006f, 0.003f, 0.003f, ps3Led, 0.25f, 0.054f, 0.2945f)
-            for (ux in floatArrayOf(-0.23f, -0.2f)) box(g, 0.02f, 0.008f, 0.004f, recess, ux, 0.05f, 0.2945f)
-            box(g, 0.56f, 0.008f, 0.006f, grey, 0f, 0.024f, 0.292f)
+            box(g, 0.005f, 0.003f, 0.003f, ps3Led, 0.105f, 0.043f, 0.2945f)
+            box(g, 0.32f, 0.006f, 0.006f, grey, 0.1f, 0.028f, 0.292f)
+            val sony = tex(32, 8) { c, w, h -> c.fillStyle = "#232428"; c.fillRect(0, 0, w, h); c.fillStyle = "#6b6f78"; c.font = "bold 7px sans-serif"; c.textAlign = "center"; c.fillText("SONY", w / 2, 7) }
+            part(g, Geo.box(0.06f, 0.012f, 0.002f), sony, -0.22f, 0.07f, 0.2912f)
+            for (ux in floatArrayOf(-0.25f, -0.22f)) box(g, 0.02f, 0.008f, 0.004f, PS1.material(color = 0x000000), ux, 0.045f, 0.2915f)
             // vents down both sides and across the back, and the room's plugs
-            for (side in intArrayOf(-1, 1)) for (i in 0 until 5) box(g, 0.003f, 0.006f, 0.38f, recess, side * 0.2905f, 0.03f + i * 0.012f, -0.04f)
-            for (i in 0 until 5) box(g, 0.3f, 0.005f, 0.003f, recess, 0f, 0.03f + i * 0.012f, -0.2915f)
+            for (side in intArrayOf(-1, 1)) for (i in 0 until 4) box(g, 0.003f, 0.006f, 0.38f, recess, side * 0.2905f, 0.042f + i * 0.011f, -0.04f)
+            for (i in 0 until 4) box(g, 0.3f, 0.005f, 0.003f, recess, 0f, 0.042f + i * 0.011f, -0.2915f)
             rearPlugs(g, -0.29f, dark)
             ps3PadLeds = PS1.material(color = 0x3f1010, emissive = 0xef4444, emissiveIntensity = 0f)
             val padBody = PS1.material(color = 0x101114)
@@ -204,61 +220,60 @@ class Consoles(private val room: Room, private val ps1: Ps1) {
         }
 
         // ================= PS4 Slim (CUH-2000): 265 x 39 x 288 mm -> 0.530 x 0.065 x 0.576 =================
+        // From the photos: the top shell is most of the height (22 mm), then a thin dark gap (3 mm) holding the slot,
+        // buttons, USB ports and a little light, then a lower body (14 mm) almost the same size. SONY and PS4 on the
+        // shell's front edge, the PlayStation symbol in the middle of the top.
         run {
             val g = newGroup("ps4")
-            val matte = PS1.material(color = 0x16171b)
+            val matte = PS1.material(color = 0x17181c)
             feet(g, 0.24f, 0.26f, rubber)
-            // the lower body set back, the gap all round the front, the thin top shell over it, its rounded edge
-            box(g, 0.51f, 0.03f, 0.54f, matte, 0f, 0.018f, -0.018f, "ps1Body")
-            box(g, 0.5f, 0.01f, 0.53f, recess, 0f, 0.037f, -0.012f)
-            box(g, 0.53f, 0.022f, 0.576f, matte, 0f, 0.053f, 0f, "ps1Body")
-            box(g, 0.51f, 0.004f, 0.556f, matte, 0f, 0.0655f, 0f, "ps1Body")
-            // the chrome PS logo in the middle of the top
-            val logo = tex(32, 32) { c, w, h -> c.fillStyle = "#16171b"; c.fillRect(0, 0, w, h); c.fillStyle = "#9ca3af"; c.font = "bold 18px sans-serif"; c.textAlign = "center"; c.fillText("PS", w / 2, 23) }
-            part(g, Geo.box(0.05f, 0.002f, 0.05f), logo, 0f, 0.0685f, 0f)
-            // in the front gap (z = 0.255): the slot, two USB ports, the little light bar, POWER and EJECT
-            box(g, 0.28f, 0.005f, 0.004f, PS1.material(color = 0x000000), 0.02f, 0.037f, 0.2575f)
-            for (ux in floatArrayOf(-0.19f, -0.16f)) box(g, 0.018f, 0.005f, 0.004f, PS1.material(color = 0x000000), ux, 0.037f, 0.2575f)
+            box(g, 0.522f, 0.023f, 0.566f, matte, 0f, 0.0145f, -0.005f, "ps1Body")                          // lower body
+            box(g, 0.51f, 0.006f, 0.555f, recess, 0f, 0.028f, -0.008f)                                      // the gap
+            box(g, 0.53f, 0.034f, 0.576f, matte, 0f, 0.047f, 0f, "ps1Body")                                  // top shell
+            box(g, 0.514f, 0.004f, 0.56f, matte, 0f, 0.0645f, 0f, "ps1Body")                                 // its rounded top edge
+            val symbol = tex(32, 32) { c, w, h -> c.fillStyle = "#17181c"; c.fillRect(0, 0, w, h); ConsoleScreens.psSymbol(c, w / 2.0, h / 2.0, 24.0, "#55585f", "#17181c") }
+            part(g, Geo.box(0.06f, 0.002f, 0.06f), symbol, 0f, 0.0675f, 0f)
+            val edge = tex(128, 8) { c, w, h -> c.fillStyle = "#17181c"; c.fillRect(0, 0, w, h); c.fillStyle = "#5c6068"; c.font = "bold 6px sans-serif"
+                c.textAlign = "left"; c.fillText("SONY", 4, 6); c.textAlign = "right"; c.fillText("PS4", w - 4, 6) }
+            part(g, Geo.box(0.5f, 0.012f, 0.002f), edge, 0f, 0.047f, 0.289f)
+            // in the gap (front at z = 0.2695): slot, the light, power and eject, two USB ports
+            box(g, 0.26f, 0.004f, 0.004f, PS1.material(color = 0x000000), 0.04f, 0.028f, 0.271f)
             ps4Bar = PS1.material(color = 0x0b0b10, emissive = 0x60a5fa, emissiveIntensity = 0f)
-            box(g, 0.04f, 0.004f, 0.004f, ps4Bar, -0.235f, 0.037f, 0.2575f)
-            box(g, 0.016f, 0.005f, 0.006f, PS1.material(color = 0x2a2c33), 0.19f, 0.037f, 0.258f, "ps1Power")
-            box(g, 0.016f, 0.005f, 0.006f, PS1.material(color = 0x2a2c33), 0.215f, 0.037f, 0.258f, "ps1Open")
-            // vents along the back of the shell, and the room's plugs
-            for (i in 0 until 8) box(g, 0.04f, 0.012f, 0.003f, recess, -0.2f + i * 0.057f, 0.053f, -0.2895f)
-            rearPlugs(g, -0.288f, dark, 0.05f)   // (lower, so they stay inside the shell's height)
+            box(g, 0.03f, 0.003f, 0.004f, ps4Bar, -0.12f, 0.028f, 0.271f)
+            box(g, 0.012f, 0.004f, 0.005f, PS1.material(color = 0x2a2c33), -0.235f, 0.028f, 0.2715f, "ps1Power")
+            box(g, 0.012f, 0.004f, 0.005f, PS1.material(color = 0x2a2c33), 0.2f, 0.028f, 0.2715f, "ps1Open")
+            for (ux in floatArrayOf(-0.21f, -0.185f)) box(g, 0.018f, 0.004f, 0.004f, PS1.material(color = 0x000000), ux, 0.028f, 0.271f)
+            for (i in 0 until 8) box(g, 0.04f, 0.014f, 0.003f, recess, -0.2f + i * 0.057f, 0.047f, -0.2895f)
+            rearPlugs(g, -0.288f, dark, 0.047f)
             ps4PadBar = PS1.material(color = 0x0b0b10, emissive = 0x3b82f6, emissiveIntensity = 0f)
             val padBody = PS1.material(color = 0x17181d)
             pad(g, "ps4", 0.28f, 0.45f, -0.3f, padBody, padBody, dark, ps4PadBar)
         }
 
         // ================= PS5 Slim (lying down): 358 x 80 x 216 mm -> 0.716 x 0.134 x 0.432 =================
-        // Four cover panels: glossy white on the left, matte white on the right (the seam shows the black core),
-        // the black core between them, the removable disc drive at the right end, blue light along the front.
+        // From the photos: a thin white top cover with its diagonal seam (glossy one side, matte the other), a narrow
+        // black core band, and the thicker white bottom cover with the disc slot along its front; blue light at the core.
         run {
             val g = newGroup("ps5")
-            val glossW = PS1.material(color = 0xf4f5f8)
+            val glossW = PS1.material(color = 0xf3f4f7)
             val matteW = PS1.material(color = 0xdfe2e7)
             val core = PS1.material(color = 0x111216)
             feet(g, 0.1f, 0.1f, rubber)
-            box(g, 0.2f, 0.004f, 0.2f, PS1.material(color = 0x1a1b20), 0f, 0.008f, 0f)                       // the stand
-            box(g, 0.66f, 0.1f, 0.39f, core, 0f, 0.068f, 0f, "ps1Body")                                        // the core (y 0.018 - 0.118)
-            // bottom and top covers, each split at x = 0.14 (glossy left, matte right)
-            box(g, 0.495f, 0.017f, 0.432f, glossW, -0.1105f, 0.0185f, 0f, "ps1Body"); box(g, 0.215f, 0.017f, 0.432f, matteW, 0.2505f, 0.0185f, 0f, "ps1Body")
-            box(g, 0.495f, 0.018f, 0.432f, glossW, -0.1105f, 0.125f, 0f, "ps1Body"); box(g, 0.215f, 0.018f, 0.432f, matteW, 0.2505f, 0.125f, 0f, "ps1Body")
-            box(g, 0.44f, 0.004f, 0.38f, glossW, -0.12f, 0.1355f, -0.005f, "ps1Body")                           // the covers' gentle bulge
-            box(g, 0.18f, 0.004f, 0.38f, matteW, 0.25f, 0.1355f, -0.005f, "ps1Body")
-            // blue light in both seams along the front
+            box(g, 0.2f, 0.004f, 0.2f, PS1.material(color = 0x1a1b20), 0f, 0.006f, 0f)                       // the stand
+            box(g, 0.716f, 0.052f, 0.432f, matteW, 0f, 0.034f, 0f, "ps1Body")                                  // bottom cover
+            box(g, 0.69f, 0.046f, 0.4f, core, 0f, 0.081f, 0f, "ps1Body")                                       // the core
+            box(g, 0.716f, 0.03f, 0.432f, glossW, 0f, 0.117f, 0f, "ps1Body")                                    // top cover
+            box(g, 0.66f, 0.004f, 0.39f, glossW, 0f, 0.1335f, 0f, "ps1Body")                                    // its gentle rise
+            part(g, Geo.box(0.005f, 0.003f, 0.42f), PS1.material(color = 0x9aa0aa), 0.16f, 0.1365f, 0f).rotation.y = 0.45f   // the diagonal seam (on the rise, 2.5 mm proud)
+            // bottom cover front (z = 0.216): the disc slot and eject; core front (z = 0.2): USB-C x2, power, the blue light
+            box(g, 0.24f, 0.005f, 0.004f, PS1.material(color = 0x000000), 0.18f, 0.04f, 0.2175f)
+            box(g, 0.02f, 0.005f, 0.005f, PS1.material(color = 0xc3c7cf), 0.04f, 0.04f, 0.218f, "ps1Open")
+            for (ux in floatArrayOf(-0.3f, -0.28f)) box(g, 0.012f, 0.005f, 0.004f, PS1.material(color = 0x000000), ux, 0.081f, 0.2015f)
+            box(g, 0.022f, 0.006f, 0.005f, PS1.material(color = 0x2a2c33), -0.25f, 0.081f, 0.202f, "ps1Power")
             ps5Light = PS1.material(color = 0x0b1220, emissive = 0x60a5fa, emissiveIntensity = 0f)
-            box(g, 0.64f, 0.003f, 0.004f, ps5Light, 0f, 0.112f, 0.1975f); box(g, 0.64f, 0.003f, 0.004f, ps5Light, 0f, 0.031f, 0.1975f)   // (above the bottom cover, not behind it)
-            // front of the core (z = 0.195): USB-C x2 and POWER on the left, the disc drive's slot and EJECT on the right
-            for (ux in floatArrayOf(-0.29f, -0.268f)) box(g, 0.012f, 0.005f, 0.004f, PS1.material(color = 0x000000), ux, 0.06f, 0.1975f)
-            box(g, 0.026f, 0.006f, 0.006f, PS1.material(color = 0x2a2c33), -0.3f, 0.09f, 0.198f, "ps1Power")
-            box(g, 0.2f, 0.07f, 0.008f, core, 0.21f, 0.068f, 0.199f, "ps1Body")                                // the disc drive's front
-            box(g, 0.17f, 0.005f, 0.004f, PS1.material(color = 0x000000), 0.21f, 0.075f, 0.2045f)
-            box(g, 0.026f, 0.006f, 0.006f, PS1.material(color = 0x2a2c33), 0.21f, 0.052f, 0.205f, "ps1Open")
-            // vent fins along the back, and the room's plugs
-            for (i in 0 until 10) box(g, 0.004f, 0.08f, 0.008f, recess, -0.27f + i * 0.06f, 0.068f, -0.197f)
-            rearPlugs(g, -0.195f, dark)
+            box(g, 0.64f, 0.003f, 0.004f, ps5Light, 0f, 0.098f, 0.2015f); box(g, 0.64f, 0.003f, 0.004f, ps5Light, 0f, 0.063f, 0.2015f)
+            for (i in 0 until 10) box(g, 0.004f, 0.036f, 0.008f, recess, -0.27f + i * 0.06f, 0.081f, -0.202f)
+            rearPlugs(g, -0.2f, dark)
             ps5PadLight = PS1.material(color = 0x0b1220, emissive = 0x60a5fa, emissiveIntensity = 0f)
             pad(g, "ps5", 0.33f, 0.4f, -0.3f, PS1.material(color = 0x15161a), glossW, PS1.material(color = 0x1d1e23), ps5PadLight)
         }
@@ -276,6 +291,11 @@ class Consoles(private val room: Room, private val ps1: Ps1) {
         for ((k, g) in groups) g.visible = k == current
         ps1.console = current
         ps1.library.moveFloorCase(-(HALF_W.getValue(current) + 0.17f))
+        // the game's disc: in the PS1's tray, in the PS2 Slim's well (seen when the lid opens), or out of sight inside a slot loader
+        val p = PATHS[current]
+        val d = ps1.disc
+        if (p == null) { d.visible = true; d.position.copy(ps1.discHome); d.scale.set(1f, 1f, 1f) }
+        else { d.visible = p.lid; d.position.copy(p.home); d.scale.set(p.scale, p.scale, p.scale) }
         room.onShadowsChanged()
     }
 
@@ -314,87 +334,143 @@ class Consoles(private val room: Room, private val ps1: Ps1) {
     fun drawMenu(c: Canvas2D, w: Int, h: Int, t: Float) = ConsoleScreens.menu(current, c, w, h, t, tvLight)
 }
 
-/** The consoles' TV screens, shared by the TV (with its light) and the start screen (without). */
+/**
+ * The consoles' boot-ups, recreated from recordings of the real ones (timed down to the PS1's 7.5 s boot), and their
+ * home screens. Everything is laid out from the centre in units of u = min(w, h) / 96, so the same drawing fills the
+ * TV (128 x 96) and the whole phone screen on the app's start screen, portrait or landscape.
+ */
 object ConsoleScreens {
+    private fun fade(e: Float, a: Float, b: Float, inT: Float = 0.5f, outT: Float = 0.5f) =
+        max(0f, min(1f, min((e - a) / inT, (b - e) / outT)))
     private fun centerText(c: Canvas2D, s: String, x: Number, y: Number, font: String, color: String) { c.font = font; c.fillStyle = color; c.textAlign = "center"; c.fillText(s, x, y) }
+
+    /** The PlayStation symbol: the bold P standing on the flattened S (checked against the real logo). (cx, cy) is its centre, s its height. */
+    fun psSymbol(c: Canvas2D, cx: Double, cy: Double, s: Double, color: String, bg: String) {
+        c.fillStyle = color
+        // the P: a tall stem, and the big round bowl at the top right with its hole
+        c.beginPath(); c.moveTo(cx - 0.16 * s, cy - 0.5 * s); c.lineTo(cx + 0.04 * s, cy - 0.45 * s); c.lineTo(cx + 0.04 * s, cy + 0.3 * s); c.lineTo(cx - 0.16 * s, cy + 0.4 * s); c.closePath(); c.fill()
+        c.beginPath(); c.moveTo(cx, cy - 0.46 * s); c.bezierCurveTo(cx + 0.44 * s, cy - 0.4 * s, cx + 0.46 * s, cy, cx + 0.12 * s, cy + 0.02 * s); c.lineTo(cx + 0.02 * s, cy - 0.02 * s); c.closePath(); c.fill()
+        c.fillStyle = bg
+        c.beginPath(); c.moveTo(cx + 0.04 * s, cy - 0.3 * s); c.bezierCurveTo(cx + 0.16 * s, cy - 0.27 * s, cx + 0.17 * s, cy - 0.16 * s, cx + 0.08 * s, cy - 0.15 * s); c.lineTo(cx + 0.04 * s, cy - 0.16 * s); c.closePath(); c.fill()
+        c.fillStyle = color
+        // the S, lying flat in front: its left arm folds back on itself, its right arm sweeps up to the right
+        c.beginPath(); c.moveTo(cx - 0.54 * s, cy + 0.3 * s); c.lineTo(cx - 0.18 * s, cy + 0.15 * s); c.lineTo(cx - 0.18 * s, cy + 0.27 * s); c.lineTo(cx - 0.33 * s, cy + 0.33 * s)
+        c.lineTo(cx - 0.18 * s, cy + 0.37 * s); c.lineTo(cx - 0.18 * s, cy + 0.48 * s); c.lineTo(cx - 0.56 * s, cy + 0.39 * s); c.closePath(); c.fill()
+        c.beginPath(); c.moveTo(cx + 0.06 * s, cy + 0.27 * s); c.lineTo(cx + 0.46 * s, cy + 0.1 * s); c.bezierCurveTo(cx + 0.6 * s, cy + 0.09 * s, cx + 0.58 * s, cy + 0.25 * s, cx + 0.42 * s, cy + 0.3 * s)
+        c.lineTo(cx + 0.06 * s, cy + 0.42 * s); c.closePath(); c.fill()
+    }
+
     fun boot(key: String, c: Canvas2D, w: Int, h: Int, e: Float, light: (Int) -> Unit = {}) {
+        val u = min(w, h) / 96.0
+        val cx = w / 2.0; val cy = h / 2.0
+        c.globalAlpha = 1f
         c.fillStyle = "#000000"; c.fillRect(0, 0, w, h)
-        val cx = w / 2.0
         when (key) {
+            // PS2 (from the real boot): white translucent blocks drifting through dark-blue space round a blue glow, with
+            // "Sony Computer Entertainment"; a moment of black; the white "PlayStation 2" logo.
             "ps2" -> {
-                if (e < 4.0f) {
-                    // the towers: blue-grey columns rising out of the fog, lit from below
-                    val k = min(1f, e / 1.2f)
-                    for (i in 0 until 14) {
-                        val col = i % 7; val row = i / 7
-                        val x = 6 + col * 17 + row * 8; val base = 74 + row * 10
-                        val hgt = (8 + ((i * 37) % 28)) * k * (0.6f + 0.4f * sin(e * 1.3f + i))
-                        c.fillStyle = if (row == 0) "#334155" else "#475569"; c.fillRect(x, (base - hgt).toInt(), 10, hgt.toInt())
-                        c.fillStyle = "#93c5fd"; c.fillRect(x, (base - hgt).toInt(), 10, 1)
+                if (e < 4.3f) {
+                    val a = fade(e, 0f, 4.3f, 0.4f, 0.5f)
+                    c.globalAlpha = a
+                    val gx = cx - 18 * u; val gy = cy - 6 * u
+                    val glow = c.createRadialGradient(gx, gy, 0, gx, gy, 46 * u)
+                    glow.addColorStop(0, "rgba(59,92,220,0.9)"); glow.addColorStop(0.45, "rgba(23,37,120,0.55)"); glow.addColorStop(1, "rgba(0,0,0,0)")
+                    c.fillStyle = glow; c.fillRect(0, 0, w, h)
+                    // the blocks: each flies out from the glow along its own line, growing as it nears
+                    for (i in 0 until 64) {
+                        val ang = i * 2.399 + 0.3
+                        val d = ((i * 0.137 + e * (0.05 + (i % 5) * 0.012)) % 1.0)
+                        val r = (8 + d * 90) * u
+                        val x = gx + cos(ang) * r * 1.3; val y = gy + sin(ang) * r * 0.75
+                        val sz = (1.5 + d * 9) * u * (0.6 + (i % 3) * 0.3)
+                        val lightK = 0.45 + d * 0.5
+                        c.globalAlpha = a * min(1.0, d * 4).toFloat()
+                        c.fillStyle = "rgba(${(200 * lightK).toInt()},${(206 * lightK).toInt()},${(225 * lightK).toInt()},0.85)"
+                        c.fillRect(x - sz / 2, y - sz * 0.35, sz, sz * 0.7)
+                        c.fillStyle = "rgba(240,244,255,${0.5 * lightK})"; c.fillRect(x - sz / 2, y - sz * 0.35, sz, sz * 0.18)
                     }
-                    val fog = c.createLinearGradient(0, 40, 0, h); fog.addColorStop(0, "rgba(30,58,138,0)"); fog.addColorStop(1, "rgba(30,58,138,0.85)")
-                    c.fillStyle = fog; c.fillRect(0, 40, w, h - 40)
-                    c.globalAlpha = max(0f, min(1f, (e - 1.5f) / 0.8f)) * max(0f, min(1f, (4f - e) / 0.4f))
-                    centerText(c, "SONY COMPUTER ENTERTAINMENT", cx, 22, "bold 5px sans-serif", "#e2e8f0"); c.globalAlpha = 1f
-                } else if (e > 4.4f) {
-                    c.globalAlpha = min(1f, (e - 4.4f) / 0.5f)
-                    centerText(c, "PS2", cx, 54, "bold italic 26px sans-serif", "#e5e7eb")
-                    centerText(c, "PlayStation 2", cx, 68, "6px sans-serif", "#94a3b8"); c.globalAlpha = 1f
+                    c.globalAlpha = a * fade(e, 0.5f, 3.6f, 0.7f, 0.6f)
+                    centerText(c, "Sony Computer Entertainment", cx, cy + 4 * u, "${(6.5 * u).toInt()}px sans-serif", "#f1f5f9")
+                    light(0x3b5cdc)
+                } else if (e > 4.6f) {
+                    c.globalAlpha = fade(e, 4.6f, 7.4f, 0.6f, 0.5f)
+                    centerText(c, "PlayStation", cx - 4 * u, cy + 3 * u, "${(13 * u).toInt()}px sans-serif", "#f8fafc")
+                    centerText(c, "2", cx + 33 * u, cy + 3 * u, "bold ${(15 * u).toInt()}px sans-serif", "#f8fafc")
+                    light(0x94a3b8)
                 }
-                light(0x3b82f6)
             }
+            // PS3: SONY COMPUTER ENTERTAINMENT, then PLAYSTATION 3 over the wave (kept as it was: it's right)
             "ps3" -> {
                 if (e > 0.6f && e < 3.6f) {
-                    c.globalAlpha = min(1f, (e - 0.6f) / 0.6f) * min(1f, max(0f, (3.6f - e) / 0.5f))
-                    centerText(c, "SONY", cx, 46, "bold 12px serif", "#e5e7eb")
-                    centerText(c, "COMPUTER ENTERTAINMENT", cx, 56, "5px sans-serif", "#9ca3af"); c.globalAlpha = 1f
+                    c.globalAlpha = fade(e, 0.6f, 3.6f, 0.6f, 0.5f)
+                    centerText(c, "SONY", cx, cy - 2 * u, "bold ${(12 * u).toInt()}px serif", "#e5e7eb")
+                    centerText(c, "COMPUTER ENTERTAINMENT", cx, cy + 8 * u, "${(5 * u).toInt()}px sans-serif", "#9ca3af")
                 } else if (e > 4.0f) {
-                    xmbWave(c, w, h, e)
+                    xmbWave(c, w, h, e, u)
                     c.globalAlpha = min(1f, (e - 4.0f) / 0.6f)
-                    centerText(c, "PLAYSTATION 3", cx, 46, "10px serif", "#f1f5f9"); c.globalAlpha = 1f
+                    centerText(c, "PLAYSTATION 3", cx, cy - 2 * u, "${(10 * u).toInt()}px serif", "#f1f5f9")
                 }
                 light(0x93c5fd)
             }
+            // PS4 (from the real boot): the white PlayStation symbol alone on black, then the deep blue "Welcome Back to
+            // PlayStation" screen with its light wave sweeping across the bottom.
             "ps4" -> {
-                // the bright blue light screen, then the logo over drifting shapes
-                val g = c.createLinearGradient(0, 0, 0, h); g.addColorStop(0, "#1e3a8a"); g.addColorStop(1, "#60a5fa")
-                c.globalAlpha = min(1f, e / 0.8f); c.fillStyle = g; c.fillRect(0, 0, w, h); c.globalAlpha = 1f
-                for (i in 0 until 9) {
-                    val x = ((i * 29 + e * (6 + i)) % (w + 20)) - 10; val y = (i * 13 + 20) % h
-                    c.fillStyle = "rgba(255,255,255,0.12)"; c.beginPath(); c.arc(x, y, 6 + (i % 3) * 4, 0, PI * 2); c.fill()
-                }
-                c.globalAlpha = max(0f, min(1f, (e - 1.2f) / 0.8f))
-                centerText(c, "PS4", cx, 54, "bold 24px sans-serif", "#ffffff"); c.globalAlpha = 1f
-                light(0x60a5fa)
-            }
-            else -> { // ps5: particles drifting in to the middle, a white flash, then the logo
-                if (e < 3.6f) {
-                    val k = min(1f, e / 3.2f)
-                    for (i in 0 until 40) {
-                        val a = i * 2.4; val r0 = 70.0 * (1 - k) + 6
-                        val x = cx + cos(a + e * 0.6) * r0 * (0.4 + (i % 5) * 0.15); val y = 48 + sin(a + e * 0.6) * r0 * 0.5 * (0.4 + (i % 5) * 0.15)
-                        c.fillStyle = if (i % 3 == 0) "#93c5fd" else "#f8fafc"; c.fillRect(x.toInt(), y.toInt(), 1, 1)
-                    }
-                } else if (e < 4.3f) {
-                    c.globalAlpha = 1f - (e - 3.6f) / 0.7f; c.fillStyle = "#ffffff"; c.fillRect(0, 0, w, h); c.globalAlpha = 1f
+                if (e < 4.4f) {
+                    c.globalAlpha = fade(e, 0.3f, 4.4f, 0.7f, 0.4f)
+                    psSymbol(c, cx, cy - 4 * u, 26 * u, "#ffffff", "#000000")
+                    light(0x64748b)
                 } else {
-                    val g = c.createLinearGradient(0, 0, 0, h); g.addColorStop(0, "#020617"); g.addColorStop(1, "#1e3a8a")
+                    c.globalAlpha = min(1f, (e - 4.4f) / 0.5f)
+                    val g = c.createLinearGradient(0, 0, 0, h); g.addColorStop(0, "#002b8a"); g.addColorStop(1, "#0047d1")
                     c.fillStyle = g; c.fillRect(0, 0, w, h)
-                    c.globalAlpha = min(1f, (e - 4.3f) / 0.6f)
-                    centerText(c, "PS5", cx, 56, "bold 24px sans-serif", "#ffffff"); c.globalAlpha = 1f
+                    for (k in 0 until 3) {
+                        c.strokeStyle = "rgba(160,200,255,${0.32 - k * 0.09})"; c.lineWidth = ((3 - k) * u).toFloat(); c.beginPath()
+                        var x = 0.0
+                        while (x <= w) { val y = h - (18 + k * 7) * u + sin(x / w * 3.2 + e * 0.7 + k) * 8 * u; if (x == 0.0) c.moveTo(x, y) else c.lineTo(x, y); x += 2 * u }
+                        c.stroke()
+                    }
+                    centerText(c, "Welcome Back to PlayStation", cx, cy - 6 * u, "${(5.5 * u).toInt()}px sans-serif", "#eef4ff")
+                    centerText(c, "Press the PS button to use the controller.", cx, cy + 2 * u, "${(3.6 * u).toInt()}px sans-serif", "#c7d7ff")
+                    light(0x2563eb)
                 }
-                light(0xe0f2fe)
+            }
+            // PS5 (from the real boot): the silver PlayStation symbol on black, the dark navy glow with the health warning,
+            // drifting specks of light, then into the console.
+            else -> {
+                if (e < 3.4f) {
+                    c.globalAlpha = fade(e, 0.2f, 3.4f, 0.8f, 0.4f)
+                    psSymbol(c, cx, cy - 2 * u, 22 * u, "#c9ccd3", "#000000")
+                    light(0x475569)
+                } else {
+                    val g = c.createRadialGradient(cx, cy, 0, cx, cy, max(w, h) * 0.75)
+                    g.addColorStop(0, "#0f2341"); g.addColorStop(1, "#02060f")
+                    c.globalAlpha = min(1f, (e - 3.4f) / 0.4f); c.fillStyle = g; c.fillRect(0, 0, w, h)
+                    if (e < 5.2f) {
+                        c.globalAlpha = fade(e, 3.6f, 5.2f, 0.4f, 0.4f)
+                        c.fillStyle = "#9aa7bd"
+                        for (i in 0 until 4) { val lw = (70 - (if (i == 3) 34 else 0)) * u; c.fillRect(cx - 35 * u, cy - 6 * u + i * 3.5 * u, lw, 1.2 * u) }
+                    } else {
+                        c.globalAlpha = min(1f, (e - 5.2f) / 0.5f)
+                        for (i in 0 until 46) {
+                            val px = (i * 37.7 + e * (3 + i % 4) * u) % w; val py = (i * 23.3 + sin(e + i) * 3 * u) % h
+                            c.fillStyle = if (i % 4 == 0) "#e0f2fe" else "#94a3b8"; c.fillRect(px, py, max(1.0, u * 0.6), max(1.0, u * 0.6))
+                        }
+                    }
+                    light(0x1e3a8a)
+                }
             }
         }
+        c.globalAlpha = 1f
         c.textAlign = "left"
     }
     /** The PS3's wave: soft ribbons drifting over a blue gradient. */
-    private fun xmbWave(c: Canvas2D, w: Int, h: Int, t: Float) {
+    private fun xmbWave(c: Canvas2D, w: Int, h: Int, t: Float, u: Double = min(w, h) / 96.0) {
         val g = c.createLinearGradient(0, 0, w, h); g.addColorStop(0, "#0c4a6e"); g.addColorStop(1, "#1e3a8a")
         c.fillStyle = g; c.fillRect(0, 0, w, h)
         for (r in 0 until 3) {
-            c.strokeStyle = "rgba(255,255,255,${0.18 - r * 0.04})"; c.lineWidth = 1f; c.beginPath()
-            for (x in 0..w step 4) { val y = 64 + sin(x * 0.05 + t * (0.6 + r * 0.2) + r) * (6 + r * 3); if (x == 0) c.moveTo(x, y) else c.lineTo(x, y) }
+            c.strokeStyle = "rgba(255,255,255,${0.18 - r * 0.04})"; c.lineWidth = u.toFloat(); c.beginPath()
+            var x = 0.0
+            while (x <= w) { val y = h * 0.66 + sin(x / u * 0.05 + t * (0.6 + r * 0.2) + r) * (6 + r * 3) * u; if (x == 0.0) c.moveTo(x, y) else c.lineTo(x, y); x += 4 * u }
             c.stroke()
         }
     }

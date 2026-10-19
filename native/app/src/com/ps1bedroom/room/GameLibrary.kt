@@ -72,11 +72,14 @@ class GameLibrary(private val room: Room) {
     fun registerFloorCase(mesh: Mesh) = register(BANDICOOT_INDEX, mesh)
     /** The case on the floor steps aside for bigger consoles (its home moves; it moves too if it's at home). */
     fun moveFloorCase(x: Float) {
-        val s = slots[BANDICOOT_INDEX] ?: return
-        val m = caseMeshes[BANDICOOT_INDEX] ?: return
-        val atHome = m.parent === s.parent && abs(m.position.x - s.pos.x) < 0.001f && abs(m.position.z - s.pos.z) < 0.001f
+        val s = slots[FLOOR_SLOT] ?: return
+        // whichever game's case is lying in the floor spot right now
+        for (gi in caseMeshes.indices) {
+            val m = caseMeshes[gi] ?: continue
+            if (slotOf[gi] != FLOOR_SLOT || inHand[gi]) continue
+            if (m.parent === s.parent && abs(m.position.x - s.pos.x) < 0.001f && abs(m.position.z - s.pos.z) < 0.001f) m.position.x = x
+        }
         s.pos.x = x
-        if (atHome) m.position.x = x
     }
 
     /** Collector's wall shelf on the left wall, between the calendar and the band poster. */
@@ -266,13 +269,17 @@ class GameLibrary(private val room: Room) {
     private fun updateInsertAnim(t: Float) {
         val a = insertAnim ?: return
         val e = t - a.start
-        val disc = ps1.disc; val home = ps1.discHome
+        val disc = ps1.disc
+        val path = ps1.consoles?.discPath()
+        if (path != null && !path.lid) { updateSlotInsert(a, t, e, path); return }
+        val home = path?.home ?: ps1.discHome
+        val ds = path?.scale ?: 1f
         if (a.stage == 0 && e > 0.3f) { a.stage = 1; ps1.setLid(true); sfx("ps1LidOpen") }
         if (a.stage == 1) {
             // Old disc rises out of the tray and shrinks away into its case
             val k = min(1f, max(0f, (e - 0.55f) / 0.45f))
             disc.position.set(home.x - k * 0.3f, home.y + sin(k * PI.toFloat() * 0.8f) * 0.3f, home.z + k * 0.15f)
-            val s = 1 - k * 0.9f; disc.scale.set(s, s, s)
+            val s = (1 - k * 0.9f) * ds; disc.scale.set(s, s, s)
             if (e > 1.0f) { a.stage = 2; ps1.showDiscLabel(discLabelTex(ALL_GAMES[a.gi])); sfx("discOut") }
         }
         if (a.stage == 2) {
@@ -281,10 +288,49 @@ class GameLibrary(private val room: Room) {
             val k = min(1f, max(0f, (e - 1.0f) / 0.7f))
             val s = k * k * (3 - 2 * k)
             disc.position.set(from.x + (home.x - from.x) * s, from.y + 0.05f + (home.y - from.y - 0.05f) * s + sin(PI.toFloat() * s) * 0.32f, from.z + (home.z - from.z) * s)
-            val sc = 0.4f + 0.6f * s; disc.scale.set(sc, sc, sc)
-            if (k >= 1) { a.stage = 3; disc.position.copy(home); disc.scale.set(1f, 1f, 1f); sfx("discIn") }
+            val sc = (0.4f + 0.6f * s) * ds; disc.scale.set(sc, sc, sc)
+            if (k >= 1) { a.stage = 3; disc.position.copy(home); disc.scale.set(ds, ds, ds); sfx("discIn") }
         }
         if (a.stage == 3 && e > 1.95f) { a.stage = 4; ps1.setLid(false); sfx("ps1LidClose") }
+        if (a.stage == 4 && e > 2.25f) {
+            insertedGame = a.gi; onInserted()
+            insertAnim = null
+            ps1.gameInserted(t)
+        }
+    }
+    /**
+     * Slot-loading consoles (PS3, PS4, PS5): the old disc slides out of the slot and drops into its case, the new
+     * one arcs over from its case, lines up with the slot and slides in (out of sight inside the console).
+     */
+    private fun updateSlotInsert(a: InsertAnim, t: Float, e: Float, p: Consoles.DiscPath) {
+        val disc = ps1.disc; val ds = p.scale
+        fun smooth(k: Float) = k * k * (3 - 2 * k)
+        if (a.stage == 0 && e > 0.25f) { a.stage = 1; disc.visible = true; sfx("ps1LidOpen") }
+        if (a.stage == 1) {
+            // out of the slot (0.25 - 0.55 s), then up and away into its case (0.55 - 1.0 s)
+            val k1 = smooth(min(1f, max(0f, (e - 0.25f) / 0.3f)))
+            if (e < 0.55f) { disc.position.set(p.home.x + (p.front.x - p.home.x) * k1, p.home.y, p.home.z + (p.front.z - p.home.z) * k1); disc.scale.set(ds, ds, ds) }
+            else {
+                val k = min(1f, (e - 0.55f) / 0.45f)
+                disc.position.set(p.front.x - k * 0.3f, p.front.y + sin(k * PI.toFloat() * 0.8f) * 0.3f, p.front.z + k * 0.15f)
+                val s = (1 - k * 0.9f) * ds; disc.scale.set(s, s, s)
+            }
+            if (e > 1.0f) { a.stage = 2; ps1.showDiscLabel(discLabelTex(ALL_GAMES[a.gi])); sfx("discOut") }
+        }
+        if (a.stage == 2) {
+            // the new disc arcs from its case to just in front of the slot
+            val from = slots[FLOOR_SLOT]!!.pos
+            val s = smooth(min(1f, max(0f, (e - 1.0f) / 0.7f)))
+            disc.position.set(from.x + (p.front.x - from.x) * s, from.y + 0.05f + (p.front.y - from.y - 0.05f) * s + sin(PI.toFloat() * s) * 0.3f, from.z + (p.front.z - from.z) * s)
+            val sc = (0.4f + 0.6f * s) * ds; disc.scale.set(sc, sc, sc)
+            if (e >= 1.7f) a.stage = 3
+        }
+        if (a.stage == 3) {
+            // ...and the drive pulls it in
+            val k = smooth(min(1f, max(0f, (e - 1.75f) / 0.35f)))
+            disc.position.set(p.front.x + (p.home.x - p.front.x) * k, p.front.y, p.front.z + (p.home.z - p.front.z) * k)
+            if (k >= 1f) { a.stage = 4; disc.visible = false; sfx("discIn") }
+        }
         if (a.stage == 4 && e > 2.25f) {
             insertedGame = a.gi; onInserted()
             insertAnim = null

@@ -204,19 +204,24 @@ class Overlays(private val act: Activity, private val root: FrameLayout, private
     private var console = "ps1"
     fun setConsole(k: String) { console = k }
     private lateinit var engineLine: TextView
-    /** The chosen console's boot-up, drawn at the TV's PS1 resolution and scaled up crunchy. */
+    /**
+     * The chosen console's boot-up, full screen: drawn at a chunky PS1 resolution in the phone's own shape (240 pixels
+     * across the short side) and scaled up without smoothing, so it fills the whole screen like the PS1's intro.
+     */
     private inner class IntroView : View(act) {
-        private val c2d = com.ps1bedroom.room.engine.Canvas2D(128, 96)
+        private var c2d: com.ps1bedroom.room.engine.Canvas2D? = null
         private val paint = android.graphics.Paint().apply { isFilterBitmap = false }
         private val dst = android.graphics.RectF()
         var startMs = 0L
         override fun onDraw(cv: android.graphics.Canvas) {
+            if (width <= 0 || height <= 0) return
+            val k = 240f / minOf(width, height)
+            val cw = maxOf(1, (width * k).toInt()); val ch = maxOf(1, (height * k).toInt())
+            val c = c2d?.takeIf { it.width == cw && it.height == ch } ?: com.ps1bedroom.room.engine.Canvas2D(cw, ch).also { c2d = it }
             val e = (android.os.SystemClock.uptimeMillis() - startMs) / 1000f
-            ConsoleScreens.boot(console, c2d, 128, 96, e)
-            cv.drawColor(Color.BLACK)
-            val s = minOf(width / 128f, height / 96f)
-            dst.set((width - 128 * s) / 2, (height - 96 * s) / 2, (width + 128 * s) / 2, (height + 96 * s) / 2)
-            cv.drawBitmap(c2d.bitmap, null, dst, paint)
+            ConsoleScreens.boot(console, c, cw, ch, e)
+            dst.set(0f, 0f, width.toFloat(), height.toFloat())
+            cv.drawBitmap(c.bitmap, null, dst, paint)
             if (visibility == View.VISIBLE) postInvalidateOnAnimation()
         }
     }
@@ -267,13 +272,13 @@ class Overlays(private val act: Activity, private val root: FrameLayout, private
             // This console's own boot-up, then the same title card
             intro.startMs = android.os.SystemClock.uptimeMillis(); intro.visibility = View.VISIBLE
             intro.animate().alpha(1f).setDuration(300).start(); intro.invalidate()
-            later(6200) {
+            later(7500) {
                 bootStage = 2
                 intro.animate().alpha(0f).setDuration(600).withEndAction { intro.visibility = View.GONE }.start()
                 black.visibility = View.VISIBLE
                 black.animate().alpha(1f).setDuration(600).start()
             }
-            later(8700) { finishBoot() }
+            later(10000) { finishBoot() }
             return
         }
         white.visibility = View.VISIBLE

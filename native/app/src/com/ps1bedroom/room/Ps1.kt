@@ -48,8 +48,10 @@ class Ps1(private val room: Room, private val tv: Tv) {
     var console = "ps1"
     var consoles: Consoles? = null
     private lateinit var ps1CaseRef: com.ps1bedroom.room.engine.Object3D
-    /** Shows or hides the PS1 itself (its jewel case stays on the floor for every console). */
-    fun showModel(on: Boolean) { for (c in ps1Group.children) if (c !== ps1CaseRef) c.visible = on }
+    /** The PS1's own parts (recorded when it's built): game cases that later land on the floor spot are not among them. */
+    private val modelParts = ArrayList<com.ps1bedroom.room.engine.Object3D>()
+    /** Shows or hides the PS1 itself. (v0.37 fix: it used to hide every child, so the case of the game in the console vanished.) */
+    fun showModel(on: Boolean) { for (c in modelParts) c.visible = on }
 
     private fun ps1Part(geo: Geometry, mat: Material, x: Float, y: Float, z: Float, tag: String? = null): Mesh {
         val m = Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true
@@ -164,6 +166,7 @@ class Ps1(private val room: Room, private val tv: Tv) {
         // Every console / controller part shades the same way
         ps1Group.traverse { if (it is Mesh) it.receiveShadow = true }
 
+        for (c in ps1Group.children) if (c !== ps1CaseRef && c !== ps1Disc) modelParts += c
         buildHookups()
     }
     private data class B(val name: String, val x: Float, val z: Float, val r: Float, val tag: String)

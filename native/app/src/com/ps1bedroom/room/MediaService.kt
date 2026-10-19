@@ -22,6 +22,10 @@ class MediaService : Service() {
         const val ACTION_PAUSE = "com.ps1bedroom.room.PAUSE"
         /** Set by the activity: what the notification's Pause button does. */
         @Volatile var onPause: (() -> Unit)? = null
+        /** The song on the boombox (My Music), shown in the notification with its controls. */
+        @Volatile var nowPlaying: String? = null
+        @Volatile var onControl: ((String) -> Unit)? = null
+        const val ACTION_CONTROL = "com.ps1bedroom.room.CONTROL"
         fun start(ctx: Context) {
             val i = Intent(ctx, MediaService::class.java)
             if (Build.VERSION.SDK_INT >= 26) ctx.startForegroundService(i) else ctx.startService(i)
@@ -33,18 +37,26 @@ class MediaService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_PAUSE) { onPause?.invoke(); stopSelf(); return START_NOT_STICKY }
+        if (intent?.action == ACTION_CONTROL) { intent.getStringExtra("cmd")?.let { onControl?.invoke(it) }; return START_NOT_STICKY }
         val nm = getSystemService(NotificationManager::class.java)
         if (Build.VERSION.SDK_INT >= 26 && nm.getNotificationChannel(CHANNEL) == null)
             nm.createNotificationChannel(NotificationChannel(CHANNEL, "Room sounds", NotificationManager.IMPORTANCE_LOW).apply { setShowBadge(false) })
         val open = PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP), PendingIntent.FLAG_IMMUTABLE)
         val pause = PendingIntent.getService(this, 1, Intent(this, MediaService::class.java).setAction(ACTION_PAUSE), PendingIntent.FLAG_IMMUTABLE)
         val b = if (Build.VERSION.SDK_INT >= 26) Notification.Builder(this, CHANNEL) else @Suppress("DEPRECATION") Notification.Builder(this)
-        val n = b.setSmallIcon(R.mipmap.ic_launcher)
+        b.setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle("PS1 Bedroom")
-            .setContentText("The room is playing")
+            .setContentText(nowPlaying?.let { "📻 $it" } ?: "The room is playing")
             .setContentIntent(open)
             .setOngoing(true)
-            .addAction(Notification.Action.Builder(null, "Pause", pause).build())
+        val song = nowPlaying
+        if (song != null) {
+            fun ctl(cmd: String, code: Int) = PendingIntent.getService(this, code, Intent(this, MediaService::class.java).setAction(ACTION_CONTROL).putExtra("cmd", cmd), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+            b.addAction(Notification.Action.Builder(null, "⏮", ctl("prev", 2)).build())
+            b.addAction(Notification.Action.Builder(null, "⏯", ctl("toggle", 3)).build())
+            b.addAction(Notification.Action.Builder(null, "⏭", ctl("next", 4)).build())
+        }
+        val n = b.addAction(Notification.Action.Builder(null, "Pause", pause).build())
             .build()
         if (Build.VERSION.SDK_INT >= 29) startForeground(1, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK) else startForeground(1, n)
         return START_NOT_STICKY

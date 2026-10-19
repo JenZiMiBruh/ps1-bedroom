@@ -34,6 +34,11 @@ class Furniture(private val room: Room) {
     private lateinit var lampShadeMat: Material
     var lampOn = false; private set
     lateinit var radioDisplayMat: Material
+    /** My Music shows the album cover in the cassette window and scrolls the song on the display. */
+    lateinit var cassetteDeck: Mesh
+    lateinit var cassetteDeckMat: Material
+    lateinit var radioDisplay: Mesh
+    lateinit var dresserGroupRef: Group
     private lateinit var calendarTex: CanvasTex
     private var calendarKey = ""
     private val CAL_WEATHER = Weather(seed = 103.0, blotch = 0.12, warm = 0.15, creases = 1)
@@ -68,6 +73,7 @@ class Furniture(private val room: Room) {
         // ---- Dresser on the left wall (front faces +X), six drawers with knobs ----
         PS1.syncGrime(257)
         val dresserGroup = Group()
+        dresserGroupRef = dresserGroup
         dresserGroup.position.set(-3.42f, 0f, 2.3f)
         scene.add(dresserGroup)
         val matDresser = PS1.material(map = woodTex, color = 0x8a6a55)
@@ -89,13 +95,14 @@ class Furniture(private val room: Room) {
         }
         // Cassette deck: its own front face shows the album cover when there is one (My Music phase)
         val cassetteDeckMat = PS1.material(color = 0x4b5563)
-        propPart(boomboxGroup, Geo.box(0.03f, 0.1f, 0.18f), List(6) { cassetteDeckMat }, 0.1f, 0.13f, 0f, "bbscreen")
+        cassetteDeck = propPart(boomboxGroup, Geo.box(0.03f, 0.1f, 0.18f), List(6) { cassetteDeckMat }, 0.1f, 0.13f, 0f, "bbscreen")
+        this.cassetteDeckMat = cassetteDeckMat
         propPart(boomboxGroup, Geo.box(0.04f, 0.04f, 0.5f), matBoombox, 0f, 0.34f, 0f)
         for (hz in floatArrayOf(-0.24f, 0.24f)) propPart(boomboxGroup, Geo.box(0.04f, 0.06f, 0.03f), matBoombox, 0f, 0.31f, hz)
         val boomAntenna = propPart(boomboxGroup, Geo.cylinder(0.005f, 0.005f, 0.5f, 4), PS1.material(color = 0xd1d5db), -0.05f, 0.5f, 0.26f)
         boomAntenna.rotation.x = -0.4f
         radioDisplayMat = PS1.material(color = 0x1e3a2a, emissive = 0x22c55e, emissiveIntensity = 0.05f)
-        propPart(boomboxGroup, Geo.box(0.012f, 0.035f, 0.14f), List(6) { radioDisplayMat }, 0.105f, 0.245f, 0f, "bbscreen")
+        radioDisplay = propPart(boomboxGroup, Geo.box(0.012f, 0.035f, 0.14f), List(6) { radioDisplayMat }, 0.105f, 0.245f, 0f, "bbscreen")
         // Photo frame, trophy, and a band poster above the dresser
         val photo = propPart(dresserGroup, Geo.box(0.03f, 0.22f, 0.17f), PS1.material(color = 0x1f2937), -0.1f, 1.54f, 0.5f)
         photo.rotation.z = 0.12f

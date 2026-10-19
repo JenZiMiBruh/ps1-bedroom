@@ -247,6 +247,12 @@ class Canvas2D(@JvmField val width: Int, @JvmField val height: Int) {
         dstRect.set(dx.toFloat(), dy.toFloat(), dx.toFloat() + dw.toFloat(), dy.toFloat() + dh.toFloat())
         canvas.drawBitmap(src.bitmap, srcRect, dstRect, p)
     }
+    fun drawImage(src: Bitmap, sx: Number, sy: Number, sw: Number, sh: Number, dx: Number, dy: Number, dw: Number, dh: Number) {
+        val p = imgPaint; p.isFilterBitmap = imageSmoothingEnabled; p.alpha = (globalAlpha * 255).toInt(); p.xfermode = fill.xfermode
+        srcRect.set(sx.toInt(), sy.toInt(), (sx.toFloat() + sw.toFloat()).toInt(), (sy.toFloat() + sh.toFloat()).toInt())
+        dstRect.set(dx.toFloat(), dy.toFloat(), dx.toFloat() + dw.toFloat(), dy.toFloat() + dh.toFloat())
+        canvas.drawBitmap(src, srcRect, dstRect, p)
+    }
     /** RGBA bytes like ImageData.data (0..255 per channel, row by row). */
     fun getImageData(): IntArray {
         val px = IntArray(width * height); bitmap.getPixels(px, 0, width, 0, 0, width, height)

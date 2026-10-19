@@ -75,7 +75,7 @@ class Extras(private val room: Room, private val env: Environment, private val t
     private lateinit var fanBlades: Group
     var decorMode = "auto"
     // Boombox radio: OFF -> Q 97.1 Slow Jams -> ALT 104.3 -> OFF
-    val RADIO_STATIONS = listOf("OFF", "Q 97.1 FM: Late-Night Slow Jams", "ALT 104.3 FM: Pop-Punk Countdown")
+    val RADIO_STATIONS = listOf("OFF", "Q 97.1 FM: Late-Night Slow Jams", "ALT 104.3 FM: Pop-Punk Countdown", "MY MUSIC: Your Own Songs")
     var radioStation = 0; private set
 
     private fun star(): Geometry {
@@ -382,7 +382,7 @@ class Extras(private val room: Room, private val env: Environment, private val t
     }
 
     // ---- Poster ----
-    private val POSTERS: Map<String, ((Canvas2D, Int, Int) -> Unit)?> = linkedMapOf(
+    val POSTERS: LinkedHashMap<String, ((Canvas2D, Int, Int) -> Unit)?> = linkedMapOf(
         "none" to null,
         "band" to { ctx, w, h ->
             val g = ctx.createLinearGradient(0, 0, 0, h); g.addColorStop(0, "#0b0b12"); g.addColorStop(1, "#5b0f2e")
@@ -485,6 +485,10 @@ class Extras(private val room: Room, private val env: Environment, private val t
     }
 
     // ---- Boombox radio (the stations' sound comes with the audio phase) ----
+    fun setStation(st: Int, radioDisplayMat: Material) {
+        radioStation = st.coerceIn(0, RADIO_STATIONS.size - 1)
+        radioDisplayMat.emissiveIntensity = if (radioStation > 0) 0.9f else 0.05f
+    }
     fun cycleRadio(radioDisplayMat: Material) {
         radioStation = (radioStation + 1) % RADIO_STATIONS.size
         radioDisplayMat.emissiveIntensity = if (radioStation > 0) 0.9f else 0.05f

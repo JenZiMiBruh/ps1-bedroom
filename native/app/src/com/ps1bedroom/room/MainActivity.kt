@@ -35,6 +35,10 @@ class MainActivity : Activity() {
         root.addView(view)
         app.density = resources.displayMetrics.density
         app.settings = Settings(app, this)
+        app.myMusic = MyMusic(app, this)
+        app.pickMusic = { folder -> runOnUiThread { pickMusic(folder) } }
+        app.onNowPlaying = { title, artist, _ -> runOnUiThread { MediaService.nowPlaying = title?.let { if (artist.isNullOrEmpty()) it else "$it · $artist" }; if (app.sound.playing) MediaService.start(this) } }
+        MediaService.onControl = { cmd -> app.post { app.myMusic.mediaControl(cmd) } }
         app.hud = Hud(this, root, app).also { it.attachMenu() }
         setContentView(root)
         pacer = FramePacer(this, view, app)
@@ -43,6 +47,36 @@ class MainActivity : Activity() {
         // (straight away: the GL thread, which runs posted work, is paused while the app is in the background)
         MediaService.onPause = { if (app.sound.playing) app.toggleAudio() }
         hideSystemBars()
+    }
+
+    // ---- My Music: the system file picker (songs, or a whole album folder) ----
+    @Suppress("DEPRECATION")
+    private fun pickMusic(folder: Boolean) {
+        val i = if (folder) android.content.Intent(android.content.Intent.ACTION_OPEN_DOCUMENT_TREE)
+        else android.content.Intent(android.content.Intent.ACTION_OPEN_DOCUMENT).addCategory(android.content.Intent.CATEGORY_OPENABLE).setType("audio/*").putExtra(android.content.Intent.EXTRA_ALLOW_MULTIPLE, true)
+        i.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or android.content.Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+        try { startActivityForResult(i, if (folder) 41 else 40) } catch (e: Exception) { app.toast("🎵 No file picker on this device") }
+    }
+    @Deprecated("Activity results")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: android.content.Intent?) {
+        @Suppress("DEPRECATION") super.onActivityResult(requestCode, resultCode, data)
+        if (resultCode != RESULT_OK || data == null || (requestCode != 40 && requestCode != 41)) return
+        val mm = app.myMusic
+        Thread {
+            val items = ArrayList<MyMusic.Item>()
+            if (requestCode == 41) {
+                data.data?.let { tree -> mm.takePermission(tree); items += mm.listTree(tree) }
+            } else {
+                val uris = ArrayList<android.net.Uri>()
+                data.clipData?.let { c -> for (k in 0 until c.itemCount) uris += c.getItemAt(k).uri } ?: data.data?.let { uris += it }
+                for (u in uris) {
+                    var name = u.lastPathSegment ?: "song"
+                    try { contentResolver.query(u, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c -> if (c.moveToFirst()) name = c.getString(0) ?: name } } catch (e: Exception) { }
+                    items += MyMusic.Item(u, name, name, contentResolver.getType(u) ?: "")
+                }
+            }
+            mm.import(items)
+        }.start()
     }
 
     override fun onResume() { super.onResume(); view.onResume(); pacer.interacted(); pacer.start(); hideSystemBars() }

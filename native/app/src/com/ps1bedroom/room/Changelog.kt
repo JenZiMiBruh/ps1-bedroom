@@ -24,6 +24,13 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.22", "My Music", listOf(
+            "Add your own songs, or a whole album folder, from your phone (Menu → Sound → My Music); the files stay where they are",
+            "They play through the boombox like the radio: tap it to switch between the FM stations and MY MUSIC",
+            "Albums with their covers, play / pause / skip, shuffle and repeat; the notification shows the song with controls",
+            "The cover shows in the cassette window and as a jewel case on the dresser, and the tuner LCD scrolls the song name",
+            "New \"Now playing\" poster with the album cover"
+        )),
         Entry("0.21", "Phone calls and Jasper's voice", listOf(
             "The cordless phone rings every so often while the sound is on: tap it to answer and hear who it is",
             "Miss it and the answering machine takes a message: its red light blinks until you tap it to play them",

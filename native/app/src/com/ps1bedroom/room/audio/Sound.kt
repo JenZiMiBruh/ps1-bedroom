@@ -105,6 +105,8 @@ class Sound(private val app: App) {
     private lateinit var hall: Spot; private lateinit var hallPower: Gain; private lateinit var hallMuffle: Filter; private lateinit var hallMuffle2: Filter; private lateinit var hallBoost: Gain
     private lateinit var lrVoices: List<Voice>; private lateinit var lrLaugh: Gain
     private lateinit var radio: Spot; private lateinit var radioBus: Gain
+    /** The boombox's My Music stream (made with the engine). */
+    var musicStream: StreamSource? = null; private set
     private lateinit var lava: Spot; private lateinit var lavaBloop: Synth
     private lateinit var ps1Drive: Spot; private lateinit var ps1Seek: NoiseSynth
     private lateinit var rain: Gain; private lateinit var glassSpot: Spot; private lateinit var rainGlass: Gain; private lateinit var rainHeavy: Gain
@@ -235,6 +237,11 @@ class Sound(private val app: App) {
         radio = Spot(pos.getValue("boombox"), 1.4, 1.0, 0.2, master, 0.0)
         radioBus = gain(2.0)
         radioBus.chain(filt(110.0, "highpass"), filt(6500.0, "lowpass"), radio.level)
+        // My Music streams through the same speaker
+        musicStream = StreamSource(ctx, app.myMusic.ctx).also { m ->
+            m.onEnded = { app.post { app.myMusic.ended() } }; m.onError = { app.post { app.myMusic.error() } }
+            m.chain(gain(0.32), radioBus)
+        }
         // ---- Lava lamp
         lava = Spot(pos.getValue("lava"), 1.0, 1.0, 0.3, master, 0.0)
         lavaBloop = Synth(ctx, "sine", Envelope(ctx, 0.02, 0.2, 0.5, 0.15)).also { it.volume.value = -12.0 }
@@ -368,7 +375,7 @@ class Sound(private val app: App) {
             setActiveChannel("pc", if (app.monitor.pcPoweredOn) app.monitor.currentChannel else null)
             val ch = app.tv.bedroomTvChannel
             setActiveChannel("tv", if (app.tv.bedroomTvOn) ch else null, if (ch == Tv.PS1_TV_CHANNEL) app.library.insertedGame else (if (ch == 2) app.extras.currentTape else 0))
-            setActiveChannel("radio", if (app.extras.radioStation > 0) app.extras.radioStation - 1 else null)
+            setActiveChannel("radio", if (app.extras.radioStation in 1..Music.RADIO_CHANNELS.size) app.extras.radioStation - 1 else null)
             radio.level.gain.rampTo(vol.getValue("radio"), 0.2)
             // Weather
             val raining = env.isRainingNow(); val snowing = env.isSnowingNow()
@@ -1036,6 +1043,7 @@ class Sound(private val app: App) {
             build()
             ready = true
             playing = true
+            app.myMusic.reattach()
             setMasterVolume(masterVolume)
         } else playing = !playing
         ctx.sync {

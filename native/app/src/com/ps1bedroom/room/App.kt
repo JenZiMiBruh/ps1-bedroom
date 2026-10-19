@@ -44,6 +44,12 @@ class App : GLSurfaceView.Renderer {
     lateinit var weatherFx: WeatherFx; private set
     lateinit var places: Places; private set
     lateinit var monitor: Monitor; private set
+    /** My Music (made by the activity: it needs a Context). */
+    lateinit var myMusic: MyMusic
+    /** Song changes for the media notification (title, artist, cover). */
+    @Volatile var onNowPlaying: ((String?, String?, android.graphics.Bitmap?) -> Unit)? = null
+    /** Opens the system file picker for songs (false) or a whole album folder (true). */
+    @Volatile var pickMusic: ((Boolean) -> Unit)? = null
     val phone = Phone(this)
     /** The sound engine (HTML Tone.js soundscape). */
     val sound = com.ps1bedroom.room.audio.Sound(this)
@@ -155,6 +161,7 @@ class App : GLSurfaceView.Renderer {
                 room.extraDynamicRoots += jasper.dogGroup
                 extras = Extras(room, env, tv, desk, bedroom); extras.build(); tv.tapes = extras
                 room.extraDynamicRoots.addAll(extras.dynamicRoots())
+                myMusic.buildRoomParts(); room.extraDynamicRoots.addAll(myMusic.dynamicRoots())
                 places = Places(room, env, sky, exterior, weatherFx) { renderer.shadowsNeedUpdate = true }   // HTML 14241: the places outside
                 room.extraDynamicRoots.addAll(places.dynamicRoots())
                 sky.placesPaint = places.paint
@@ -183,6 +190,8 @@ class App : GLSurfaceView.Renderer {
             controls.update()
             startMs = SystemClock.uptimeMillis()
             built = true
+            myMusic.onChanged = { hud?.refreshMenu() }
+            myMusic.load()
             settings.restore()   // the HTML's applySavedSettings, once everything exists
             ps1.sfx = { sound.sfx(it) }; ps1.stopBootSound = { sound.stopPs1BootSound() }; library.sfx = { sound.sfx(it) }
             env.envHooks += { sound.updateLayered() }
@@ -223,6 +232,7 @@ class App : GLSurfaceView.Renderer {
         desk.update(t)
         monitor.tick(t)
         phone.update(t)
+        myMusic.tick()
         // The monitor redraws ~6x a second, only while the PC is on and the screen is in view
         desk.monScreen.updateMatrixWorld(); SPHERE_MONITOR_C.setFromMatrixPosition(desk.monScreen.matrixWorld)
         if (monitor.pcPoweredOn && t - lastMonitorUpdate > 0.16f && renderer.sphereInView(SPHERE_MONITOR_C, 0.6f)) { monitor.update(t); lastMonitorUpdate = t }
@@ -337,7 +347,7 @@ class App : GLSurfaceView.Renderer {
             "machine" -> phone.playMessages { ms, fn -> hud?.later(ms, fn) }
             "heater" -> extras.cycleHeater()
             "poster" -> extras.cyclePoster()
-            "boombox", "bbscreen" -> extras.cycleRadio(furniture.radioDisplayMat)
+            "boombox", "bbscreen" -> { val n = extras.RADIO_STATIONS.size; var st = (extras.radioStation + 1) % n; if (st == myMusic.MY_MUSIC_STATION && myMusic.tracks.isEmpty()) st = (st + 1) % n; myMusic.setRadioStation(st); if (st == myMusic.MY_MUSIC_STATION) myMusic.mediaControl("play") }
             "pc" -> { monitor.setPower(!monitor.pcPoweredOn); toast(if (monitor.pcPoweredOn) "💾 Rebooting HP Pavilion... Windows 98 / XP ScanDisk complete." else "⚠️ \"DO NOT TURN OFF!\" You just killed a 48-hour Napster download at 99%!") }
             "monitor" -> openPc()
             "phone" -> if (phone.ringing) phone.answer() else { toast("📞 56k V.90 MODEM: \"MOM HANG UP THE PHONE! I'M IN A STARCRAFT MATCH!\""); sfx("phone") }

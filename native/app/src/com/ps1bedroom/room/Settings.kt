@@ -377,7 +377,7 @@ class Settings(private val app: App, private val ctx: Context) {
             if (!s.optBoolean("tv", true) && app.tv.bedroomTvOn) app.tv.toggleBedroomTv(0f)
             s.optInt("tvCh", 0).let { if (it in 1 until Tv.PS1_TV_CHANNEL) app.tv.setChannel(it) }
             app.monitor.setChannel(s.optInt("pcCh", 0))
-            repeat(s.optInt("radio", 0)) { app.extras.cycleRadio(app.furniture.radioDisplayMat) }
+            app.extras.setStation(s.optInt("radio", 0), app.furniture.radioDisplayMat)
             app.sound.masterVolume = s.optDouble("master", 0.85)
             app.sound.wantAudio = s.optBoolean("audioOn", true)
             app.sound.livingRoomTvOn = s.optBoolean("livingTv", true)

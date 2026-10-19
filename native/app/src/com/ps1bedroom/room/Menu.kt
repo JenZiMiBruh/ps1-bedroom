@@ -369,12 +369,46 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
             Triple(if (app.extras.radioStation > 0) "RADIO: ${app.extras.RADIO_STATIONS[app.extras.radioStation].substringBefore(':')}" else "RADIO: OFF", app.extras.radioStation > 0, { post { app.extras.cycleRadio(app.furniture.radioDisplayMat); app.sfx("radioTune"); s.changed() } }),
             Triple("PC SCREEN", app.monitor.pcPoweredOn, { post { val on = app.monitor.pcPoweredOn; app.monitorNextChannel(); app.sfx(if (on) "monitorChannel" else "pcOn"); s.changed() } })
         ))
-        note("My Music and YouTube on the TV arrive with the next updates.", true)
+        buildMyMusic()
         details("Mixer") {
             for ((k, label) in listOf("pc" to "PC tower fan & HDD", "fan" to "Ceiling fan", "ac" to "Wall AC", "livtv" to "Living room TV (muffled)", "bedtv" to "Bedroom TV & PS1",
                     "weather" to "Rain, wind & storms", "nature" to "Outdoors: city, birds, crickets", "pcspk" to "PC speakers", "sfx" to "Clicks, PS1 drive, lava lamp", "radio" to "Boombox radio"))
                 slider(label, 0, 150, 5, ((snd.vol[k] ?: 1.0) * 100).roundToInt(), { "$it%" }) { v -> post { snd.vol[k] = v / 100.0; snd.updateLayered(); s.changed() } }
         }
+    }
+    /** HTML 13600-13788: the boombox player, in the Sound tab. */
+    private fun buildMyMusic() {
+        val mm = app.myMusic
+        h4("📻 My Music", if (mm.tracks.isEmpty()) null else "${mm.tracks.size} songs")
+        val cur = mm.current
+        val onMusic = app.extras.radioStation == mm.MY_MUSIC_STATION
+        note(if (cur != null) "${if (onMusic && !mm.paused) "▶" else "⏸"} ${cur.title}${if (cur.artist.isNotEmpty()) " · ${cur.artist}" else ""}${if (cur.album.isNotEmpty()) "  (${cur.album})" else ""}" else mm.statusText())
+        if (mm.tracks.isNotEmpty()) {
+            tiles(listOf(
+                Triple("⏮", false, { post { mm.mediaControl("prev") } }),
+                Triple(if (onMusic && !mm.paused) "⏸ PAUSE" else "▶ PLAY", onMusic && !mm.paused, { post { mm.mediaControl("toggle") } }),
+                Triple("⏭", false, { post { mm.mediaControl("next") } })
+            ))
+            tiles(listOf(
+                Triple(if (mm.shuffle) "🔀 SHUFFLE: ON" else "🔀 SHUFFLE: OFF", mm.shuffle, { post { mm.toggleShuffle() } }),
+                Triple(mapOf("all" to "🔁 REPEAT ALL", "one" to "🔂 REPEAT ONE", "off" to "➡️ REPEAT OFF").getValue(mm.repeat), mm.repeat != "off", { post { mm.cycleRepeat() } })
+            ))
+            details("Albums") {
+                for (a in mm.albums()) {
+                    chips(listOf(Triple("💿 ${a.title}${if (a.artist.isNotEmpty()) " · ${a.artist}" else ""} (${a.tracks.size})", a.tracks.contains(cur), { post { mm.playList(a.tracks) } })) +
+                        a.tracks.mapIndexed { i, t -> Triple("${if (t.track > 0) "${t.track}. " else ""}${t.title}", t == cur, { post { mm.playList(a.tracks, i) } }) })
+                }
+            }
+        }
+        tiles(listOf(
+            Triple("＋ ADD SONGS", false, { app.pickMusic?.invoke(false) }),
+            Triple("＋ ALBUM FOLDER", false, { app.pickMusic?.invoke(true) })
+        ))
+        if (mm.tracks.isNotEmpty()) details("Manage") {
+            chips(mm.albums().map { a -> Triple("✕ ${a.title}", false, { post { mm.removeAlbum(a); app.toast("🎵 Removed ${a.title}") } }) })
+            chips(listOf(Triple("🗑 Clear My Music", false, { post { mm.clear() } })))
+        }
+        note("Your songs stay on your device: the app only remembers where they are (plus a small copy of each cover). Tap the boombox in the room to switch between the FM stations and MY MUSIC. The \"Now playing\" poster shows the album cover.", true)
     }
     private fun buildRoom() {
         val blindLabels = arrayOf("SLATTED", "TILTED OPEN", "ROLLED UP", "CLOSED")

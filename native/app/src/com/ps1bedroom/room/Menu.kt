@@ -224,16 +224,24 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
         }
         body.addView(flow, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = dpi(2f) })
     }
-    /** Colour swatches (the HTML's <input type=color>, as a palette): round chips of the colour itself, the picked one ringed. */
-    private fun swatchRow(colors: List<String>, current: String, onPick: (String) -> Unit) {
-        val flow = FlowLayout(act, dpi(8f))
-        for (hex in colors) {
+    /** Named colours for Jasper's custom coat. */
+    private val DOG_COLOURS = listOf("#1d1b1a" to "Jet black", "#3a2a1c" to "Dark chocolate", "#5a3a22" to "Chocolate", "#8a6a45" to "Sable",
+        "#b97a3e" to "Tan", "#a3532a" to "Rust red", "#d9b27a" to "Cream", "#a8a6a0" to "Silver", "#d6d4cf" to "Light grey",
+        "#ece7dc" to "Off-white", "#f8f5ee" to "Snow white", "#6b7280" to "Blue grey")
+    /** Colour swatches (the HTML's <input type=color>, as a palette): the colour itself with its name, the picked one ringed. */
+    private fun swatchRow(colors: List<Pair<String, String>>, current: String, onPick: (String) -> Unit) {
+        val flow = FlowLayout(act, dpi(6f))
+        for ((hex, name) in colors) {
             val on = hex.equals(current, true)
-            flow.addView(View(act).apply {
-                background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(Color.parseColor(hex)); setStroke(dpi(if (on) 3f else 1f), if (on) PINK else LINE) }
-                contentDescription = hex
+            flow.addView(LinearLayout(act).apply {
+                orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_HORIZONTAL; setPadding(dpi(2f), dpi(4f), dpi(2f), dpi(4f))
+                background = if (on) GradientDrawable().apply { setColor(ACTIVE_BG); cornerRadius = dp(10f); setStroke(dpi(2f), PINK) } else null
+                addView(View(act).apply { background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(Color.parseColor(hex)); setStroke(dpi(1f), LINE_HI) } },
+                    LinearLayout.LayoutParams(dpi(32f), dpi(32f)))
+                addView(text(name, if (on) Color.WHITE else MUTED, 9f, on).apply { gravity = Gravity.CENTER; maxLines = 2 }, LinearLayout.LayoutParams(dpi(60f), -2).apply { topMargin = dpi(3f) })
+                contentDescription = name
                 setOnClickListener { onPick(hex) }
-            }, ViewGroup.LayoutParams(dpi(34f), dpi(34f)))
+            }, ViewGroup.LayoutParams(dpi(66f), ViewGroup.LayoutParams.WRAP_CONTENT))
         }
         body.addView(flow, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = dpi(4f) })
     }
@@ -463,11 +471,23 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
         val dog = app.jasper
         chips(Jasper.PRESETS.map { (k, p) -> Triple(p.name, dog.colorPreset == k, { post { dog.applyColors(p, k); app.sfx("ui"); s.changed() } }) })
         details("Custom colours") {
-            val swatches = listOf("#1d1b1a", "#3a2a1c", "#5a3a22", "#8a6a45", "#b97a3e", "#a3532a", "#d9b27a", "#a8a6a0", "#d6d4cf", "#ece7dc", "#f8f5ee", "#6b7280")
-            for ((part, label) in listOf("coat" to "Coat", "dark" to "Saddle & mask", "light" to "Chest & paws")) {
+            // Jasper's three colours right now, by name
+            val names = DOG_COLOURS.toMap()
+            fun nameOf(hex: String) = names.entries.firstOrNull { it.key.equals(hex, true) }?.value ?: "Custom"
+            val preview = LinearLayout(act).apply { orientation = LinearLayout.HORIZONTAL }
+            for ((hex, label) in listOf(dog.colors.coat to "Coat", dog.colors.dark to "Saddle", dog.colors.light to "Chest")) {
+                preview.addView(LinearLayout(act).apply {
+                    orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_HORIZONTAL
+                    addView(View(act).apply { background = GradientDrawable().apply { setColor(Color.parseColor(hex)); cornerRadius = dp(8f); setStroke(1, LINE) } }, LinearLayout.LayoutParams(-1, dpi(26f)))
+                    addView(text(label, MUTED, 10f, false).apply { gravity = Gravity.CENTER })
+                    addView(text(nameOf(hex), TEXT, 11f).apply { gravity = Gravity.CENTER })
+                }, LinearLayout.LayoutParams(0, -2, 1f).apply { marginEnd = dpi(6f) })
+            }
+            body.addView(preview, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dpi(6f) })
+            for ((part, label) in listOf("coat" to "Coat (most of him)", "dark" to "Saddle & mask (his back and face)", "light" to "Chest & paws")) {
                 val cur = when (part) { "coat" -> dog.colors.coat; "dark" -> dog.colors.dark; else -> dog.colors.light }
-                note(label, true)
-                swatchRow(swatches, cur) { hex -> post { dog.setPart(part, hex); app.sfx("ui"); s.changed() } }
+                h4(label)
+                swatchRow(DOG_COLOURS, cur) { hex -> post { dog.setPart(part, hex); app.sfx("ui"); s.changed() } }
             }
         }
         h4("Decorations")

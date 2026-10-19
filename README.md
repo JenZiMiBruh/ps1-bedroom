@@ -13,7 +13,7 @@
 ![Release](https://img.shields.io/badge/📅%20RELEASE-October%2021%2C%202026-ff3ea5?style=for-the-badge&labelColor=1a1033)
 ![Google Play](https://img.shields.io/badge/GOOGLE%20PLAY-before%20the%20end%20of%202026-22c55e?style=for-the-badge&logo=googleplay&logoColor=white&labelColor=1a1033)
 
-![Native build](https://img.shields.io/badge/native%20build-v0.31-a78bfa?style=flat-square&labelColor=1a1033)
+![Native build](https://img.shields.io/badge/native%20build-v0.32-a78bfa?style=flat-square&labelColor=1a1033)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.0-7f52ff?style=flat-square&logo=kotlin&logoColor=white&labelColor=1a1033)
 ![OpenGL ES](https://img.shields.io/badge/OpenGL%20ES-3.0-5586a4?style=flat-square&logo=opengl&logoColor=white&labelColor=1a1033)
 ![APK](https://img.shields.io/badge/APK-~1.2%20MB-ef4444?style=flat-square&labelColor=1a1033)
@@ -98,6 +98,7 @@ Newest first. The same list is in the app (tap the version tag in the bottom-lef
 
 | Build | What changed |
 |---|---|
+| **0.32** | Title screen layout fix, named colour picker for Jasper, desk mouse fix |
 | **0.31** | Boombox player panel, Jasper crown flicker fix, reworked screen cutout modes, colour swatches |
 | **0.30** | Jasper neck rebuilt, working screen cutout modes, train sound, focus bell, sleep-timer fade, WinBeats My Music |
 | **0.29** | Screen cutout options (notch / hole-punch / curved edges), draggable sliders, Jasper neck fix, real temperature on the TV weather channel |

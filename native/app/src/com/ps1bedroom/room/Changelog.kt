@@ -24,6 +24,11 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.32", "Fixes", listOf(
+            "Fixed: the title screen could slide down and show the room behind it (its layers shared one layout, so moving one moved them all)",
+            "Jasper's custom colours are a proper picker now: named colours (Jet black, Chocolate, Tan, Silver...) with a preview of his three colours",
+            "Fixed: the mouse on the desk no longer pokes its shell out through its casing"
+        )),
         Entry("0.31", "The boombox player and fixes", listOf(
             "Tap the boombox to open its player: the stations and My Music, what's playing with its cover, play / pause / skip, shuffle and repeat, your albums, and adding songs",
             "Fixed: the flicker at the back of Jasper's head (the dark crown's back face sat exactly on the skull's, so the two fought)",

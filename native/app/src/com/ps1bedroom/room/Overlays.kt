@@ -50,7 +50,8 @@ class Overlays(private val act: Activity, private val root: FrameLayout, private
         return LayerDrawable(arrayOf(sh, bg)).apply { setLayerInset(0, dpi(shadow), dpi(shadow), 0, 0); setLayerInset(1, 0, 0, dpi(shadow), dpi(shadow)) }
     }
     private fun pill(t: String, color: Int) = text(t, color, 12f, 0.04f).apply { setPadding(dpi(11f), dpi(7f), dpi(14f), dpi(10f)); background = panel(PANEL, LINE, 6f, 3f) }
-    private val MATCH = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
+    /** A fresh full-size layout each time: one shared params object across several views moved them all together. */
+    private val MATCH get() = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
 
     // ================= Photo mode =================
     private val photoBar = LinearLayout(act).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; visibility = View.GONE }

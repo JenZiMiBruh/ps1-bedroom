@@ -311,7 +311,9 @@ class Desk(private val room: Room, private val tex: Textures, private val librar
         val mouseLower = Mesh(Geo.cylinder(0.056f, 0.062f, 0.032f, 10), matDarkPlastic)
         mouseLower.scale.set(1.0f, 1.0f, 1.55f); mouseLower.position.y = 0.016f; mouseLower.castShadow = true; mouseGroup.add(mouseLower)
         val mouseDome = Mesh(Geo.sphere(0.056f, 10, 8), PS1.material(color = 0x94a3b8))
-        mouseDome.scale.set(0.95f, 0.58f, 1.52f); mouseDome.position.set(0f, 0.024f, 0.005f); mouseDome.castShadow = true; mouseGroup.add(mouseDome)
+        // v0.32: the shell sits ON the casing with its widest point inside the casing's flat sides (it was longer and lower,
+        // so its front and lower edge poked out through the dark casing in jagged teeth)
+        mouseDome.scale.set(0.9f, 0.45f, 1.4f); mouseDome.position.set(0f, 0.032f, 0.003f); mouseDome.castShadow = true; mouseGroup.add(mouseDome)
         val scrollWheel = Mesh(Geo.cylinder(0.014f, 0.014f, 0.012f, 8), matDarkPlastic)
         scrollWheel.rotation.z = (PI / 2).toFloat(); scrollWheel.position.set(0f, 0.048f, -0.042f); mouseGroup.add(scrollWheel)
         val opticalGlow = Mesh(Geo.box(0.03f, 0.006f, 0.04f), PS1.material(color = 0xef4444, emissive = 0xef4444, emissiveIntensity = 0.9f))

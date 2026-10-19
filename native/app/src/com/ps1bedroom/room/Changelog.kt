@@ -24,6 +24,15 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.14", "Weather", listOf(
+            "Rain outside the window with splashes on the sill and the ground, heavier and more slanted in a storm",
+            "Snow that drifts and blows sideways in a blizzard; falling leaves in fall and blossoms in spring",
+            "Fireflies blinking around the trees on clear summer nights, dust drifting in the sun or moon beam",
+            "The window glass beads up with raindrops that run down, fogs over, and frosts at the edges in winter",
+            "Seasonal ground outside (grass, flowers, fallen leaves, snow; darker when wet) and lightning that lights up the room",
+            "Engine: GPU instancing, so each particle type is a single draw call",
+            "Test shortcut until the menus arrive: a three-finger tap on the right half of the screen changes the weather (left half: the time)"
+        )),
         Entry("0.13", "Tapes, stars and the little things", listOf(
             "Tap a VHS tape on the TV cart to put it in the VCR: Taped Off TV '99 (old commercials), Kung Fu Midnight and Ocean Dreams, each with a PLAY counter and tracking band",
             "Answering machine on the desk with a message light",

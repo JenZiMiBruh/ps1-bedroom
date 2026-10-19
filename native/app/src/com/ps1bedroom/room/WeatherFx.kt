@@ -1,0 +1,396 @@
+package com.ps1bedroom.room
+
+import com.ps1bedroom.room.engine.CanvasTex
+import com.ps1bedroom.room.engine.DOUBLE_SIDE
+import com.ps1bedroom.room.engine.Geo
+import com.ps1bedroom.room.engine.Geometry
+import com.ps1bedroom.room.engine.Group
+import com.ps1bedroom.room.engine.InstancedMesh
+import com.ps1bedroom.room.engine.Material
+import com.ps1bedroom.room.engine.Mesh
+import com.ps1bedroom.room.engine.PS1
+import com.ps1bedroom.room.engine.Texture
+import com.ps1bedroom.room.engine.Vec3
+import com.ps1bedroom.room.engine.Weather
+import com.ps1bedroom.room.engine.createCanvasTex
+import com.ps1bedroom.room.engine.weatherCanvas
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.roundToInt
+import kotlin.math.sin
+import kotlin.random.Random
+
+/**
+ * HTML 8225-8445 (+ the lightning in the animate loop): weather and season FX. Every particle type is one
+ * InstancedMesh (one draw call): dust in the light beam, rain + splashes, snow, falling leaves / blossoms,
+ * fireflies; plus the weather-aware window pane, the seasonal ground outside and the soft window glow.
+ */
+class WeatherFx(private val room: Room, private val env: Environment, private val sky: Sky) {
+    private val scene = room.scene
+    private val rnd = Random.Default
+    private fun randIn(a: Float, b: Float) = a + rnd.nextFloat() * (b - a)
+    private fun rand() = rnd.nextFloat()
+
+    // Outside volume seen through the window
+    private object OUT { const val x0 = -1.8f; const val x1 = 3.4f; const val y0 = 0.4f; const val y1 = 4.8f; const val z0 = -3.25f; const val z1 = -6.2f; const val ledgeY = 1.6f }
+
+    private fun makeInstanced(group: Group, geo: Geometry, mat: Material, count: Int): InstancedMesh {
+        val mesh = InstancedMesh(geo, mat, count); group.add(mesh); return mesh
+    }
+
+    // Dust motes drifting in the moonbeam
+    private class Mote(var s: Float, var u: Float, var v: Float, val speed: Float, val phase: Float, val drift: Float)
+    private val dustGroup = Group()
+    private val dustMesh: InstancedMesh
+    private val dustMotes: List<Mote>
+    private val beamOrigin = Vec3(0.8f, 2.6f, -2.95f)
+    private val beamDir = Vec3(); private val beamSide = Vec3(); private val beamUp = Vec3()
+
+    // Rain, splashes, snow
+    private class Drop(var x: Float, var y: Float, var z: Float, val v: Float, val ph: Float = 0f)
+    private class Splash(var life: Float = 0f, var x: Float = 0f, var y: Float = -50f, var z: Float = 0f)
+    private val weather3DGroup = Group()
+    private val RAIN_COUNT = 260
+    private val rainMesh: InstancedMesh
+    private val rainDrops: List<Drop>
+    private val SPLASH_COUNT = 70
+    private val splashMesh: InstancedMesh
+    private val splashes = List(SPLASH_COUNT) { Splash() }
+    private var splashNext = 0
+    private val SNOW_COUNT = 300
+    private val snowMesh: InstancedMesh
+    private val snowFlakes: List<Drop>
+
+    // Falling autumn leaves / spring blossoms (per-instance colour)
+    private class Leaf(var x: Float, var y: Float, val z: Float, val vy: Float, val vx: Float, val ph: Float, val rs: Float)
+    private val foliage3DGroup = Group()
+    private val LEAF_COUNT = 56
+    private val leafMesh: InstancedMesh
+    private val leaves: List<Leaf>
+    private val FALL_LEAF_COLS = intArrayOf(0xea580c, 0xdc2626, 0xeab308, 0xd97706, 0x92400e)
+    private val SPRING_PETAL_COLS = intArrayOf(0xfbcfe8, 0xf9a8d4, 0xffffff, 0xf472b6)
+    private var leafPalette: IntArray? = null
+
+    // Fireflies blinking around the trees on clear summer nights
+    private class Firefly(val x: Float, val y: Float, val z: Float, val ph: Float, val sp: Float)
+    private val fireflyGroup = Group()
+    private val FIREFLY_COUNT = 30
+    private val fireflyMesh: InstancedMesh
+    private val fireflies: List<Firefly>
+
+    // Window pane, ground, glow
+    private class GlassDrop(var x: Float, var y: Float, var r: Float, var v: Float)
+    private val glassCanvasObj: CanvasTex
+    private val glassDrops = ArrayList<GlassDrop>()
+    private var glassLastDraw = 0f
+    private var glassKey = ""
+    private val groundCanvasObj: CanvasTex
+    private val windowGlowMat: Material
+
+    /** The whole-sky flash; the sky reads it, the room lights spike with it. */
+    var lightningFlash = 0f; private set
+    /** Fired on a storm's flash (the thunderclap comes with the audio phase). */
+    var onThunder: (() -> Unit)? = null
+
+    init {
+        scene.add(dustGroup)
+        val dustMat = PS1.material(color = 0x93c5fd, emissive = 0x60a5fa, emissiveIntensity = 0.28f)
+        dustMesh = makeInstanced(dustGroup, Geo.box(0.011f, 0.011f, 0.011f), dustMat, 64)
+        dustMotes = List(64) { Mote(rand(), randIn(-1f, 1f), randIn(-1f, 1f), randIn(0.2f, 0.6f), randIn(0f, 6.28f), randIn(0.01f, 0.03f)) }
+
+        scene.add(weather3DGroup)
+        rainMesh = makeInstanced(weather3DGroup, Geo.box(0.012f, 0.36f, 0.012f), PS1.basic(color = 0xbfdbfe, transparent = true, opacity = 0.55f, depthWrite = false), RAIN_COUNT)
+        rainDrops = List(RAIN_COUNT) { Drop(randIn(OUT.x0, OUT.x1), randIn(OUT.y0, OUT.y1), randIn(OUT.z0, OUT.z1), randIn(7f, 10f)) }
+        splashMesh = makeInstanced(weather3DGroup, Geo.sphere(0.03f, 5, 3, 0f, (PI * 2).toFloat(), 0f, (PI / 2).toFloat()),
+            PS1.basic(color = 0xdbeafe, transparent = true, opacity = 0.6f, depthWrite = false), SPLASH_COUNT)
+        snowMesh = makeInstanced(weather3DGroup, Geo.box(0.04f, 0.04f, 0.04f), PS1.basic(color = 0xffffff, transparent = true, opacity = 0.9f), SNOW_COUNT)
+        snowFlakes = List(SNOW_COUNT) { Drop(randIn(OUT.x0, OUT.x1), randIn(OUT.y0, OUT.y1), randIn(OUT.z0, OUT.z1), randIn(0.45f, 0.95f), randIn(0f, 6.28f)) }
+
+        scene.add(foliage3DGroup)
+        leafMesh = makeInstanced(foliage3DGroup, Geo.plane(0.085f, 0.065f), PS1.basic(color = 0xffffff, side = DOUBLE_SIDE), LEAF_COUNT)
+        leaves = List(LEAF_COUNT) { Leaf(randIn(OUT.x0, OUT.x1), randIn(OUT.y0 + 0.6f, OUT.y1), randIn(OUT.z0, OUT.z1), randIn(0.4f, 0.95f), randIn(0.2f, 0.6f), randIn(0f, 6.28f), randIn(1.5f, 4f)) }
+        recolorLeaves(FALL_LEAF_COLS)
+
+        scene.add(fireflyGroup)
+        fireflyMesh = makeInstanced(fireflyGroup, Geo.sphere(0.028f, 5, 4), PS1.basic(color = 0xd9f99d), FIREFLY_COUNT)
+        fireflies = List(FIREFLY_COUNT) { Firefly(randIn(-1.6f, 3.3f), randIn(0.7f, 3.2f), randIn(-3.6f, -5.8f), randIn(0f, 6.28f), randIn(0.3f, 0.8f)) }
+
+        // Window pane: beads of rain that run down the glass, frost from the corners, condensation in fog
+        glassCanvasObj = createCanvasTex(128, 100) { _, _, _ -> }
+        val windowGlass = Mesh(Geo.plane(2.74f, 2.14f), PS1.basic(map = glassCanvasObj.tex, transparent = true, depthWrite = false))
+        windowGlass.position.set(0.8f, 2.65f, -3.13f)
+        scene.add(windowGlass)
+
+        // Seasonal ground below the window (grass, flowering grass, fallen leaves, snow; darker when wet)
+        groundCanvasObj = createCanvasTex(128, 128, 7f, 5f) { _, _, _ -> }
+        val outdoorGround = Mesh(Geo.plane(26f, 13f, 8, 4), Material(map = groundCanvasObj.tex, ps1 = false)) // MeshLambertMaterial
+        outdoorGround.rotation.x = (-PI / 2).toFloat()
+        outdoorGround.position.set(0.8f, 0.32f, -9.8f)
+        scene.add(outdoorGround)
+
+        // Soft glow just outside the window so it reads as the room's light source
+        val glow = createCanvasTex(64, 64) { ctx, _, _ ->
+            val g = ctx.createRadialGradient(32, 32, 2, 32, 32, 32)
+            g.addColorStop(0, "rgba(255, 255, 255, 0.9)"); g.addColorStop(0.5, "rgba(255, 255, 255, 0.3)"); g.addColorStop(1, "rgba(255, 255, 255, 0)")
+            ctx.fillStyle = g; ctx.fillRect(0, 0, 64, 64)
+        }.tex
+        glow.nearest = false // a plain THREE.CanvasTexture filters linearly
+        windowGlowMat = Material(map = glow, transparent = true, additive = true, depthWrite = false, opacity = 0.35f, lit = false, ps1 = false)
+        val windowGlow = Mesh(Geo.plane(4.2f, 3.4f), windowGlowMat)
+        windowGlow.position.set(0.8f, 2.75f, -3.45f)
+        scene.add(windowGlow)
+    }
+
+    /** Everything here moves every frame: none of it takes part in static batching. */
+    fun dynamicRoots() = listOf(dustGroup, weather3DGroup, foliage3DGroup, fireflyGroup)
+
+    private fun recolorLeaves(palette: IntArray) {
+        if (leafPalette === palette) return
+        leafPalette = palette
+        for (i in 0 until LEAF_COUNT) leafMesh.setColorAt(i, palette[i % palette.size])
+        leafMesh.needsUpdate()
+    }
+
+    private fun drawWindowGlass(dt: Float) {
+        val raining = env.isRainingNow()
+        val winter = env.currentSeason == "winter"
+        val key = "${env.currentWeather}|$raining|$winter|${env.currentSeason}"
+        // Nothing on the glass changes between draws unless drops are moving or the weather changed
+        if (glassDrops.isEmpty() && !raining && key == glassKey) return
+        glassKey = key
+        val ctx = glassCanvasObj.ctx
+        val w = 128; val h = 100
+        ctx.clearRect(0, 0, w, h)
+        ctx.fillStyle = "rgba(170, 190, 225, 0.05)"
+        ctx.fillRect(0, 0, w, h)
+        // Condensation in fog / rain
+        if (env.currentWeather == "foggy" || raining) {
+            ctx.fillStyle = if (env.currentWeather == "foggy") "rgba(210, 220, 235, 0.22)" else "rgba(200, 210, 230, 0.08)"
+            ctx.fillRect(0, 0, w, h)
+        }
+        // Frost creeping in from the edges in winter
+        if (winter) {
+            val frost = ctx.createRadialGradient(w / 2, h / 2, min(w, h) * 0.25, w / 2, h / 2, max(w, h) * 0.7)
+            frost.addColorStop(0, "rgba(230, 240, 255, 0)")
+            frost.addColorStop(1, "rgba(230, 240, 255, 0.55)")
+            ctx.fillStyle = frost
+            ctx.fillRect(0, 0, w, h)
+            ctx.fillStyle = "rgba(255, 255, 255, 0.35)"
+            for (i in 0 until 120) {
+                val a = (i * 2.399) % 6.283
+                val r = 0.42 + ((i * 37) % 23) / 60.0
+                ctx.fillRect((w / 2 + cos(a) * r * w * 0.7).toInt(), (h / 2 + sin(a) * r * h * 0.7).toInt(), 1, 1)
+            }
+        }
+        // Raindrops beading on the glass; heavy ones slide down leaving a trail
+        if (raining) {
+            val spawn = (1 + env.W.rain * 5).roundToInt()
+            for (i in 0 until spawn) if (glassDrops.size < 90) glassDrops += GlassDrop(rand() * w, rand() * h, 0.6f + rand() * 1.6f, 0f)
+        }
+        var i = glassDrops.size - 1
+        while (i >= 0) {
+            val d = glassDrops[i]
+            if (d.r > 1.6f && rand() < 0.05f) d.v = 8 + rand() * 18
+            if (d.v > 0) {
+                ctx.strokeStyle = "rgba(220, 235, 255, 0.18)"
+                ctx.beginPath(); ctx.moveTo(d.x, d.y); ctx.lineTo(d.x, d.y - 6); ctx.stroke()
+                d.y += d.v * dt
+                d.x += (rand() - 0.5f) * 0.4f
+            }
+            if (!raining && rand() < 0.02f) d.r -= 0.3f // dries up when the rain stops
+            if (d.y > h + 3 || d.r <= 0.2f) { glassDrops.removeAt(i); i--; continue }
+            ctx.fillStyle = "rgba(15, 23, 42, 0.25)"
+            ctx.beginPath(); ctx.arc(d.x, d.y + 0.4f, d.r, 0, PI * 2); ctx.fill()
+            ctx.fillStyle = "rgba(225, 238, 255, 0.55)"
+            ctx.beginPath(); ctx.arc(d.x, d.y, d.r * 0.8f, 0, PI * 2); ctx.fill()
+            ctx.fillStyle = "rgba(255, 255, 255, 0.9)"
+            ctx.fillRect((d.x - d.r * 0.3f).toInt(), (d.y - d.r * 0.4f).toInt(), 1, 1)
+            i--
+        }
+        // A few wet leaves stuck to the glass in a fall rain
+        if (env.currentSeason == "fall" && raining) {
+            for ((lx, ly, c) in listOf(Triple(18, 80, "#c2410c"), Triple(96, 22, "#b45309"), Triple(70, 88, "#a16207"))) {
+                ctx.fillStyle = c
+                ctx.beginPath(); ctx.ellipse(lx, ly, 4, 2.6, 0.6, 0, PI * 2); ctx.fill()
+            }
+        }
+        glassCanvasObj.tex.needsUpdate()
+    }
+
+    /** Paints the ground for anywhere but the city; returns false to use the seasonal city ground (the places phase sets it). */
+    var outsideGroundPaint: ((com.ps1bedroom.room.engine.Canvas2D, Int, Int) -> Boolean)? = null
+    private fun drawOutdoorGround() {
+        val ctx = groundCanvasObj.ctx
+        val w = 128; val h = 128
+        if (outsideGroundPaint?.invoke(ctx, w, h) != true) {
+            val season = env.currentSeason
+            ctx.fillStyle = mapOf("summer" to "#1f4d24", "spring" to "#2f6b2a", "fall" to "#5b3a1a", "winter" to "#dfe7f1").getValue(season)
+            ctx.fillRect(0, 0, w, h)
+            val specks = when (season) {
+                "summer" -> arrayOf("#2d6a32", "#163a1a", "#3f7d3a")
+                "spring" -> arrayOf("#3f8f37", "#f9a8d4", "#ffffff", "#facc15")
+                "fall" -> arrayOf("#c2410c", "#b45309", "#eab308", "#7c2d12", "#365314")
+                else -> arrayOf("#ffffff", "#c7d2e2", "#e5edf7")
+            }
+            val sz = if (season == "fall") 2 else 1
+            for (i in 0 until 2600) {
+                ctx.fillStyle = specks[i % specks.size]
+                ctx.fillRect((rand() * w).toInt(), (rand() * h).toInt(), sz, sz)
+            }
+        }
+        weatherCanvas(ctx, w, h, Weather(seed = 91.0, blotch = 0.35, speckle = 0.1))
+        if (env.isPrecipNow()) {
+            ctx.fillStyle = if (env.isSnowingNow()) "rgba(255, 255, 255, 0.25)" else "rgba(0, 10, 25, 0.35)"
+            ctx.fillRect(0, 0, w, h)
+        }
+        groundCanvasObj.tex.needsUpdate()
+    }
+
+    private var groundKey = ""
+    /** Called from applyEnvironmentSettings when the season / weather / time changes. */
+    fun updateSettings() {
+        val precip = env.isPrecipNow()
+        rainMesh.visible = env.isRainingNow()
+        splashMesh.visible = env.isRainingNow()
+        snowMesh.visible = env.isSnowingNow()
+        // Falling leaves / blossoms only where there are leafy trees outside
+        foliage3DGroup.visible = (env.currentSeason == "fall" || env.currentSeason == "spring") &&
+            sky.outsideEnv in setOf("city", "suburbs", "house", "neighborhood", "countryside", "forest", "lake", "trailer")
+        if (env.currentSeason == "fall") recolorLeaves(FALL_LEAF_COLS)
+        if (env.currentSeason == "spring") recolorLeaves(SPRING_PETAL_COLS)
+        fireflyGroup.visible = env.currentSeason == "summer" && (env.currentTime == "night" || env.currentTime == "dusk") && env.currentWeather == "clear"
+        windowGlowMat.color.copy(room.moonLight.color)
+        // Kept faint: it sits over the whole view outside, and stronger values wash out the scenery (fog still thickens it)
+        val glowBase = 0.1f + 0.08f * env.daylight.toFloat()
+        val glowWeather = if (env.currentWeather == "foggy") 1.4f else if (env.currentWeather == "storm") 0.55f else if (precip) 0.75f else 1f
+        windowGlowMat.opacity = (if (room.blindsOpenState == 2) 0.05f else glowBase) * glowWeather
+        // The ground only changes with the season, the weather and the place (the HTML repaints it every call)
+        val key = "${env.currentSeason}|$precip|${env.isSnowingNow()}|${sky.outsideEnv}"
+        if (key != groundKey) { groundKey = key; drawOutdoorGround() }
+    }
+
+    /** Per-frame particle motion. */
+    fun update(t: Float, dt: Float) {
+        // Dust floats inside the light beam, wherever the sun or moon is shining in from (and fades with it)
+        val tp = Room.roomLightTargetPos
+        beamDir.set(tp.x - beamOrigin.x, tp.y - beamOrigin.y, tp.z - beamOrigin.z).normalize()
+        beamSide.set(-beamDir.z, 0f, beamDir.x).normalize()
+        beamUp.crossVectors(beamSide, beamDir).normalize()
+        val beamLen = 4.2f
+        dustGroup.visible = env.moonBaseIntensity > 0.25f && room.blindsOpenState != 2
+        if (dustGroup.visible) {
+            for (i in dustMotes.indices) {
+                val m = dustMotes[i]
+                m.s += m.drift * dt * 0.6f
+                if (m.s > 1) { m.s = 0f; m.u = randIn(-1f, 1f); m.v = randIn(-1f, 1f) }
+                val d = m.s * beamLen
+                val spread = 0.8f + m.s * 0.5f // the beam widens a little as it crosses the room
+                val su = m.u * spread * 0.75f + cos(t * m.speed + m.phase) * 0.06f
+                val sv = m.v * spread * 0.55f + sin(t * m.speed * 0.8f + m.phase) * 0.08f
+                val px = beamOrigin.x + beamDir.x * d + beamSide.x * su + beamUp.x * sv
+                val py = beamOrigin.y + beamDir.y * d + beamSide.y * su + beamUp.y * sv
+                val pz = beamOrigin.z + beamDir.z * d + beamSide.z * su + beamUp.z * sv
+                val inRoom = pz > -2.9f && py > 0.1f && py < 4.9f && px > Room.MIN_X + 0.1f && px < Room.MAX_X - 0.1f
+                // Specks only catch the light now and then, brightest in the middle of the beam and fading at both ends
+                val edge = max(0f, 1 - (m.u * m.u + m.v * m.v) * 0.7f)
+                val ends = min(1f, m.s * 6) * min(1f, (1 - m.s) * 3)
+                val glint = max(0f, sin(t * m.speed * 1.7f + m.phase * 3))
+                val k = if (inRoom) edge * ends * (0.35f + 0.65f * glint) else 0f
+                dustMesh.setInstance(i, px, py, pz, 0f, t * m.speed, 0f, k)
+            }
+            dustMesh.needsUpdate()
+        }
+
+        val W = env.W
+        if (rainMesh.visible) {
+            val active = (RAIN_COUNT * (0.15f + 0.85f * W.rain)).roundToInt()
+            val slant = 0.08f + W.wind * 0.3f
+            for (i in 0 until RAIN_COUNT) {
+                val d = rainDrops[i]
+                if (i >= active) { rainMesh.setInstance(i, 0f, -50f, 0f, 0f, 0f, 0f, 0f); continue }
+                d.y -= d.v * (0.9f + W.rain * 0.45f) * dt
+                d.x -= d.v * slant * dt
+                val overLedge = d.x > -0.6f && d.x < 2.2f && d.z > -3.42f
+                val floorY = if (overLedge) OUT.ledgeY else OUT.y0
+                if (d.y < floorY) {
+                    if (rand() < 0.6f) {
+                        val s = splashes[splashNext]
+                        splashNext = (splashNext + 1) % SPLASH_COUNT
+                        s.life = 0.25f; s.x = d.x; s.y = floorY; s.z = d.z
+                    }
+                    d.y = OUT.y1 + rand() * 0.5f
+                    d.x = randIn(OUT.x0, OUT.x1 + 1.2f)
+                    d.z = randIn(OUT.z0, OUT.z1)
+                }
+                rainMesh.setInstance(i, d.x, d.y, d.z, 0f, 0f, slant, 1f)
+            }
+            rainMesh.needsUpdate()
+            for (i in 0 until SPLASH_COUNT) {
+                val s = splashes[i]
+                if (s.life > 0) s.life -= dt
+                val k = if (s.life > 0) 1.6f - s.life * 4 else 0f
+                splashMesh.setInstance(i, s.x, s.y, s.z, 0f, 0f, 0f, max(0f, k))
+            }
+            splashMesh.needsUpdate()
+        }
+        if (snowMesh.visible) {
+            val blow = 0.1f + W.wind * 1.6f
+            val activeSnow = (SNOW_COUNT * (0.2f + 0.8f * W.rain)).roundToInt()
+            for (i in 0 until SNOW_COUNT) {
+                val f = snowFlakes[i]
+                if (i >= activeSnow) { snowMesh.setInstance(i, 0f, -50f, 0f, 0f, 0f, 0f, 0f); continue }
+                f.y -= f.v * (0.8f + W.wind * 0.9f) * dt
+                f.x += (sin(t * 1.7f + f.ph) * 0.35f - blow) * dt
+                if (f.y < OUT.y0 || f.x < OUT.x0 - 0.5f) {
+                    f.y = OUT.y1 + rand() * 0.4f
+                    f.x = randIn(OUT.x0, OUT.x1 + W.wind * 2.5f)
+                }
+                snowMesh.setInstance(i, f.x, f.y, f.z, t * f.v, t * f.v * 0.7f, 0f, 1f)
+            }
+            snowMesh.needsUpdate()
+        }
+        if (foliage3DGroup.visible) {
+            val gust = 1 + W.wind * 1.8f
+            val scale = if (env.currentSeason == "spring") 0.65f else 1f
+            for (i in 0 until LEAF_COUNT) {
+                val l = leaves[i]
+                l.y -= l.vy * gust * dt
+                l.x += (sin(t * 2.1f + l.ph) * 0.45f + l.vx * gust) * dt
+                if (l.y < OUT.y0 + 0.1f) { l.y = OUT.y1; l.x = randIn(OUT.x0, OUT.x1) }
+                if (l.x > OUT.x1 + 0.4f) l.x = OUT.x0
+                leafMesh.setInstance(i, l.x, l.y, l.z, t * l.rs, t * l.rs * 0.8f, sin(t + l.ph), scale)
+            }
+            leafMesh.needsUpdate()
+        }
+        if (fireflyGroup.visible) {
+            for (i in 0 until FIREFLY_COUNT) {
+                val f = fireflies[i]
+                val blink = max(0f, sin(t * f.sp * 3 + f.ph * 5))
+                fireflyMesh.setInstance(i, f.x + sin(t * f.sp + f.ph) * 0.4f, f.y + sin(t * f.sp * 1.3f + f.ph) * 0.25f,
+                    f.z + cos(t * f.sp * 0.7f + f.ph) * 0.3f, 0f, 0f, 0f, if (blink > 0.6f) blink else 0f)
+            }
+            fireflyMesh.needsUpdate()
+        }
+        if (t - glassLastDraw > 0.1f) {
+            drawWindowGlass(t - glassLastDraw)
+            glassLastDraw = t
+        }
+    }
+
+    /** The animate loop's lightning: a random flash in storms (and far-off heat lightning), the room lights spiking with it. */
+    fun updateLightning(frameScale: Float) {
+        val W = env.W
+        if (W.lightning && rand() < (if (W.base == "storm") 0.009f else 0.004f) * frameScale) {
+            lightningFlash = if (W.base == "storm") 1.0f else 0.6f
+            if (W.base == "storm") onThunder?.invoke() // heat lightning is too far away to hear
+        }
+        if (lightningFlash > 0) {
+            lightningFlash = max(0f, lightningFlash - 0.08f * frameScale)
+            room.moonLight.intensity = env.moonBaseIntensity + lightningFlash * 5.0f
+            room.ambientLight.intensity = env.ambientBaseIntensity + lightningFlash * 1.4f
+        }
+        sky.lightningFlash = lightningFlash
+    }
+}

@@ -88,7 +88,7 @@ class Scene : Object3D() {
     @JvmField var fogDensity = 0.025f
 }
 
-class Mesh(@JvmField var geometry: Geometry, materials: List<Material>) : Object3D() {
+open class Mesh(@JvmField var geometry: Geometry, materials: List<Material>) : Object3D() {
     @JvmField var materials: MutableList<Material> = materials.toMutableList()
     constructor(geometry: Geometry, material: Material) : this(geometry, listOf(material))
     var material: Material
@@ -156,3 +156,40 @@ class SpotShadow {
 private val sceneTmpM = Mat4()
 private val sceneZero = Vec3()
 private val sceneOne = Vec3(1f, 1f, 1f)
+
+/**
+ * three's InstancedMesh: many copies of one geometry in a single draw call. Set each copy with [setInstance]
+ * (or [setColorAt]), then call [needsUpdate] once; the matrices go to the GPU in one buffer upload.
+ * Never frustum culled (like the HTML's particles) and never in static batches.
+ */
+class InstancedMesh(geometry: Geometry, material: Material, @JvmField val count: Int) : Mesh(geometry, material) {
+    @JvmField val instanceMatrices = FloatArray(count * 16)
+    @JvmField var instanceColors: FloatArray? = null
+    @JvmField var version = 1
+    // GL state, owned by the renderer
+    @JvmField var uploadedVersion = 0
+    @JvmField var instVao = 0
+    @JvmField var instVbo = IntArray(2)
+    init {
+        frustumCulled = false
+        for (i in 0 until count) for (k in 0 until 4) instanceMatrices[i * 16 + k * 5] = 1f
+    }
+    /** compose(position, quaternion from Euler XYZ, uniform scale), as the HTML's setInstance does. */
+    fun setInstance(i: Int, x: Float, y: Float, z: Float, rx: Float, ry: Float, rz: Float, s: Float) {
+        val a = kotlin.math.cos(rx); val b = kotlin.math.sin(rx)
+        val c = kotlin.math.cos(ry); val d = kotlin.math.sin(ry)
+        val e = kotlin.math.cos(rz); val f = kotlin.math.sin(rz)
+        val m = instanceMatrices; val o = i * 16
+        // three Matrix4.makeRotationFromEuler, order XYZ (column-major)
+        m[o] = c * e * s; m[o + 4] = -c * f * s; m[o + 8] = d * s
+        m[o + 1] = (a * f + b * e * d) * s; m[o + 5] = (a * e - b * f * d) * s; m[o + 9] = -b * c * s
+        m[o + 2] = (b * f - a * e * d) * s; m[o + 6] = (b * e + a * f * d) * s; m[o + 10] = a * c * s
+        m[o + 3] = 0f; m[o + 7] = 0f; m[o + 11] = 0f
+        m[o + 12] = x; m[o + 13] = y; m[o + 14] = z; m[o + 15] = 1f
+    }
+    fun setColorAt(i: Int, hex: Int) {
+        val cols = instanceColors ?: FloatArray(count * 3) { 1f }.also { instanceColors = it }
+        cols[i * 3] = ((hex shr 16) and 255) / 255f; cols[i * 3 + 1] = ((hex shr 8) and 255) / 255f; cols[i * 3 + 2] = (hex and 255) / 255f
+    }
+    fun needsUpdate() { version++ }
+}

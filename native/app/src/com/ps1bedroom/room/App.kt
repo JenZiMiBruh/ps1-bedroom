@@ -41,6 +41,7 @@ class App : GLSurfaceView.Renderer {
     lateinit var decor: Decor; private set
     lateinit var jasper: Jasper; private set
     lateinit var extras: Extras; private set
+    lateinit var weatherFx: WeatherFx; private set
     lateinit var tv: Tv; private set
     lateinit var ps1: Ps1; private set
     lateinit var library: GameLibrary; private set
@@ -105,6 +106,9 @@ class App : GLSurfaceView.Renderer {
                 room.extraDynamicRoots += bedroom.chairGroup
                 fan = Fan(room); fan.build()
                 room.extraDynamicRoots += fan.fanBladesGroup; room.extraDynamicRoots += fan.fanPullChain; room.extraDynamicRoots += fan.lightPullChain
+                com.ps1bedroom.room.engine.PS1.syncGrime(256)   // HTML 8225: weather and season FX
+                weatherFx = WeatherFx(room, env, sky); room.extraDynamicRoots.addAll(weatherFx.dynamicRoots())
+                env.envHooks += { weatherFx.updateSettings() }
                 furniture = Furniture(room); furniture.build()
                 decor = Decor(room, res); decor.build()
                 room.extraBatchExcluded.addAll(decor.stringBulbs)
@@ -154,6 +158,8 @@ class App : GLSurfaceView.Renderer {
         handleTaps()
         env.tick(System.currentTimeMillis())
         if (debugPresetStep) { debugPresetStep = false; debugPreset = (debugPreset + 1) % env.TIME_PRESETS.size; env.setTimePreset(env.TIME_PRESETS[debugPreset].first) }
+        if (debugWeatherStep) { debugWeatherStep = false; val keys = Environment.WEATHER_KINDS.keys.toList(); env.weatherKind = keys[(keys.indexOf(env.weatherKind) + 1) % keys.size]; env.applyEnvironmentSettings() }
+        weatherFx.update(t, dt)
         exterior.update(t, dt, sky.outsideEnv)
         desk.update(t)
         fan.update(dt)
@@ -171,6 +177,7 @@ class App : GLSurfaceView.Renderer {
         if (t - lastCalendarCheck > 60f) { lastCalendarCheck = t; furniture.refreshCalendar() }
         if (t - lastClockDraw > 1f) { lastClockDraw = t; bedroom.drawAlarmClock(env.currentHour()) }
         room.updateBlinds(dt)
+        weatherFx.updateLightning(dt * 60f)
         // The backdrop redraws ~3x a second while the window is on screen, every 2.5 s otherwise (as in the HTML)
         if (t - lastSkylineUpdate > (if (renderer.sphereInView(SPHERE_WINDOW_C, 2.0f)) 0.33f else 2.5f)) {
             sky.updateCitySkyline(t)
@@ -270,6 +277,8 @@ class App : GLSurfaceView.Renderer {
 
     // Temporary test shortcut until the menus are ported: a three-finger tap steps through the time presets
     @Volatile private var debugPresetStep = false
+    @Volatile private var debugWeatherStep = false
+    fun debugNextWeather() { debugWeatherStep = true }
     private var debugPreset = -1
     fun debugNextTimePreset() { debugPresetStep = true }
 

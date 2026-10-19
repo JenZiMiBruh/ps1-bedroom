@@ -25,7 +25,7 @@ object Batching {
         val buckets = LinkedHashMap<String, MutableList<Mesh>>()
         val sharedEmissive = LinkedHashMap<String, MutableList<Mesh>>()
         scene.traverse { o ->
-            if (o !is Mesh || o.multiMaterial || isDynamic(o)) return@traverse
+            if (o !is Mesh || o is InstancedMesh || o.multiMaterial || isDynamic(o)) return@traverse
             val tag = o.userData["interactTag"] as String?
             if (tag != null && !staticTags.contains(tag)) return@traverse
             if (tag == null && noBatch.contains(o)) return@traverse

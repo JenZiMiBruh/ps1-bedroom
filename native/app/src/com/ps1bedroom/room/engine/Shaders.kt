@@ -16,6 +16,8 @@ layout(location = 0) in vec3 position;
 layout(location = 1) in vec3 normal;
 layout(location = 2) in vec2 uv;
 layout(location = 3) in vec3 color;
+layout(location = 4) in mat4 instanceMatrix;   // identity unless drawn as an InstancedMesh
+layout(location = 8) in vec3 instanceColor;    // (1, 1, 1) unless the InstancedMesh has per-instance colours
 uniform mat4 modelMatrix;
 uniform mat4 modelViewMatrix;
 uniform mat4 projectionMatrix;
@@ -36,14 +38,17 @@ out float vFogDepth;
 out vec4 vShadowCoord0;
 out vec4 vShadowCoord1;
 out vec3 vColor;
+out vec3 vInstColor;
 void main() {
   vColor = color;
+  vInstColor = instanceColor;
+  vec4 instPosition = instanceMatrix * vec4(position, 1.0);
   vUv = (uvTransform * vec3(uv, 1.0)).xy;
-  vec3 transformedNormal = normalMatrix * normal;
+  vec3 transformedNormal = normalMatrix * (mat3(instanceMatrix) * normal);
   vNormal = normalize(transformedNormal);
-  vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+  vec4 worldPosition = modelMatrix * instPosition;
   vMacroPos = worldPosition.xyz;
-  vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+  vec4 mvPosition = modelViewMatrix * instPosition;
   gl_Position = projectionMatrix * mvPosition;
   if (uPs1 == 1 && gl_Position.w > 0.0) {
     // PS1 GTE screen-space vertex snap. Up close the grid is as coarse as ever; beyond 2 m it gets finer with
@@ -90,6 +95,7 @@ in float vFogDepth;
 in vec4 vShadowCoord0;
 in vec4 vShadowCoord1;
 in vec3 vColor;
+in vec3 vInstColor;
 out vec4 fragColor;
 uniform vec3 diffuse;
 uniform float opacity;
@@ -148,6 +154,7 @@ float shadowAt(sampler2D sm, vec4 coord, float bias) {
 void main() {
   vec4 diffuseColor = vec4(diffuse, opacity);
   if (uVertexColors == 1) diffuseColor.rgb *= vColor;
+  diffuseColor.rgb *= vInstColor;
   vec2 affineUv = vAffineUv / vAffineW;
   if (uHasMap == 1) diffuseColor *= texture(map, affineUv);
   if (uMacro == 1) {

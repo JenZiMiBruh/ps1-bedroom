@@ -111,6 +111,9 @@ class Renderer {
         val px = ByteBuffer.allocateDirect(4).put(byteArrayOf(-1, -1, -1, -1)); px.position(0)
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, px)
         nearest(GL_CLAMP_TO_EDGE)
+        // Generic values for the instancing attributes: identity matrix and white for everything that is not instanced
+        glVertexAttrib4f(4, 1f, 0f, 0f, 0f); glVertexAttrib4f(5, 0f, 1f, 0f, 0f); glVertexAttrib4f(6, 0f, 0f, 1f, 0f); glVertexAttrib4f(7, 0f, 0f, 0f, 1f)
+        glVertexAttrib3f(8, 1f, 1f, 1f)
         // geometry / textures from a previous GL context are gone
         uploadedGeometries.forEach { it.uploaded = false }; uploadedGeometries.clear()
         uploadedTextures.forEach { it.glId = 0; it.uploadedVersion = 0 }; uploadedTextures.clear()
@@ -316,6 +319,9 @@ class Renderer {
         glBindTexture(GL_TEXTURE_2D, t[0])
         glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, size, size, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, null)
         nearest(GL_CLAMP_TO_EDGE)
+        // Generic values for the instancing attributes: identity matrix and white for everything that is not instanced
+        glVertexAttrib4f(4, 1f, 0f, 0f, 0f); glVertexAttrib4f(5, 0f, 1f, 0f, 0f); glVertexAttrib4f(6, 0f, 0f, 1f, 0f); glVertexAttrib4f(7, 0f, 0f, 0f, 1f)
+        glVertexAttrib3f(8, 1f, 1f, 1f)
         glBindFramebuffer(GL_FRAMEBUFFER, f[0])
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, t[0], 0)
         glDrawBuffers(1, intArrayOf(GL_NONE), 0); glReadBuffer(GL_NONE)
@@ -436,8 +442,40 @@ class Renderer {
         applyState(m)
         val vao = o.geometry.vao
         if (vao != curVao) { glBindVertexArray(vao); curVao = vao }
-        drawGeometry(o.geometry, d.group)
+        if (o is InstancedMesh) { uploadInstances(o); drawGeometry(o.geometry, d.group, o.count) }
+        else drawGeometry(o.geometry, d.group)
         lastDrawCalls++
+    }
+
+    /** InstancedMesh: per-instance matrix (attributes 4-7) and colour (8) buffers live in the geometry's VAO. */
+    private var instBuf: FloatBuffer = ByteBuffer.allocateDirect(4).order(ByteOrder.nativeOrder()).asFloatBuffer()
+    private fun instFloats(a: FloatArray): FloatBuffer {
+        if (instBuf.capacity() < a.size) instBuf = ByteBuffer.allocateDirect(a.size * 4).order(ByteOrder.nativeOrder()).asFloatBuffer()
+        instBuf.clear(); instBuf.put(a); instBuf.position(0)
+        return instBuf
+    }
+    private fun uploadInstances(o: InstancedMesh) {
+        val g = o.geometry
+        if (o.instVao != g.vao) { // first draw, or the GL context was recreated
+            glGenBuffers(2, o.instVbo, 0)
+            glBindBuffer(GL_ARRAY_BUFFER, o.instVbo[0])
+            glBufferData(GL_ARRAY_BUFFER, o.instanceMatrices.size * 4, null, GL_DYNAMIC_DRAW)
+            for (k in 0 until 4) {
+                glEnableVertexAttribArray(4 + k); glVertexAttribPointer(4 + k, 4, GL_FLOAT, false, 64, k * 16); glVertexAttribDivisor(4 + k, 1)
+            }
+            o.instanceColors?.let { cols ->
+                glBindBuffer(GL_ARRAY_BUFFER, o.instVbo[1])
+                glBufferData(GL_ARRAY_BUFFER, cols.size * 4, null, GL_DYNAMIC_DRAW)
+                glEnableVertexAttribArray(8); glVertexAttribPointer(8, 3, GL_FLOAT, false, 0, 0); glVertexAttribDivisor(8, 1)
+            }
+            o.instVao = g.vao; o.uploadedVersion = 0
+        }
+        if (o.uploadedVersion != o.version) {
+            glBindBuffer(GL_ARRAY_BUFFER, o.instVbo[0])
+            glBufferSubData(GL_ARRAY_BUFFER, 0, o.instanceMatrices.size * 4, instFloats(o.instanceMatrices))
+            o.instanceColors?.let { cols -> glBindBuffer(GL_ARRAY_BUFFER, o.instVbo[1]); glBufferSubData(GL_ARRAY_BUFFER, 0, cols.size * 4, instFloats(cols)) }
+            o.uploadedVersion = o.version
+        }
     }
 
     // ---- three.js ShaderMaterial (sky dome, clouds): its own program, then back to the PS1 one ----
@@ -488,8 +526,13 @@ class Renderer {
         }
     }
 
-    private fun drawGeometry(g: Geometry, group: IntArray?) {
+    private fun drawGeometry(g: Geometry, group: IntArray?, instances: Int = -1) {
         val idx = g.indices
+        if (instances >= 0) {
+            if (idx != null) glDrawElementsInstanced(GL_TRIANGLES, group?.get(1) ?: idx.size, GL_UNSIGNED_INT, (group?.get(0) ?: 0) * 4, instances)
+            else glDrawArraysInstanced(GL_TRIANGLES, group?.get(0) ?: 0, group?.get(1) ?: g.vertexCount, instances)
+            return
+        }
         if (idx != null) {
             if (group != null) glDrawElements(GL_TRIANGLES, group[1], GL_UNSIGNED_INT, group[0] * 4)
             else glDrawElements(GL_TRIANGLES, idx.size, GL_UNSIGNED_INT, 0)

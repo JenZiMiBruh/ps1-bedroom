@@ -266,7 +266,8 @@ class Bedroom(private val room: Room) {
                     vy += quiltPuff + rumple + headTaper - sideDrape
                 } else {
                     // Keep the inner bottom face flat above the base mattress; only drop the outer skirt
-                    if (abs(vx) > 1.16) vy -= 0.07 else vy = -0.10
+                    // native fix: the skirt hangs down over the mattress sides and foot instead of ending in a block
+                    if (abs(vx) > 1.16 || vz > 1.37) vy -= 0.24 else vy = -0.10
                 }
                 p[i * 3 + 1] = vy.toFloat()
             }
@@ -274,14 +275,16 @@ class Bedroom(private val room: Room) {
         }
         bedMesh(comforterGeo, PS1.material(map = spaceBedTex, polygonOffset = true, polygonOffsetFactor = -1f, polygonOffsetUnits = -1f), 0f, 0.72f, 0.25f, tag = "bed")
         // Folded-back top sheet collar over the head edge of the comforter
-        val foldSheetGeo = Geo.box(2.46f, 0.055f, 0.40f, 10, 1, 3)
+        val foldSheetGeo = Geo.box(2.46f, 0.055f, 0.40f, 10, 1, 8)
         run {
             val p = foldSheetGeo.positions
             for (i in 0 until foldSheetGeo.vertexCount) {
                 val fx = p[i * 3].toDouble(); val fy = p[i * 3 + 1].toDouble(); val fz = p[i * 3 + 2].toDouble()
                 val sideDrape = if (abs(fx) > 1.14) ((abs(fx) - 1.14) / 0.10).pow(1.5) * 0.045 else 0.0
                 val ripple = if (fy > 0) sin(fx * 3.0 + fz * 3.5) * 0.008 else 0.0
-                p[i * 3 + 1] = (fy + ripple - sideDrape).toFloat()
+                // native fix: past the comforter's head edge the sheet folds down onto the mattress instead of hovering
+                val headDrop = if (fz < -0.02) ((-0.02 - fz) / 0.18).pow(0.7) * 0.2 else 0.0
+                p[i * 3 + 1] = (fy + ripple - sideDrape - headDrop).toFloat()
             }
             foldSheetGeo.computeVertexNormals()
         }

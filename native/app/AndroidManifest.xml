@@ -3,8 +3,8 @@
      current app; it takes over com.ps1bedroom.ambience once it matches 1-to-1. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.ps1bedroom.room"
-    android:versionCode="19"
-    android:versionName="0.16">
+    android:versionCode="20"
+    android:versionName="0.16.1">
 
     <uses-sdk android:minSdkVersion="24" android:targetSdkVersion="34" />
     <uses-feature android:glEsVersion="0x00030000" android:required="true" />

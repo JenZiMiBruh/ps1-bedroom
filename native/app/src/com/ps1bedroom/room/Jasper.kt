@@ -219,10 +219,24 @@ class Jasper(private val room: Room, private val env: Environment) {
         if (onBed) { jump = Jump(pos.clone(), Vec3(1.25f, 0f, -0.55f), 0f, 0.9f, 0f); onBed = false }
         path += DOG_HUB.clone()
         if (s.bed) path += Vec3(1.25f, 0f, -0.55f)
-        path += Vec3(s.pos.x, 0f, s.pos.z)
+        if (!s.bed) path += Vec3(s.pos.x, 0f, s.pos.z) // native fix: for the bed he stops at its edge and jumps up from there
         state = "walk"
     }
 
+    /** Furniture he walks around (TV cart, chair, heater) with clearance radii; set by the app. */
+    var obstacles: List<Pair<Object3D, Float>> = emptyList()
+    // native fix: he used to walk straight through the bed, the desk, the chair and everything else
+    private fun keepClear() {
+        if (pos.x > 1.35f && pos.z < 1.65f) pos.x = 1.35f            // bed
+        if (pos.x < -0.1f && pos.z < -0.5f) pos.z = -0.5f            // desk
+        if (pos.x < -2.8f && pos.z > 1.5f && pos.z < 3.05f) pos.x = -2.8f // dresser
+        if (pos.x > 0.7f && pos.x < 1.55f && pos.z < -2.15f) pos.z = -2.15f // nightstand
+        for ((o, r) in obstacles) {
+            val dx = pos.x - o.position.x; val dz = pos.z - o.position.z
+            val d = kotlin.math.hypot(dx, dz)
+            if (d < r && d > 0.0001f) { pos.x = o.position.x + dx / d * r; pos.z = o.position.z + dz / d * r }
+        }
+    }
     private val to = Vec3()
     fun update(t: Float, dt: Float) {
         val j = jump
@@ -251,6 +265,7 @@ class Jasper(private val room: Room, private val env: Environment) {
                 }
             } else {
                 pos.addScaledVector(to.normalize(), min(dist, 0.85f * dt))
+                keepClear()
             }
         } else if (state == "rest" || state == "idle") {
             if (spot?.name == "desk" && !sittingAtDesk) until = min(until, t + 5)

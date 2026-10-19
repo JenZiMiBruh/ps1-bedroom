@@ -161,7 +161,12 @@ class Furniture(private val room: Room) {
             g.computeVertexNormals()
             return g
         }
-        arrayOf(floatArrayOf(0.03f, 0.36f, 0.02f), floatArrayOf(-0.06f, 0.38f, -0.04f), floatArrayOf(0.05f, 0.4f, -0.06f)).forEachIndexed { i, pp ->
+        // native fix: a real pile of paper fills the basket, so the top balls rest on it instead of floating
+        for (layer in 0 until 3) for (k in 0 until 3) {
+            val a = k * 2.094f + layer * 1.05f; val rad = 0.055f + layer * 0.01f
+            propPart(basketGroup, crumple(0.058f, 31 + layer * 3 + k), paperMat, cos(a) * rad, 0.08f + layer * 0.09f, sin(a) * rad)
+        }
+        arrayOf(floatArrayOf(0.03f, 0.33f, 0.02f), floatArrayOf(-0.06f, 0.35f, -0.04f), floatArrayOf(0.05f, 0.37f, -0.06f)).forEachIndexed { i, pp ->
             propPart(basketGroup, crumple(0.06f, 7 + i), paperMat, pp[0], pp[1], pp[2])
         }
         propPart(basketGroup, crumple(0.055f, 13), paperMat, 0.26f, 0.0f, 0.1f) // missed shot on the floor

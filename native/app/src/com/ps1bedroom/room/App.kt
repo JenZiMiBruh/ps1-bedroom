@@ -131,6 +131,7 @@ class App : GLSurfaceView.Renderer {
                 room.extraDynamicRoots.addAll(places.dynamicRoots())
                 sky.placesPaint = places.paint
                 player.obstacles = listOf(tv.tvStandGroup to 0.7f, bedroom.chairGroup to 0.5f, jasper.dogGroup to 0.45f, extras.heaterGroup to 0.45f)
+                jasper.obstacles = listOf(tv.tvStandGroup to 0.75f, bedroom.chairGroup to 0.55f, extras.heaterGroup to 0.5f)
                 weatherFx.outsideGroundPaint = { c, w, h -> places.paint.outsideGroundPaint(c, w, h) }
                 decor.buildKenney()   // the HTML's GLB models finish loading after everything else
                 room.extraBatchExcluded.addAll(desk.lavaBlobs)

@@ -191,18 +191,18 @@ class Ps1(private val room: Room, private val tv: Tv) {
         val stripSwitch = Mesh(Geo.box(0.04f, 0.012f, 0.03f), PS1.material(color = 0xef4444, emissive = 0xdc2626, emissiveIntensity = 0.9f))
         stripSwitch.position.set(-3.45f, 0.055f, 0.205f); scene.add(stripSwitch)
         // Strip cord up into the wall outlet
-        addCable(listOf(doubleArrayOf(-3.45, 0.025, 0.19), floorAt(-3.5, 0.12, 0.01), floorAt(-3.66, 0.14, 0.01), doubleArrayOf(-3.7, 0.12, 0.2), doubleArrayOf(-3.69, 0.28, 0.25)), 0.01f)
+        addCable(listOf(doubleArrayOf(-3.45, 0.025, 0.19), floorAt(-3.52, 0.13, 0.01), floorAt(-3.6, 0.17, 0.01), doubleArrayOf(-3.645, 0.08, 0.215), doubleArrayOf(-3.648, 0.17, 0.24), doubleArrayOf(-3.675, 0.27, 0.25)), 0.01f) // native fix: up the face of the baseboard, not through it
         val wallPlug = Mesh(Geo.box(0.03f, 0.045f, 0.04f), matDarkPlastic); wallPlug.position.set(-3.687f, 0.28f, 0.25f); scene.add(wallPlug)
         fun stripPlug(z: Double): DoubleArray {
             val plug = Mesh(Geo.box(0.04f, 0.03f, 0.04f), matDarkPlastic); plug.position.set(-3.45f, 0.066f, z.toFloat()); scene.add(plug)
-            return doubleArrayOf(-3.45, 0.08, z)
+            return doubleArrayOf(-3.43, 0.068, z) // native fix: the cord leaves the side of the plug, clear of the strip
         }
         // TV power cord: out of the back of the set, down behind the cart, along the floor to the strip
         addCable(listOf(tvLocal(0.12, 1.2, -0.39), tvLocal(0.12, 1.0, -0.44), tvLocal(0.12, 0.35, -0.42),
-            restOnFloor(tvLocal(0.12, 0.0, -0.5), 0.01), floorAt(-3.15, 0.5, 0.01), floorAt(-3.36, 0.55, 0.01), stripPlug(0.55)), 0.01f)
+            restOnFloor(tvLocal(0.12, 0.0, -0.5), 0.01), floorAt(-3.15, 0.5, 0.01), floorAt(-3.36, 0.55, 0.01), doubleArrayOf(-3.385, 0.072, 0.55), stripPlug(0.55)), 0.01f)
         // PS1 power cord: from AC IN at the back, around the cart's end, to the strip
         addCable(listOf(ps1Local(0.19, 0.055, -0.215), restOnFloor(ps1Local(0.19, 0.0, -0.32), 0.009),
-            floorAt(-1.95, 0.08, 0.009), floorAt(-2.7, 0.02, 0.009), floorAt(-3.2, 0.2, 0.009), floorAt(-3.36, 0.37, 0.009), stripPlug(0.37)), 0.009f)
+            floorAt(-1.95, 0.08, 0.009), floorAt(-2.7, 0.02, 0.009), floorAt(-3.2, 0.2, 0.009), floorAt(-3.36, 0.37, 0.009), doubleArrayOf(-3.385, 0.072, 0.37), stripPlug(0.37)), 0.009f)
         // A/V cable: AV MULTI OUT across the rug, up the front of the cart, splitting into yellow / white / red plugs
         val avSplit = tvLocal(0.135, 0.885, 0.385)
         addCable(listOf(ps1Local(-0.13, 0.055, -0.215), restOnFloor(ps1Local(-0.13, 0.0, -0.33), 0.009),

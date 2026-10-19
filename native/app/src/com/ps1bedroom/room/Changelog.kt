@@ -24,6 +24,14 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.16.1", "Fixes", listOf(
+            "Jasper walks to the edge of the bed and jumps up instead of walking into it, and goes around the desk, dresser, nightstand, TV cart, chair and heater",
+            "Power cords run up the face of the baseboard and leave the side of their plugs instead of going through them",
+            "The cardboard box sits on the floor instead of sinking into it",
+            "The wastebasket is properly full of crumpled paper",
+            "The bed's comforter drapes over the sides and foot, and the folded top sheet lies on the mattress instead of hovering",
+            "The Tamagotchu sits fully on the dresser"
+        )),
         Entry("0.16", "Walk, sit and lie down", listOf(
             "The bottom dock: Walk, Sit, Bed and Free cam (Sound, Sleep and Photo arrive with the menus)",
             "Walk around the room in first person with the on-screen joystick; drag to look, pinch to zoom",

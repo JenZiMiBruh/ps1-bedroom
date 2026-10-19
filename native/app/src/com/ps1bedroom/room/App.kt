@@ -30,7 +30,7 @@ class App : GLSurfaceView.Renderer {
     val camera = PerspectiveCamera(45f, 1f, 0.04f, 60f)
     val controls = OrbitControls(camera)
     val renderer = Renderer()
-    private lateinit var room: Room
+    lateinit var room: Room; private set
     lateinit var env: Environment; private set
     lateinit var sky: Sky; private set
     lateinit var exterior: Exterior; private set
@@ -78,12 +78,17 @@ class App : GLSurfaceView.Renderer {
 
     // settings (the HTML defaults: Balanced quality, 240p, wobble 160, camera breathing 40%)
     var resShort = 240
+    lateinit var settings: Settings
+    @Volatile var pacer: FramePacer? = null
+    fun setResolution(r: Int) { resShort = r; if (surfaceW > 1) renderer.resize(surfaceW, surfaceH, effectiveRes(), jitterBase) }
+    fun setJitter(j: Float) { jitterBase = j; if (surfaceW > 1) renderer.resize(surfaceW, surfaceH, effectiveRes(), jitterBase) }
     var jitterBase = 160f
     var swayAmount = 0.4f
     private val basePos = Vec3()
     private var lastT = -1f
     private var startMs = 0L
     private var built = false
+    val isBuilt get() = built
 
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
         renderer.init()
@@ -155,6 +160,8 @@ class App : GLSurfaceView.Renderer {
             controls.update()
             startMs = SystemClock.uptimeMillis()
             built = true
+            settings.restore()   // the HTML's applySavedSettings, once everything exists
+            hud?.refreshMenu(); hud?.refreshStatus()
         }
     }
 
@@ -172,6 +179,7 @@ class App : GLSurfaceView.Renderer {
         lastT = t
         applyPerfLevel()
         while (true) { val fn = posted.poll() ?: break; fn() }
+        if (built) settings.heartbeat()
         applyInput()
         handleTaps()
         env.tick(System.currentTimeMillis())
@@ -208,10 +216,12 @@ class App : GLSurfaceView.Renderer {
         // Camera modes: orbit, first-person walk, sitting in the chair, or lying on the bed
         if (player.mode == "orbit") {
             controls.update()
-            // Keep the free camera inside the room
+            // Keep the free camera inside the room (the debug option lifts this)
+            if (!settings.debugFreeCam) {
             camera.position.x = max(Room.MIN_X + 0.2f, min(Room.MAX_X - 0.2f, camera.position.x))
             camera.position.y = max(Room.MIN_Y + 0.25f, min(Room.MAX_Y - 0.2f, camera.position.y))
             camera.position.z = max(Room.MIN_Z + 0.2f, min(Room.MAX_Z - 0.2f, camera.position.z))
+            }
             basePos.copy(camera.position)
             // Camera breathing (the HTML's orbit sway)
             if (swayAmount > 0.001f) {
@@ -314,6 +324,8 @@ class App : GLSurfaceView.Renderer {
     }
     fun pullChair() = player.moveChair(1) { setPlayerMode("orbit") }
     fun putBackHeld() = library.putBackHeld()
+    fun tvNextChannel() = tv.cycleBedroomTvChannel(lastT)
+    fun tvPower() = tv.toggleBedroomTv(lastT)
     fun toggleFanLight() {
         fanLightOn = !fanLightOn
         room.fanLight.intensity = if (fanLightOn) 1.85f else 0.0f

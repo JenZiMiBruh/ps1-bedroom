@@ -24,6 +24,16 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.17", "The menu and the top bar", listOf(
+            "MENU with the World, Sound, Room, Display, Timers and About tabs (a bottom sheet in portrait, a side panel in landscape)",
+            "World: live clock / pick a time / time-lapse, the 15 places, seasons, all 15 weathers, auto-changing weather, live weather for your city (Open-Meteo), sky styles, moon mode",
+            "Room: blinds, lights, heater, fan, AC, TV, put the games back in order, posters, wall / carpet / sheet colours, decorations",
+            "Display: Battery saver / Balanced / High, frame rate, eco idle, the looks (Signature, Warm VHS, Noir...), every PS1 effect slider, °F / °C",
+            "Timers: sleep mode, the sleep timer (the screen fades to black when it ends) and the focus timer",
+            "Top bar: tap the time, temperature, season, weather or place to step through them; hold one to open the World menu",
+            "Every setting is saved and comes back the next time you open the app",
+            "Android back closes the menu or stands you up; the test shortcuts are gone"
+        )),
         Entry("0.16.1", "Fixes", listOf(
             "Jasper walks to the edge of the bed and jumps up instead of walking into it, and goes around the desk, dresser, nightstand, TV cart, chair and heater",
             "Power cords run up the face of the baseboard and leave the side of their plugs instead of going through them",

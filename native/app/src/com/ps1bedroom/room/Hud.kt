@@ -82,8 +82,8 @@ class Hud(private val act: Activity, private val root: FrameLayout, private val 
         dockBtn("bed", "🛏", "Bed") { app.post { app.setPlayerMode("bed") } }
         dockBtn("orbit", "🎥", "Free") { app.post { app.setPlayerMode("orbit") } }
         dock.addView(dockSep.apply { setBackgroundColor(LINE) }, LinearLayout.LayoutParams(dpi(2f), LinearLayout.LayoutParams.MATCH_PARENT).apply { setMargins(dpi(3f), dpi(4f), dpi(7f), dpi(4f)) })
-        dockBtn("audio", "🔈", "Sound") { toast("🔈 Sound is coming with the audio update.") }
-        dockBtn("timer", "☾", "Sleep") { toast("☾ The sleep timer is coming with the menus update.") }
+        dockBtn("audio", "🔈", "Sound") { menu.open("sound") }
+        dockBtn("timer", "☾", "Sleep") { menu.open("timer") }
         dockBtn("photo", "📷", "Photo") { toast("📷 Photo mode is coming with the menus update.") }
         root.addView(dock, FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply { bottomMargin = dpi(10f) })
         root.addOnLayoutChangeListener { _, l, t, r, b, ol, ot, or_, ob -> if (r - l != or_ - ol || b - t != ob - ot) layoutForSize(r - l, b - t) }
@@ -148,6 +148,7 @@ class Hud(private val act: Activity, private val root: FrameLayout, private val 
 
     /** updatePostureUI, from the GL thread. */
     fun postureChanged(mode: String, pullLabel: String) = act.runOnUiThread {
+        currentMode = mode; menu.refreshStatus()
         setActive(mode)
         val firstPerson = mode != "orbit"
         crosshair.visibility = if (firstPerson) View.VISIBLE else View.GONE
@@ -211,5 +212,27 @@ class Hud(private val act: Activity, private val root: FrameLayout, private val 
         (putBack.layoutParams as FrameLayout.LayoutParams).bottomMargin = above
         (pullChair.layoutParams as FrameLayout.LayoutParams).bottomMargin = dpi(if (short) 64f else 92f)
         stick.requestLayout(); putBack.requestLayout(); pullChair.requestLayout()
+    }
+
+    // ---- Top bar + menu sheet (Menu.kt), the sleep overlay ----
+    val menu: Menu by lazy { Menu(act, root, app) }
+    private val sleepOverlay = TextView(act).apply {
+        text = "SLEEPING · TAP TO WAKE"; setTextColor(Color.argb(90, 214, 221, 255)); typeface = MONO; setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+        gravity = Gravity.CENTER; setBackgroundColor(Color.BLACK); visibility = View.GONE
+        setOnClickListener { visibility = View.GONE; app.post { app.settings.wake() } }
+    }
+    fun attachMenu() {
+        menu.refreshStatus()
+        root.addView(sleepOverlay, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
+    }
+    fun refreshMenu() = act.runOnUiThread { menu.build(); dockBtns["timer"]?.let { b -> val on = app.settings.sleepEnd > 0; b.view.background = if (on) GradientDrawable().apply { setColor(ACTIVE_BG); cornerRadius = dp(10f); setStroke(dpi(2f), PINK) } else if (currentMode == "timer") b.view.background else null } }
+    fun refreshStatus() = act.runOnUiThread { menu.refreshStatus() }
+    fun showSleeping(on: Boolean) = act.runOnUiThread { sleepOverlay.visibility = if (on) View.VISIBLE else View.GONE }
+    private var currentMode = "orbit"
+    /** Android back: close the menu, then stand up / leave first person. */
+    fun back(): Boolean {
+        if (menu.isOpen) { menu.close(); return true }
+        if (currentMode != "orbit") { app.post { app.setPlayerMode("orbit") }; return true }
+        return false
     }
 }

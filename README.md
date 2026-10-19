@@ -13,7 +13,7 @@
 ![Release](https://img.shields.io/badge/📅%20RELEASE-October%2021%2C%202026-ff3ea5?style=for-the-badge&labelColor=1a1033)
 ![Google Play](https://img.shields.io/badge/GOOGLE%20PLAY-before%20the%20end%20of%202026-22c55e?style=for-the-badge&logo=googleplay&logoColor=white&labelColor=1a1033)
 
-![Native build](https://img.shields.io/badge/native%20build-v0.16.1-a78bfa?style=flat-square&labelColor=1a1033)
+![Native build](https://img.shields.io/badge/native%20build-v0.17-a78bfa?style=flat-square&labelColor=1a1033)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.0-7f52ff?style=flat-square&logo=kotlin&logoColor=white&labelColor=1a1033)
 ![OpenGL ES](https://img.shields.io/badge/OpenGL%20ES-3.0-5586a4?style=flat-square&logo=opengl&logoColor=white&labelColor=1a1033)
 ![APK](https://img.shields.io/badge/APK-~1%20MB-ef4444?style=flat-square&labelColor=1a1033)
@@ -75,12 +75,13 @@ The port follows the web version section by section and is checked against it as
 - **Weather**: rain with splashes on the sill, snow, falling leaves and blossoms, fireflies on summer nights, dust drifting in the light beam, raindrops and frost on the window glass, the seasonal ground outside, lightning flashes; every particle type is one GPU-instanced draw call
 - **VCR tapes and room extras**: four tapes to swap into the VCR (commercials, a kung-fu movie, an ocean video), the answering machine, glow-in-the-dark constellations on the ceiling, the space heater, a choice of posters, wall / carpet / sheet colours, seasonal decorations by date, boombox stations
 - **Player modes**: walk with the joystick, sit in the rolling chair (TV, desk, window) or lie on the bed, with the dock, crosshair and pop-up messages
-- **In-app changelog**: tap the version tag in the corner
+- **Menu and top bar**: every World, Room, Display and Timers setting from the web version, live weather for your city, the status bar that steps through time / weather / season / place, saved settings
+- **In-app changelog**: Menu → About
 
 ### 🔨 In progress / up next
 
 - 🔊 **Native audio**: the full soundscape, sleep timer fade, lock-screen controls
-- 📋 **Menus and the top bar**, photo mode, settings saved
+- 📷 **Photo mode** and the tutorial
 - 💻 **The PC desktop**, 🎵 **My Music**, 📺 **YouTube on the TV**
 - ✔️ **Parity pass**: side-by-side checks against the web version from the same camera spots
 
@@ -90,6 +91,7 @@ Newest first. The same list is in the app (tap the version tag in the bottom-lef
 
 | Build | What changed |
 |---|---|
+| **0.17** | The menu (World, Sound, Room, Display, Timers, About), the top status bar, live weather, sleep and focus timers, saved settings |
 | **0.16.1** | Jasper walks around furniture and jumps onto the bed from its edge; cord, box, wastebasket, bed and Tamagotchu fixes |
 | **0.16** | Walk, sit and lie down with the bottom dock and joystick; dust follows the light colour; PC tower front fixes |
 | **0.15.1** | Fixed: the app crashed on launch in 0.15 |

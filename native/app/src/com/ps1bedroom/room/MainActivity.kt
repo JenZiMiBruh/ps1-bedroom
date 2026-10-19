@@ -33,15 +33,18 @@ class MainActivity : Activity() {
         view.setOnTouchListener { _, e -> onTouch(e); true }
         val root = android.widget.FrameLayout(this)
         root.addView(view)
-        Changelog.addVersionTag(this, root)
         app.density = resources.displayMetrics.density
-        app.hud = Hud(this, root, app)
+        app.settings = Settings(app, this)
+        app.hud = Hud(this, root, app).also { it.attachMenu() }
         setContentView(root)
         pacer = FramePacer(this, view, app)
+        app.pacer = pacer
         hideSystemBars()
     }
 
     override fun onResume() { super.onResume(); view.onResume(); pacer.interacted(); pacer.start(); hideSystemBars() }
+    @Deprecated("Activity back handling")
+    override fun onBackPressed() { if (app.hud?.back() != true) @Suppress("DEPRECATION") super.onBackPressed() }
     override fun onPause() { pacer.stop(); view.onPause(); super.onPause() }
     override fun onWindowFocusChanged(hasFocus: Boolean) { super.onWindowFocusChanged(hasFocus); if (hasFocus) hideSystemBars() }
 
@@ -72,8 +75,6 @@ class MainActivity : Activity() {
             }
             MotionEvent.ACTION_POINTER_DOWN -> if (e.pointerCount >= 2) {
                 wasPinching = true
-                // Test shortcut until the menus: three fingers on the left third step the time, the middle third the place outside, the right third the weather
-                if (e.pointerCount == 3) { val fx = e.getX(2) / view.width; if (fx < 1 / 3f) app.debugNextTimePreset() else if (fx < 2 / 3f) app.debugNextPlace() else app.debugNextWeather() }
                 lastDist = hypot(e.getX(0) - e.getX(1), e.getY(0) - e.getY(1))
                 lastMidX = (e.getX(0) + e.getX(1)) / 2; lastMidY = (e.getY(0) + e.getY(1)) / 2
             }

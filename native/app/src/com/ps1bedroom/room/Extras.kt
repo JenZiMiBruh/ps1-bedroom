@@ -437,6 +437,8 @@ class Extras(private val room: Room, private val env: Environment, private val t
     }
 
     // ---- Room colours ----
+    /** (key, label) pairs for the menu's colour chips. */
+    fun colorOptions(part: String): List<Pair<String, String>> = RECOLOR.getValue(part).opts.map { (k, v) -> k to v.first }
     fun setRoomColor(part: String, key0: String) {
         val r = RECOLOR.getValue(part)
         val key = if (r.opts.containsKey(key0)) key0 else r.opts.keys.first()

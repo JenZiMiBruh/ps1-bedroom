@@ -13,10 +13,10 @@
 ![Release](https://img.shields.io/badge/📅%20RELEASE-October%2021%2C%202026-ff3ea5?style=for-the-badge&labelColor=1a1033)
 ![Google Play](https://img.shields.io/badge/GOOGLE%20PLAY-before%20the%20end%20of%202026-22c55e?style=for-the-badge&logo=googleplay&logoColor=white&labelColor=1a1033)
 
-![Native build](https://img.shields.io/badge/native%20build-v0.10.1-a78bfa?style=flat-square&labelColor=1a1033)
+![Native build](https://img.shields.io/badge/native%20build-v0.11-a78bfa?style=flat-square&labelColor=1a1033)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.0-7f52ff?style=flat-square&logo=kotlin&logoColor=white&labelColor=1a1033)
 ![OpenGL ES](https://img.shields.io/badge/OpenGL%20ES-3.0-5586a4?style=flat-square&logo=opengl&logoColor=white&labelColor=1a1033)
-![APK](https://img.shields.io/badge/APK-~820%20KB-ef4444?style=flat-square&labelColor=1a1033)
+![APK](https://img.shields.io/badge/APK-~840%20KB-ef4444?style=flat-square&labelColor=1a1033)
 ![Free](https://img.shields.io/badge/free-no%20ads%2C%20no%20account-3b82f6?style=flat-square&labelColor=1a1033)
 
 <sub><a href="#-release-dates">Release dates</a> &nbsp;·&nbsp; <a href="#-why-native">Why native</a> &nbsp;·&nbsp; <a href="#-progress">Progress</a> &nbsp;·&nbsp; <a href="#-changelog">Changelog</a> &nbsp;·&nbsp; <a href="#%EF%B8%8F-how-its-built">How it's built</a> &nbsp;·&nbsp; <a href="../../tree/main">Current web-based app (main)</a></sub>
@@ -47,7 +47,7 @@ The current Android app runs the game inside a web view. It works, but a browser
 | 🌙 **Sound while you sleep** | Synthesised live in the browser: can crackle or clip on long nights | Native mixer in a proper media service: clean all night |
 | 🌡️ **Heat** | Browser + WebGL overhead | A renderer that makes **zero garbage per frame**, merges furniture that never moves into a few big draws, and only redraws shadows when something moves |
 | 🔋 **Battery** | Frame-rate caps | 60 fps cap → **30 fps after 12 s idle → 20 fps after 2 min**, plus Android's real thermal sensor: the app backs off *before* the phone has to throttle |
-| 📦 **Size** | ~600 KB | **~820 KB** so far, with every texture still drawn in code |
+| 📦 **Size** | ~600 KB | **~840 KB** so far, with every texture still drawn in code |
 | 🎮 **Look** | three.js + PS1 shaders | **1:1 port**: the same vertex wobble, affine textures, dither, light rays and weathering, number for number |
 
 ## 🛠️ Progress
@@ -69,11 +69,12 @@ The port follows the web version section by section and is checked against it as
 - **More of the room**: dresser with the boombox, nightstand reading lamp, wastebasket, backpack, the 2001 wall calendar, posters, string lights (warm / rainbow), windowsill plants, Discman, Game Kid Advance, Noka, Tamagotchu, Kenney furniture-kit models
 - **Jasper**: the German Shepherd with the split-colour eye, wandering between his favourite spots, sleeping on the bed at night, wagging when you pet him
 - **CRT TV**: the MAGNAVOLT set on its media cart with the VCR, seven live channels, scanlines and glow; tap to flip channels or power it off
+- **PlayStation**: power, reset and a hinged lid, the disc spinning up, the boot screens and Bandi-coot Rush on the TV, the controller and real cable hookups to the TV and a power strip
 - **In-app changelog**: tap the version tag in the corner
 
 ### 🔨 In progress / up next
 
-- 🎮 **The PlayStation**: the console with working buttons and lid, the game shelf, the VCR tapes, the GTA collection
+- 🎮 **The game library**: the game shelf, picking up and swapping discs, every game on the TV, the VCR tapes, the GTA collection
 - 🌦️ **Weather**: rain and snow particles, lightning, the window glass with raindrops
 - 🏞️ **All 15 places** outside the window
 - 🔊 **Native audio**: the full soundscape, sleep timer fade, lock-screen controls
@@ -87,6 +88,7 @@ Newest first. The same list is in the app (tap the version tag in the bottom-lef
 
 | Build | What changed |
 |---|---|
+| **0.11** | The PlayStation: buttons, lid, spinning disc, boot screens, system menu and Bandi-coot Rush on the TV, DualShock, cable hookups; fan bracket flicker and chair lever fixed |
 | **0.10.1** | Fixes: stray "CH 03" on the TV static removed; the fan light's glass shade now sits snugly in its collar |
 | **0.10** | The CRT TV on its media cart: VCR, tapes, seven live channels, channel / power taps; glow-in-the-dark stars, outlet, baseboards matched to the web version |
 | **0.9** | Jasper: pixel-fur German Shepherd with the half-brown eye, favourite spots, bed at night and in storms, walking / sitting / lying poses, petting |

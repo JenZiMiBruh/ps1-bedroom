@@ -60,7 +60,9 @@ class Fan(private val room: Room) {
                 iron.add(m); room.registerInteractable(m, "fanspin")
             }
             ironPart(0.16f, 0.02f, 0.06f, 0.08f, -0.03f, 0f)   // arm out of the motor
-            ironPart(0.03f, 0.04f, 0.06f, 0.16f, -0.03f, 0f)   // bend up under the blade
+            // (native fix: the HTML's bend had the arm's exact depth and stopped right at the blade's underside, so their faces
+            //  shared planes and flickered; it is a little deeper now and its top is buried in the blade)
+            ironPart(0.03f, 0.05f, 0.068f, 0.16f, -0.025f, 0f)  // bend up into the blade
             val blade = Mesh(Geo.box(1.12f, 0.024f, 0.23f, 3, 1, 1), room.matWood)
             blade.position.set(cos(angle) * 0.68f, 0.0f, sin(angle) * 0.68f)
             blade.rotation.order = "YXZ" // pitch around the blade's own length, so all four blades sit the same way

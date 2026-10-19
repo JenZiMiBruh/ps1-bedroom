@@ -39,6 +39,10 @@ class Tv(private val room: Room, private val env: Environment) {
     var bedroomTvChannel = 0; private set
     /** The PlayStation is on (it adds A/V 1 to the rotation): comes with the console phase. */
     var ps1On = false
+    /** The console (it draws its own picture on A/V 1). */
+    var ps1: Ps1? = null
+    /** Switch the channel directly (the PlayStation puts the TV on A/V 1 and back). */
+    fun setChannel(ch: Int) { bedroomTvChannel = ch; room.bedroomTvLight.color.setHex(TV_CHANNEL_COLORS[ch]) }
     val tvStandGroup = Group()
     private lateinit var tvCanvasObj: CanvasTex
     private lateinit var tvScreenMat: Material
@@ -335,13 +339,7 @@ class Tv(private val room: Room, private val env: Environment) {
                 ctx.fillStyle = "#ffffff"; ctx.font = "bold 6px sans-serif"; ctx.fillText("SMASH CITY", 20, 88)
                 ctx.fillStyle = "#a5b4fc"; ctx.fillText("\"All Star Kids\" (Blink-ish Records)", 20, 94)
             }
-            PS1_TV_CHANNEL -> { // A/V 1 with the PlayStation off (its boot, menu and games come with the console)
-                ctx.fillStyle = "#1e3a8a"; ctx.fillRect(0, 0, w, h)
-                ctx.fillStyle = "#f8fafc"; ctx.font = "bold 9px monospace"
-                ctx.textAlign = "left"; ctx.fillText("AV 1", 8, 14)
-                ctx.textAlign = "center"; ctx.fillText("NO SIGNAL", 64, 52)
-                ctx.textAlign = "left"
-            }
+            PS1_TV_CHANNEL -> ps1?.drawScreen(ctx, w, h, t)
             else -> { // Snowy CRT static
                 var y = 0
                 while (y < h) {

@@ -148,7 +148,7 @@ class Bedroom(private val room: Room) {
         // Seat mechanism with the height lever
         chairPart(Geo.box(0.3f, 0.07f, 0.32f), matChairShell, 0f, 0.83f, 0f)
         val lever = chairPart(Geo.cylinder(0.008f, 0.008f, 0.22f, 6), matChairShell, 0.24f, 0.82f, 0.05f)
-        lever.rotation.z = (PI / 2 + 0.15).toFloat()
+        lever.rotation.z = (PI / 2 - 0.15).toFloat() // (native fix: droops down to the ball; the HTML tilted it up, away from it)
         chairPart(Geo.sphere(0.02f, 6, 5), matDarkPlastic, 0.35f, 0.8f, 0.05f)
         // Contoured seat cushion: rounded edges, waterfall front, slight dish where you sit
         val seatGeo = Geo.box(0.8f, 0.12f, 0.78f, 8, 2, 8)

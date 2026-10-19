@@ -24,6 +24,14 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.11", "The PlayStation", listOf(
+            "The grey PlayStation on the rug: POWER, RESET and OPEN buttons that press down, a hinged lid, the disc spinning up",
+            "Turn it on and the TV switches to A/V 1: the publisher screen, the PlayStation logo, the title screen, then Bandi-coot Rush",
+            "Open the lid for the system menu; tap the controller to make him jump",
+            "DualShock with its cable, the game case lying beside the console, memory cards in both slots",
+            "Real hookups: the A/V cable runs up the cart into the TV's yellow / white / red jacks, power cords run to a strip at the wall",
+            "Fixed: the fan blade brackets no longer flicker, and the chair's height lever now meets its knob"
+        )),
         Entry("0.10.1", "Fixes", listOf(
             "TV static no longer shows a stray \"CH 03\" next to the real channel number",
             "Ceiling fan light: the glass shade now sits snugly in its brass collar (no more dark notches at the seam)"

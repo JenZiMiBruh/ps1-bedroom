@@ -49,6 +49,12 @@ class Canvas2D(@JvmField val width: Int, @JvmField val height: Int) {
         }
     var lineWidth = 1f
         set(v) { field = v; stroke.strokeWidth = v }
+    var lineJoin = "miter"
+        set(v) {
+            field = v
+            val j = when (v) { "round" -> Paint.Join.ROUND; "bevel" -> Paint.Join.BEVEL; else -> Paint.Join.MITER }
+            stroke.strokeJoin = j; text.strokeJoin = j
+        }
     var imageSmoothingEnabled = false
     var font = "10px sans-serif"
         set(v) { field = v; applyFont() }

@@ -41,6 +41,7 @@ class App : GLSurfaceView.Renderer {
     lateinit var decor: Decor; private set
     lateinit var jasper: Jasper; private set
     lateinit var tv: Tv; private set
+    lateinit var ps1: Ps1; private set
     private var lastTvUpdate = 0.05f
     private val SPHERE_TV_C = Vec3(-2.05f, 1.3f, 0.65f)
     /** Set by MainActivity before the GL thread starts (for raw model files). */
@@ -80,6 +81,8 @@ class App : GLSurfaceView.Renderer {
             }
             room.onBuildInterior = {
                 desk = Desk(room, tex); desk.build()
+                ps1 = Ps1(room, tv); ps1.build(); tv.ps1 = ps1
+                room.extraDynamicRoots += ps1.ps1LidPivot
                 bedroom = Bedroom(room); bedroom.build()
                 room.extraDynamicRoots += bedroom.chairGroup
                 fan = Fan(room); fan.build()
@@ -138,6 +141,7 @@ class App : GLSurfaceView.Renderer {
         jasper.update(t, dt)
         jasper.bedroomTvOn = tv.bedroomTvOn
         tv.updateLight(t)
+        ps1.update(dt)
         // The TV redraws ~6x a second (the PlayStation ~16x) and only while it is on and on screen, as in the HTML
         if (tv.bedroomTvOn && t - lastTvUpdate > (if (tv.bedroomTvChannel == Tv.PS1_TV_CHANNEL) 0.06f else 0.16f) && renderer.sphereInView(SPHERE_TV_C, 0.7f)) { tv.updateBedroomTvScreen(t); lastTvUpdate = t }
         room.updateAc(t, dt)
@@ -216,6 +220,10 @@ class App : GLSurfaceView.Renderer {
             "dog" -> jasper.petDog(lastT)
             "tv" -> tv.cycleBedroomTvChannel(lastT)
             "tvPower" -> tv.toggleBedroomTv(lastT)
+            "ps1Power" -> ps1.powerToggle(lastT)
+            "ps1Reset" -> ps1.resetPress(lastT)
+            "ps1Open" -> ps1.lidToggle(lastT, true)
+            "ps1Pad" -> ps1.padPress(lastT)
         }
     }
     fun toggleFanLight() {

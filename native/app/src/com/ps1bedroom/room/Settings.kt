@@ -352,6 +352,8 @@ class Settings(private val app: App, private val ctx: Context) {
         lastJson = json; dirty = false
         prefs.edit().putString("settings.v1", json).apply()
     }
+    /** A saved value read straight from storage (the start screen decides before the room is built). */
+    fun peek(key: String, def: Boolean): Boolean = prefs.getString("settings.v1", null)?.let { try { JSONObject(it).optBoolean(key, def) } catch (e: Exception) { def } } ?: def
     /** applySavedSettings: on the GL thread once the room is built. */
     fun restore() {
         val s = prefs.getString("settings.v1", null)?.let { try { JSONObject(it) } catch (e: Exception) { null } }

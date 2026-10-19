@@ -24,6 +24,11 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.18", "Start screen, how-to and photo mode", listOf(
+            "The PS1-style start screen: PRESS START, the four-colour diamond on white, then the licence screen (tap to skip; turn it off in Display)",
+            "The five-card how-to on first launch (and in About → HOW TO)",
+            "Photo mode from the dock: the room without any buttons, a shutter that saves to Pictures / PS1 Bedroom, and HIDE for a clean screen (tap to bring it back)"
+        )),
         Entry("0.17", "The menu and the top bar", listOf(
             "MENU with the World, Sound, Room, Display, Timers and About tabs (a bottom sheet in portrait, a side panel in landscape)",
             "World: live clock / pick a time / time-lapse, the 15 places, seasons, all 15 weathers, auto-changing weather, live weather for your city (Open-Meteo), sky styles, moon mode",

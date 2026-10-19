@@ -234,6 +234,7 @@ class App : GLSurfaceView.Renderer {
         }
         renderer.post.time = t
         renderer.render(scene, camera)
+        photoCallback?.let { cb -> photoCallback = null; cb(readScreen()) }
         camera.position.copy(basePos)
     }
 
@@ -326,6 +327,22 @@ class App : GLSurfaceView.Renderer {
     fun putBackHeld() = library.putBackHeld()
     fun tvNextChannel() = tv.cycleBedroomTvChannel(lastT)
     fun tvPower() = tv.toggleBedroomTv(lastT)
+    // ---- Photo mode: the next frame is read back from the screen ----
+    @Volatile private var photoCallback: ((android.graphics.Bitmap) -> Unit)? = null
+    fun requestPhoto(cb: (android.graphics.Bitmap) -> Unit) { photoCallback = cb }
+    private fun readScreen(): android.graphics.Bitmap {
+        val w = surfaceW; val h = surfaceH
+        val buf = java.nio.ByteBuffer.allocateDirect(w * h * 4).order(java.nio.ByteOrder.nativeOrder())
+        android.opengl.GLES30.glBindFramebuffer(android.opengl.GLES30.GL_FRAMEBUFFER, 0)
+        android.opengl.GLES30.glReadPixels(0, 0, w, h, android.opengl.GLES30.GL_RGBA, android.opengl.GLES30.GL_UNSIGNED_BYTE, buf)
+        val src = android.graphics.Bitmap.createBitmap(w, h, android.graphics.Bitmap.Config.ARGB_8888)
+        buf.rewind(); src.copyPixelsFromBuffer(buf)
+        // GL rows run bottom-up: flip
+        val m = android.graphics.Matrix().apply { preScale(1f, -1f) }
+        val out = android.graphics.Bitmap.createBitmap(src, 0, 0, w, h, m, false)
+        src.recycle()
+        return out
+    }
     fun toggleFanLight() {
         fanLightOn = !fanLightOn
         room.fanLight.intensity = if (fanLightOn) 1.85f else 0.0f

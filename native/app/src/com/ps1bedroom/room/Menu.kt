@@ -423,6 +423,7 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
         }
         h4("Temperature")
         seg(listOf("F" to "°F  Fahrenheit", "C" to "°C  Celsius"), s.tempUnit) { v -> post { s.tempUnit = v; s.changed(); app.hud?.refreshStatus() } }
+        check("Show the start screen when the app opens", s.startScreenEnabled) { c -> post { s.startScreenEnabled = c; s.changed() } }
         check("Debug: the free camera can leave the room", s.debugFreeCam) { c -> post { s.debugFreeCam = c } }
     }
     private fun buildTimers() {
@@ -441,7 +442,7 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
         h4("PS1 Bedroom", "v${Changelog.entries.first().version}")
         note("A little late-night room to keep you company. Real time, real sky, real weather, a PlayStation full of games, and a soundscape for every corner of the room.")
         note("Made by Daymion Gallo, aka Galloade, aka JenZiMiBruh.")
-        tiles(listOf(Triple("📜 CHANGELOG", false, { Changelog.show(act) })))
+        tiles(listOf(Triple("📜 CHANGELOG", false, { Changelog.show(act) }), Triple("❓ HOW TO", false, { close(); app.hud?.overlays?.startTutorial() })))
     }
 
     private fun hideKeyboard(v: View) {

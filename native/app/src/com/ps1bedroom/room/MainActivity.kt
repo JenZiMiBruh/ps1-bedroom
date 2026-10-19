@@ -67,6 +67,7 @@ class MainActivity : Activity() {
     private var downX = 0f; private var downY = 0f; private var wasPinching = false
     private fun onTouch(e: MotionEvent) {
         pacer.interacted()
+        app.hud?.overlays?.onScreenTouched()
         when (e.actionMasked) {
             MotionEvent.ACTION_DOWN -> { lastX = e.x; lastY = e.y; downX = e.x; downY = e.y; wasPinching = false }
             MotionEvent.ACTION_UP -> {

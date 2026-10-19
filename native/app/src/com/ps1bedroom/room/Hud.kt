@@ -84,7 +84,7 @@ class Hud(private val act: Activity, private val root: FrameLayout, private val 
         dock.addView(dockSep.apply { setBackgroundColor(LINE) }, LinearLayout.LayoutParams(dpi(2f), LinearLayout.LayoutParams.MATCH_PARENT).apply { setMargins(dpi(3f), dpi(4f), dpi(7f), dpi(4f)) })
         dockBtn("audio", "🔈", "Sound") { menu.open("sound") }
         dockBtn("timer", "☾", "Sleep") { menu.open("timer") }
-        dockBtn("photo", "📷", "Photo") { toast("📷 Photo mode is coming with the menus update.") }
+        dockBtn("photo", "📷", "Photo") { menu.close(); overlays.enterPhotoMode() }
         root.addView(dock, FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply { bottomMargin = dpi(10f) })
         root.addOnLayoutChangeListener { _, l, t, r, b, ol, ot, or_, ob -> if (r - l != or_ - ol || b - t != ob - ot) layoutForSize(r - l, b - t) }
         setActive("orbit")
@@ -157,7 +157,7 @@ class Hud(private val act: Activity, private val root: FrameLayout, private val 
         pullChair.text = pullLabel
         if (mode != "walk") { app.player.stickX = 0f; app.player.stickY = 0f; knob.translationX = 0f; knob.translationY = 0f }
     }
-    fun holdingGame(holding: Boolean) = act.runOnUiThread { putBack.visibility = if (holding) View.VISIBLE else View.GONE }
+    fun holdingGame(holding: Boolean) = act.runOnUiThread { putBack.visibility = if (holding && !uiHidden) View.VISIBLE else View.GONE }
 
     private val hideToast = Runnable { slideToast(false) }
     private var toastAnim: ValueAnimator? = null
@@ -216,6 +216,16 @@ class Hud(private val act: Activity, private val root: FrameLayout, private val 
 
     // ---- Top bar + menu sheet (Menu.kt), the sleep overlay ----
     val menu: Menu by lazy { Menu(act, root, app) }
+    val overlays: Overlays by lazy { Overlays(act, root, app) }
+    private var uiHidden = false
+    /** Photo mode: everything but the photo bar goes away. */
+    fun setUiHidden(h: Boolean) {
+        uiHidden = h
+        val v = if (h) View.GONE else View.VISIBLE
+        dock.visibility = v; menu.setBarsVisible(!h); toastView.visibility = if (h) View.GONE else View.INVISIBLE
+        if (h) { crosshair.visibility = View.GONE; stick.visibility = View.GONE; pullChair.visibility = View.GONE; putBack.visibility = View.GONE }
+        else postureChanged(currentMode, app.player.pullChairLabel())
+    }
     private val sleepOverlay = TextView(act).apply {
         text = "SLEEPING · TAP TO WAKE"; setTextColor(Color.argb(90, 214, 221, 255)); typeface = MONO; setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
         gravity = Gravity.CENTER; setBackgroundColor(Color.BLACK); visibility = View.GONE
@@ -224,6 +234,7 @@ class Hud(private val act: Activity, private val root: FrameLayout, private val 
     fun attachMenu() {
         menu.refreshStatus()
         root.addView(sleepOverlay, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
+        overlays.showBoot(app.settings.peek("startScreen", true))
     }
     fun refreshMenu() = act.runOnUiThread { menu.build(); dockBtns["timer"]?.let { b -> val on = app.settings.sleepEnd > 0; b.view.background = if (on) GradientDrawable().apply { setColor(ACTIVE_BG); cornerRadius = dp(10f); setStroke(dpi(2f), PINK) } else if (currentMode == "timer") b.view.background else null } }
     fun refreshStatus() = act.runOnUiThread { menu.refreshStatus() }
@@ -231,6 +242,7 @@ class Hud(private val act: Activity, private val root: FrameLayout, private val 
     private var currentMode = "orbit"
     /** Android back: close the menu, then stand up / leave first person. */
     fun back(): Boolean {
+        if (overlays.back()) return true
         if (menu.isOpen) { menu.close(); return true }
         if (currentMode != "orbit") { app.post { app.setPlayerMode("orbit") }; return true }
         return false

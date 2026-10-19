@@ -254,11 +254,12 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
         body.addView(head, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = dpi(9f) })
         val bar = SeekBar(act).apply {
             this.max = (max - min) / step; progress = (value - min) / step
+            minimumHeight = dpi(36f)   // a bigger touch target for the thumb
             progressTintList = ColorStateList.valueOf(Color.rgb(0xd9, 0x46, 0xef)); thumbTintList = progressTintList
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(b: SeekBar, p: Int, user: Boolean) { if (!user) return; val v = min + p * step; valView.text = fmt(v); onChange(v) }
-                override fun onStartTrackingTouch(b: SeekBar) {}
-                override fun onStopTrackingTouch(b: SeekBar) {}
+                override fun onStartTrackingTouch(b: SeekBar) { dragging = true; b.parent?.requestDisallowInterceptTouchEvent(true) }
+                override fun onStopTrackingTouch(b: SeekBar) { dragging = false; if (buildPending) b.post { build() } }
             })
         }
         body.addView(bar, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
@@ -293,8 +294,13 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
 
     // ================= Tabs =================
     /** refreshMenu: rebuild the open tab from the current state. */
+    /** A slider is being dragged: rebuilding the sheet would delete it mid-drag, so wait until it's let go. */
+    private var dragging = false
+    private var buildPending = false
     fun build() {
         if (!isOpen || !app.isBuilt) return
+        if (dragging) { buildPending = true; return }
+        buildPending = false
         body.removeAllViews()
         versionSmall.text = "v${Changelog.entries.first().version}"
         when (tab) {
@@ -479,6 +485,12 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
         h4("Temperature")
         seg(listOf("F" to "°F  Fahrenheit", "C" to "°C  Celsius"), s.tempUnit) { v -> post { s.tempUnit = v; s.changed(); app.hud?.refreshStatus() } }
         app.hud?.yt?.let { yt -> check("PS1 look on YouTube: a pixel grid the size of the room's pixels, chunkier scanlines, and the picture wobbles with the TV", yt.ps1Look) { c -> yt.ps1Look = c } }
+        app.cutout?.let { co ->
+            h4("Screen cutout (notch / hole-punch)")
+            note(co.info, true)
+            seg(Cutout.MODES.map { (k, l) -> k to l.substringBefore(',').substringBefore(" (") }, co.mode) { v -> co.apply(v); build() }
+            note(Cutout.MODES.getValue(co.mode) + ". Fill lets the room run under the camera cutout; Keep clear leaves a black bar there instead.", true)
+        }
         check("Show the start screen when the app opens", s.startScreenEnabled) { c -> post { s.startScreenEnabled = c; s.changed() } }
         check("Debug: the free camera can leave the room", s.debugFreeCam) { c -> post { s.debugFreeCam = c } }
     }

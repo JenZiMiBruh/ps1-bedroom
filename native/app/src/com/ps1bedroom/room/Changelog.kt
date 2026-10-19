@@ -24,6 +24,12 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.29", "Notch support and fixes", listOf(
+            "New in Menu → Display: Screen cutout. Fill the screen (the room runs under the notch or hole-punch, buttons stay clear), fill everything, or keep clear. It tells you what your phone has: notch, hole-punch, curved edges, rounded corners",
+            "Fixed: the menu sliders can be dragged again (the menu was redrawing itself under your finger)",
+            "Fixed: the back of Jasper's neck no longer pokes through his head when he turns it",
+            "Fixed: the TV's weather channel shows the room's real temperature in your °F / °C, not a fixed one per season"
+        )),
         Entry("0.28", "Media controls, a widget, and fixes", listOf(
             "The phone now treats the room like a music app: the media player in your notification shade and lock screen, with the song, cover art, play / pause / skip and a seek bar for your music",
             "Headphone, Bluetooth, car and watch buttons control it; it pauses for phone calls and other players, and when headphones come out",

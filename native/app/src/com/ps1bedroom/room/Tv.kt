@@ -36,6 +36,8 @@ class Tv(private val room: Room, private val env: Environment) {
         val PS1_TV_CHANNEL = TV_CHANNEL_NAMES.size - 1 // the A/V input is always the last channel
     }
     var bedroomTvOn = true; private set
+    /** The weather channel's temperature, in the player's °F / °C (set by the app). */
+    var tempText: () -> String = { "--" }
     /** The picture (YouTube is pinned over it). */
     lateinit var screenMesh: Mesh
     var bedroomTvChannel = 0; private set
@@ -275,7 +277,7 @@ class Tv(private val room: Room, private val env: Environment) {
                 ctx.fillStyle = "#172554"; ctx.fillRect(86, 20, 34, 56)
                 // Forecast follows the actual season / weather / time settings
                 val forecast = env.W.label.uppercase().take(9)
-                val temp = mapOf("summer" to "74°F", "fall" to "52°F", "winter" to "27°F", "spring" to "61°F").getValue(env.currentSeason)
+                val temp = tempText()   // native fix: the room's real temperature (place, weather, live city), not a fixed one per season
                 ctx.fillStyle = "#fde047"; ctx.font = "bold 7px monospace"
                 ctx.fillText(if (env.currentTime == "day") "TODAY" else "TONIGHT", 88, 30)
                 ctx.fillStyle = "#ffffff"; ctx.fillText(temp, 92, 42); ctx.fillText(forecast, 89, 54)

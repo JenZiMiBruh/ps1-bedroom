@@ -41,6 +41,7 @@ class MainActivity : Activity() {
         app.onMediaState = { s -> runOnUiThread { MediaService.update(this, s); NowPlayingWidget.update(this, s) } }
         MediaService.onControl = { cmd -> app.postOrRun { app.mediaCommand(cmd) } }
         MediaService.onSeek = { ms -> app.postOrRun { app.sound.musicStream?.seek(ms / 1000.0); app.publishMedia() } }
+        app.cutout = Cutout(this, root, view)
         app.hud = Hud(this, root, app).also { it.attachMenu() }
         setContentView(root)
         pacer = FramePacer(this, view, app)

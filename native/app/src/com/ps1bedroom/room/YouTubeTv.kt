@@ -66,7 +66,7 @@ class YouTubeTv(private val act: Activity, private val root: FrameLayout, privat
             val e = MotionEvent.obtain(ev); e.transform(inverse)
             val r = screen.dispatchTouchEvent(e); e.recycle(); return r
         }
-    }.apply { visibility = View.GONE; setWillNotDraw(false) }
+    }.apply { visibility = View.GONE; setWillNotDraw(false); tag = Cutout.NO_INSET }
     private val screen = FrameLayout(act).apply { setBackgroundColor(Color.rgb(4, 4, 5)) }
     private var web: WebView? = null
 

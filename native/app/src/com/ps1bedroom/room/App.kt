@@ -52,6 +52,8 @@ class App : GLSurfaceView.Renderer {
     @Volatile var pickMusic: ((Boolean) -> Unit)? = null
     /** YouTube is playing on the bedroom TV (YouTubeTv); the TV's own channel sound steps aside. */
     @Volatile var ytActive = false
+    /** Notch / hole-punch handling (made by the activity). */
+    var cutout: Cutout? = null
     /** 1.3: achievements and the sunrise alarm (made by the activity). */
     lateinit var achievements: Achievements
     lateinit var alarm: Alarm
@@ -260,6 +262,7 @@ class App : GLSurfaceView.Renderer {
             built = true
             myMusic.onChanged = { hud?.refreshMenu(); publishMedia() }
             scene.add(alarm.light)
+            tv.tempText = { settings.formatTemp(settings.currentTempC()) }
             surprises = Surprises(this, alarm.context); surprises.build()
             jasper.onPet = { achievements.petted() }
             library.onInserted = { achievements.achieve("gamer") }

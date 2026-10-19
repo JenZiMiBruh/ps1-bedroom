@@ -467,6 +467,9 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
             h4(title)
             chips(app.extras.colorOptions(part).map { (k, l) -> Triple(l, app.extras.roomColors[part] == k, { post { app.extras.setRoomColor(part, k); s.changed() } }) })
         }
+        h4("PlayStation under the TV")
+        chips(Consoles.NAMES.map { (k, l) -> Triple(l, app.consoles.current == k, { post { if (app.ps1.ps1On) app.ps1.powerToggle(app.lastFrameT); app.consoles.select(k); app.sfx("ui"); s.changed(); app.hud?.overlays?.setConsole(k) } }) })
+        note("Each one has its own model, controller, lights, boot-up and sound, and the start screen follows it.", true)
         h4("Jasper's coat")
         val dog = app.jasper
         chips(Jasper.PRESETS.map { (k, p) -> Triple(p.name, dog.colorPreset == k, { post { dog.applyColors(p, k); app.sfx("ui"); s.changed() } }) })

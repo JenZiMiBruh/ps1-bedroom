@@ -44,6 +44,12 @@ class Ps1(private val room: Room, private val tv: Tv) {
     private var padPressAt = -10f
     private var tvChannelBeforePs1 = 0
     val PS1_BOOT_SECONDS = 7.5f
+    /** Which PlayStation is under the TV (Consoles draws the others' boot and menu screens). */
+    var console = "ps1"
+    var consoles: Consoles? = null
+    private lateinit var ps1CaseRef: com.ps1bedroom.room.engine.Object3D
+    /** Shows or hides the PS1 itself (its jewel case stays on the floor for every console). */
+    fun showModel(on: Boolean) { for (c in ps1Group.children) if (c !== ps1CaseRef) c.visible = on }
 
     private fun ps1Part(geo: Geometry, mat: Material, x: Float, y: Float, z: Float, tag: String? = null): Mesh {
         val m = Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true
@@ -126,7 +132,7 @@ class Ps1(private val room: Room, private val tv: Tv) {
 
         // ---- DualShock: handles, D-pad, action buttons, twin analog sticks ----
         val padGroup = Group()
-        padGroup.position.set(0.42f, 0.026f, 0.24f); padGroup.rotation.y = -0.38f
+        padGroup.position.set(0.42f, 0.04f, 0.24f); padGroup.rotation.y = -0.38f   // (v0.36: up 1.4 cm, its grips dipped into the rug)
         ps1Group.add(padGroup)
         val padBridge = Mesh(Geo.box(0.24f, 0.038f, 0.115f), matPs1Grey)
         padBridge.castShadow = true; padGroup.add(padBridge); room.registerInteractable(padBridge, "ps1Pad")
@@ -150,10 +156,10 @@ class Ps1(private val room: Room, private val tv: Tv) {
         val ps1Case = Games.buildPs1JewelCase(Games.BANDICOOT_RUSH, matJewelPlastic)
         ps1Case.rotation.set((-PI / 2).toFloat(), 0f, 0.28f)
         ps1Case.position.set(-0.44f, 0.011f, 0.14f)
-        ps1Group.add(ps1Case)
+        ps1Group.add(ps1Case); ps1CaseRef = ps1Case
         library.registerFloorCase(ps1Case)
         val padCable = Mesh(GeoCurves.tube(CatmullRomCurve3(listOf(doubleArrayOf(-0.12, 0.047, 0.222), doubleArrayOf(0.04, 0.012, 0.35),
-            doubleArrayOf(0.26, 0.012, 0.31), doubleArrayOf(0.39, 0.025, 0.20))), 12, 0.009f, 5), matDarkPlastic)
+            doubleArrayOf(0.26, 0.012, 0.31), doubleArrayOf(0.39, 0.039, 0.20))), 12, 0.009f, 5), matDarkPlastic)
         padCable.castShadow = true; ps1Group.add(padCable)
         // Every console / controller part shades the same way
         ps1Group.traverse { if (it is Mesh) it.receiveShadow = true }
@@ -251,7 +257,7 @@ class Ps1(private val room: Room, private val tv: Tv) {
     private fun startBoot(t: Float) {
         bootStart = t
         stopBootSound() // a reboot cuts off the previous boot jingle
-        if (!lidOpen) { sfx("ps1Spin"); sfx("ps1Boot") }
+        if (!lidOpen) { sfx("ps1Spin"); sfx(if (console == "ps1") "ps1Boot" else console + "Boot") }
     }
     fun powerToggle(t: Float) {
         press("power")
@@ -294,8 +300,8 @@ class Ps1(private val room: Room, private val tv: Tv) {
                 ctx.textAlign = "left"; ctx.fillText("AV 1", 8, 14)
                 ctx.textAlign = "center"; ctx.fillText("NO SIGNAL", 64, 52)
             }
-            "menu" -> drawMenu(ctx, w, h, t)
-            "boot" -> drawBoot(ctx, w, h, t - bootStart)
+            "menu" -> consoles?.takeIf { console != "ps1" }?.drawMenu(ctx, w, h, t) ?: drawMenu(ctx, w, h, t)
+            "boot" -> consoles?.takeIf { console != "ps1" }?.drawBoot(ctx, w, h, t - bootStart) ?: drawBoot(ctx, w, h, t - bootStart)
             "title" -> library.drawTitleScreen(ctx, w, h, library.currentGame(), t - bootStart - PS1_BOOT_SECONDS)
             else -> library.drawGameplay(ctx, w, h, t - bootStart - PS1_BOOT_SECONDS - 4, t)
         }

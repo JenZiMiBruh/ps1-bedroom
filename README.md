@@ -13,7 +13,7 @@
 ![Release](https://img.shields.io/badge/📅%20RELEASE-October%2021%2C%202026-ff3ea5?style=for-the-badge&labelColor=1a1033)
 ![Google Play](https://img.shields.io/badge/GOOGLE%20PLAY-before%20the%20end%20of%202026-22c55e?style=for-the-badge&logo=googleplay&logoColor=white&labelColor=1a1033)
 
-![Native build](https://img.shields.io/badge/native%20build-v0.35-a78bfa?style=flat-square&labelColor=1a1033)
+![Native build](https://img.shields.io/badge/native%20build-v0.36-a78bfa?style=flat-square&labelColor=1a1033)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.0-7f52ff?style=flat-square&logo=kotlin&logoColor=white&labelColor=1a1033)
 ![OpenGL ES](https://img.shields.io/badge/OpenGL%20ES-3.0-5586a4?style=flat-square&logo=opengl&logoColor=white&labelColor=1a1033)
 ![APK](https://img.shields.io/badge/APK-~1.2%20MB-ef4444?style=flat-square&labelColor=1a1033)
@@ -98,6 +98,7 @@ Newest first. The same list is in the app (tap the version tag in the bottom-lef
 
 | Build | What changed |
 |---|---|
+| **0.36** | PS2 / PS3 / PS4 / PS5 Slim consoles with their own controllers, lights, boot-ups, sounds and matching start screen |
 | **0.35** | Window widget, Quick Settings tile, app shortcuts, picture-in-picture, haptics, photo sharing |
 | **0.34** | Soft shadows, desk corner fix, sharper small textures (calendar art) |
 | **0.33** | Door sign lettering fix |

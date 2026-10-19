@@ -353,7 +353,7 @@ class Settings(private val app: App, private val ctx: Context) {
         put("jitter", app.jitterBase.toDouble()); put("affine", app.renderer.ps1Uniforms.affineStrength.toDouble()); put("dither", app.renderer.post.ditherStrength.toDouble())
         put("volumetric", env.userVolumetricSetting.toDouble()); put("sway", app.swayAmount.toDouble()); put("ao", app.aoBase.toDouble())
         put("tempUnit", tempUnit); put("fpsChoice", fpsChoice); put("ecoIdle", ecoIdle)
-        put("poster", app.extras.posterChoice); put("colors", JSONObject(app.extras.roomColors as Map<*, *>)); put("decor", app.extras.decorMode); put("jasper", JSONObject().put("preset", app.jasper.colorPreset).put("coat", app.jasper.colors.coat).put("dark", app.jasper.colors.dark).put("light", app.jasper.colors.light)); put("heater", app.extras.heaterMode)
+        put("poster", app.extras.posterChoice); put("colors", JSONObject(app.extras.roomColors as Map<*, *>)); put("decor", app.extras.decorMode); put("console", app.consoles.current); put("jasper", JSONObject().put("preset", app.jasper.colorPreset).put("coat", app.jasper.colors.coat).put("dark", app.jasper.colors.dark).put("light", app.jasper.colors.light)); put("heater", app.extras.heaterMode)
         put("outside", app.sky.outsideEnv); put("startScreen", startScreenEnabled); put("tutorialSeen", tutorialSeen); put("sleepDim", sleepDim)
     }
     fun saveNow() {
@@ -365,6 +365,7 @@ class Settings(private val app: App, private val ctx: Context) {
         prefs.edit().putString("settings.v1", json).apply()
     }
     /** A saved value read straight from storage (the start screen decides before the room is built). */
+    fun peekString(key: String, def: String): String = prefs.getString("settings.v1", null)?.let { try { JSONObject(it).optString(key, def) } catch (e: Exception) { def } } ?: def
     fun peek(key: String, def: Boolean): Boolean = prefs.getString("settings.v1", null)?.let { try { JSONObject(it).optBoolean(key, def) } catch (e: Exception) { def } } ?: def
     /** applySavedSettings: on the GL thread once the room is built. */
     fun restore() {
@@ -409,6 +410,7 @@ class Settings(private val app: App, private val ctx: Context) {
             app.extras.setPoster(s.optString("poster", "none"))
             s.optJSONObject("colors")?.let { c -> for (part in c.keys()) app.extras.setRoomColor(part, c.getString(part)) }
             app.extras.decorMode = s.optString("decor", "auto"); app.extras.applyDecor()
+            app.consoles.select(s.optString("console", "ps1"), true)
             s.optJSONObject("jasper")?.let { j ->
                 val k = j.optString("preset", "classic")
                 val p = Jasper.PRESETS[k] ?: Jasper.Preset("Custom", j.optString("coat", "#b97a3e"), j.optString("dark", "#1b1410"), j.optString("light", "#d9b27a"))

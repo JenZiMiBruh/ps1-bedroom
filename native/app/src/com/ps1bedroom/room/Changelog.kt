@@ -24,6 +24,14 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.36", "PS2, PS3, PS4 and PS5", listOf(
+            "Pick the PlayStation under the TV in Menu → Room: the original PS1, or a PS2 Slim, PS3 Slim, PS4 Slim or PS5 Slim, each modelled from the real console's measurements and photos",
+            "Each one has its own controller (DualShock 2, DualShock 3, DualShock 4, DualSense), lights (the PS4's light bar, the PS5's blue seams), and the PS2 Slim's lid flips up to show the disc",
+            "Each console has its own boot-up and home screen on the TV and its own boot sound",
+            "The start screen plays the boot-up of the console you picked",
+            "Discs, the TV input and the games work the same on all of them",
+            "Fixed: the PS1 controller's grips no longer dip into the rug"
+        )),
         Entry("0.35", "Widgets and Android extras", listOf(
             "New Window widget: the real view out of your bedroom window (place, sky, weather), with a live clock, the date, the weather and temperature. Each one has its own options: clock, date, weather, place, window frame, blinds",
             "Quick Settings tile: Room sounds. Pull down the shade and tap to play or pause",

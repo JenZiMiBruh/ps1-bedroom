@@ -70,6 +70,14 @@ class GameLibrary(private val room: Room) {
     }
     /** The case for the disc that's in the console, lying face-up beside it. */
     fun registerFloorCase(mesh: Mesh) = register(BANDICOOT_INDEX, mesh)
+    /** The case on the floor steps aside for bigger consoles (its home moves; it moves too if it's at home). */
+    fun moveFloorCase(x: Float) {
+        val s = slots[BANDICOOT_INDEX] ?: return
+        val m = caseMeshes[BANDICOOT_INDEX] ?: return
+        val atHome = m.parent === s.parent && abs(m.position.x - s.pos.x) < 0.001f && abs(m.position.z - s.pos.z) < 0.001f
+        s.pos.x = x
+        if (atHome) m.position.x = x
+    }
 
     /** Collector's wall shelf on the left wall, between the calendar and the band poster. */
     fun buildGtaShelf(matJewelPlastic: Material) {

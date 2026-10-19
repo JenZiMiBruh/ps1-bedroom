@@ -205,6 +205,8 @@ class App : GLSurfaceView.Renderer {
     private var lastHeld: Int? = null
     lateinit var tv: Tv; private set
     lateinit var ps1: Ps1; private set
+    /** PS2 / PS3 / PS4 / PS5 (built after everything else, so the grime map is untouched). */
+    lateinit var consoles: Consoles; private set
     lateinit var library: GameLibrary; private set
     private var gta3d: Gta3d? = null
     /** The 3D-era GTA games render a chase-cam drive into a texture that the TV shows (only while one is playing). */
@@ -267,6 +269,7 @@ class App : GLSurfaceView.Renderer {
                 monitor = Monitor(tex.monCanvasObj, desk.monScreenMat, room, desk.pcLedMat, env); monitor.update(0f)
                 ps1 = Ps1(room, tv); ps1.library = library; library.ps1 = ps1
                 ps1.build(desk.matJewelPlastic); tv.ps1 = ps1
+                room.extraDynamicRoots += ps1.ps1Group   // (not batched: the console under the TV can be swapped)
                 library.buildGtaShelf(desk.matJewelPlastic)   // HTML 6242, after the hookups
                 room.extraBatchExcluded.addAll(library.batchExcluded()); room.extraDynamicRoots += ps1.disc
                 room.extraDynamicRoots += ps1.ps1LidPivot
@@ -318,6 +321,7 @@ class App : GLSurfaceView.Renderer {
             scene.add(alarm.light)
             tv.tempText = { settings.formatTemp(settings.currentTempC()) }
             surprises = Surprises(this, alarm.context); surprises.build()
+            consoles = Consoles(room, ps1); consoles.build(); ps1.consoles = consoles; consoles.toast = { toast(it) }
             jasper.onPet = { achievements.petted() }
             library.onInserted = { achievements.achieve("gamer") }
             myMusic.load()
@@ -376,6 +380,7 @@ class App : GLSurfaceView.Renderer {
         jasper.bedroomTvOn = tv.bedroomTvOn
         tv.updateLight(t)
         ps1.update(dt)
+        consoles.update(t, dt)
         library.update(t, dt)
         if (library.heldGame != lastHeld) { lastHeld = library.heldGame; hud?.holdingGame(lastHeld != null) }
         if (player.updateChair(dt)) renderer.shadowsNeedUpdate = true
@@ -500,7 +505,7 @@ class App : GLSurfaceView.Renderer {
         }
         when (tag) {
             "cat" -> toast("🐱 MIDNIGHT CAT: *Low-Bit PS1 Meow* (Night-vision eyes toggled!)")
-            "ps1Body" -> toast("🎮 PLAYSTATION: Click POWER (left), RESET (small) or OPEN (right) on top, or the lid itself.")
+            "ps1Body" -> toast(if (consoles.current == "ps1") "🎮 PLAYSTATION: Click POWER (left), RESET (small) or OPEN (right) on top, or the lid itself." else "🎮 ${Consoles.FULL[consoles.current]?.uppercase()}: tap the POWER or EJECT buttons on the front, or the controller. Change consoles in Menu → Room.")
         }
         // The HTML plays these from inside each toggle
         when (tag) {

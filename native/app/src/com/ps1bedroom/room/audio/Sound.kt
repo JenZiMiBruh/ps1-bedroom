@@ -778,6 +778,40 @@ class Sound(private val app: App) {
                 k.pad.triggerAttackRelease(listOf("F#3", "C#4", "F4", "A#4"), 2.6, t + 4.3, 0.4)
                 listOf("C#6", "F6", "G#6", "C#7").forEachIndexed { i, n -> k.tone2.triggerAttackRelease(n, 0.3, t + 4.4 + i * 0.12, 0.14) }
             }
+            // ---- The other consoles' boot sounds (Consoles.kt), timed to their boot screens ----
+            "ps2Boot" -> {
+                k = sfxAt(P.getValue("tv"), 10.0); ps1BootKit = k
+                k.noiseFilter.type = "lowpass"; k.noiseFilter.frequency.setValueAtTime(120.0, t); k.noiseFilter.frequency.exponentialRampToValueAtTime(1400.0, t + 3.2)
+                k.noise.envelope.attack = 1.6; k.noise.envelope.decay = 2.0; k.noise.triggerAttackRelease(2.6, t + 0.2, 0.45)
+                k.pad.triggerAttackRelease(listOf("D2", "A2", "D3", "F3"), 3.4, t + 0.3, 0.55)
+                listOf("A5", "D6", "F6", "A6", "D7").forEachIndexed { i, n -> k.tone2.triggerAttackRelease(n, 0.5, t + 1.8 + i * 0.28, 0.08) }
+                k.thump.triggerAttackRelease("D2", 0.8, t + 4.4, 0.4)
+                k.pad.triggerAttackRelease(listOf("D3", "A3", "D4", "E4"), 2.8, t + 4.4, 0.4)
+            }
+            "ps3Boot" -> {
+                k = sfxAt(P.getValue("tv"), 10.0); ps1BootKit = k
+                k.pad.triggerAttackRelease(listOf("D3", "A3", "D4", "F#4", "A4"), 3.2, t + 0.5, 0.45)
+                k.tone2.triggerAttackRelease("A5", 1.2, t + 1.4, 0.06)
+                k.pad.triggerAttackRelease(listOf("G3", "B3", "D4", "G4", "B4"), 3.4, t + 4.0, 0.5)
+                listOf("D6", "G6", "B6").forEachIndexed { i, n -> k.tone2.triggerAttackRelease(n, 0.8, t + 4.3 + i * 0.35, 0.07) }
+            }
+            "ps4Boot" -> {
+                k = sfxAt(P.getValue("tv"), 10.0); ps1BootKit = k
+                k.noiseFilter.type = "highpass"; k.noiseFilter.frequency.value = 2500.0
+                k.noise.envelope.attack = 0.6; k.noise.envelope.decay = 0.8; k.noise.triggerAttackRelease(0.8, t + 0.2, 0.2)
+                k.pad.triggerAttackRelease(listOf("E3", "B3", "E4", "G#4", "B4"), 2.6, t + 0.9, 0.5)
+                k.tone.oscillator.type = "sine"
+                listOf("E5", "G#5", "B5", "E6").forEachIndexed { i, n -> k.tone.triggerAttackRelease(n, 0.25, t + 1.3 + i * 0.14, 0.09) }
+                k.pad.triggerAttackRelease(listOf("A3", "C#4", "E4", "B4"), 2.4, t + 3.6, 0.35)
+            }
+            "ps5Boot" -> {
+                k = sfxAt(P.getValue("tv"), 10.0); ps1BootKit = k
+                k.noiseFilter.type = "bandpass"; k.noiseFilter.frequency.setValueAtTime(400.0, t); k.noiseFilter.frequency.exponentialRampToValueAtTime(5000.0, t + 3.5)
+                k.noise.envelope.attack = 2.6; k.noise.envelope.decay = 0.9; k.noise.triggerAttackRelease(3.0, t + 0.3, 0.3)
+                k.pad.triggerAttackRelease(listOf("F3", "C4", "F4", "A4"), 3.0, t + 0.8, 0.35)
+                k.tone2.triggerAttackRelease("C7", 0.9, t + 3.6, 0.1); k.tone2.triggerAttackRelease("F7", 1.1, t + 3.75, 0.08)
+                k.pad.triggerAttackRelease(listOf("F3", "A3", "C4", "E4", "G4"), 3.0, t + 4.3, 0.45)
+            }
             "ps1Power" -> { k = sfxAt(P.getValue("ps1"), 1.0); k.tickFilter.frequency.value = 1600.0; k.tick.triggerAttackRelease(0.01, t, 0.8); k.thump.triggerAttackRelease("C3", 0.06, t + 0.01, 0.3) }
             "ps1Reset", "ps1Button" -> { k = sfxAt(P.getValue("ps1"), 1.0); k.tickFilter.frequency.value = 2000.0; k.tick.triggerAttackRelease(0.01, t, 0.6) }
             "lightSwitch" -> {

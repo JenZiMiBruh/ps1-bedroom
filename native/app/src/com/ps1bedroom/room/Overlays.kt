@@ -200,11 +200,33 @@ class Overlays(private val act: Activity, private val root: FrameLayout, private
     private val white = LinearLayout(act).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER; setBackgroundColor(Color.WHITE); alpha = 0f; visibility = View.GONE }
     private val black = LinearLayout(act).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER; alpha = 0f; visibility = View.GONE }
     private var bootStage = 0
+    /** The console under the TV: the start screen plays its boot-up instead of the PS1's. */
+    private var console = "ps1"
+    fun setConsole(k: String) { console = k }
+    private lateinit var engineLine: TextView
+    /** The chosen console's boot-up, drawn at the TV's PS1 resolution and scaled up crunchy. */
+    private inner class IntroView : View(act) {
+        private val c2d = com.ps1bedroom.room.engine.Canvas2D(128, 96)
+        private val paint = android.graphics.Paint().apply { isFilterBitmap = false }
+        private val dst = android.graphics.RectF()
+        var startMs = 0L
+        override fun onDraw(cv: android.graphics.Canvas) {
+            val e = (android.os.SystemClock.uptimeMillis() - startMs) / 1000f
+            ConsoleScreens.boot(console, c2d, 128, 96, e)
+            cv.drawColor(Color.BLACK)
+            val s = minOf(width / 128f, height / 96f)
+            dst.set((width - 128 * s) / 2, (height - 96 * s) / 2, (width + 128 * s) / 2, (height + 96 * s) / 2)
+            cv.drawBitmap(c2d.bitmap, null, dst, paint)
+            if (visibility == View.VISIBLE) postInvalidateOnAnimation()
+        }
+    }
+    private val intro by lazy { IntroView().also { it.visibility = View.GONE; it.alpha = 0f; boot.addView(it, 1, MATCH) } }
     private val bootTimers = ArrayList<Runnable>()
     val bootShowing get() = boot.parent != null && bootStage < 3
     init {
         press.addView(text("PS1 BEDROOM", Color.WHITE, 26f, 0.23f).apply { setShadowLayer(0.01f, dp(3f), dp(3f), Color.rgb(0x3b, 0x1a, 0x7a)) })
-        press.addView(text("AMBIENCE ENGINE", MUTED, 11f, 0.27f), LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = dpi(8f) })
+        engineLine = text("AMBIENCE ENGINE", MUTED, 11f, 0.27f)
+        press.addView(engineLine, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = dpi(8f) })
         val start = text("PRESS START", GOLD, 15f, 0.27f)
         // blink 1.1 s steps(2)
         ValueAnimator.ofInt(0, 2).apply { duration = 1100; repeatCount = ValueAnimator.INFINITE; addUpdateListener { start.alpha = if ((it.animatedValue as Int) < 1) 1f else 0f }; start() }
@@ -230,6 +252,8 @@ class Overlays(private val act: Activity, private val root: FrameLayout, private
     /** Shown on launch unless it's turned off in Display. */
     fun showBoot(enabled: Boolean) {
         if (!enabled) { bootStage = 3; app.post { app.startAudioIfWanted() }; if (!app.settings.peek("tutorialSeen", false)) startTutorial(); return }
+        console = app.settings.peekString("console", "ps1")
+        if (console != "ps1") engineLine.text = "AMBIENCE ENGINE · " + (Consoles.NAMES[console] ?: "")
         root.addView(boot, MATCH)
     }
     private fun later(ms: Long, fn: () -> Unit) { val r = Runnable(fn); bootTimers += r; boot.postDelayed(r, ms) }
@@ -239,6 +263,19 @@ class Overlays(private val act: Activity, private val root: FrameLayout, private
         app.post { app.startAudioIfWanted() }
         bootStage = 1
         press.animate().alpha(0f).setDuration(600).start()
+        if (console != "ps1") {
+            // This console's own boot-up, then the same title card
+            intro.startMs = android.os.SystemClock.uptimeMillis(); intro.visibility = View.VISIBLE
+            intro.animate().alpha(1f).setDuration(300).start(); intro.invalidate()
+            later(6200) {
+                bootStage = 2
+                intro.animate().alpha(0f).setDuration(600).withEndAction { intro.visibility = View.GONE }.start()
+                black.visibility = View.VISIBLE
+                black.animate().alpha(1f).setDuration(600).start()
+            }
+            later(8700) { finishBoot() }
+            return
+        }
         white.visibility = View.VISIBLE
         white.animate().alpha(1f).setDuration(600).start()
         white.findViewWithTag<View>("diamond").animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(1400).setInterpolator(DecelerateInterpolator(2f)).start()

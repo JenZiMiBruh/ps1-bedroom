@@ -52,21 +52,11 @@ class YouTubeTv(private val act: Activity, private val root: FrameLayout, privat
     private val src = floatArrayOf(0f, 0f, SW.toFloat(), 0f, 0f, SH.toFloat(), SW.toFloat(), SH.toFloat())
     private val dst = FloatArray(8)
     private var show = false
-    private val layer = object : FrameLayout(act) {
-        override fun drawChild(canvas: Canvas, child: View, drawingTime: Long): Boolean {
-            if (isFull) return super.drawChild(canvas, child, drawingTime)
-            canvas.save(); canvas.concat(matrix); val r = super.drawChild(canvas, child, drawingTime); canvas.restore(); return r
-        }
-        private val pt = FloatArray(2)
-        override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
-            if (isFull) return super.dispatchTouchEvent(ev)
-            if (!show || screen.visibility != View.VISIBLE) return false
-            pt[0] = ev.x; pt[1] = ev.y; inverse.mapPoints(pt)
-            if (ev.actionMasked == MotionEvent.ACTION_DOWN && (pt[0] < 0 || pt[1] < 0 || pt[0] > SW || pt[1] > SH)) return false
-            val e = MotionEvent.obtain(ev); e.transform(inverse)
-            val r = screen.dispatchTouchEvent(e); e.recycle(); return r
-        }
-    }.apply { visibility = View.GONE; setWillNotDraw(false); tag = Cutout.NO_INSET }
+    // v0.41 fix: the player is placed with ordinary view properties (position, scale, rotation), which the YouTube
+    // player honours on every Android version. (A perspective canvas transform was ignored by newer WebViews, so
+    // the player showed up untransformed in the top-left corner.) Touches reach it through normal view dispatch;
+    // anywhere else falls through to the room.
+    private val layer = FrameLayout(act).apply { visibility = View.GONE; tag = Cutout.NO_INSET }
     private val screen = FrameLayout(act).apply { setBackgroundColor(Color.rgb(4, 4, 5)) }
     private var web: WebView? = null
 
@@ -233,6 +223,8 @@ class YouTubeTv(private val act: Activity, private val root: FrameLayout, privat
         isFull = f
         fullBtn.text = if (f) "📺 On TV" else "⛶ Full"
         screen.layoutParams = if (f) FrameLayout.LayoutParams(-1, -1) else FrameLayout.LayoutParams(SW, SH)
+        if (f) { screen.scaleX = 1f; screen.scaleY = 1f; screen.rotation = 0f; screen.translationX = 0f; screen.translationY = 0f }
+        else lastPts.fill(Float.NaN)   // back on the TV: re-place it on the next frame
         layer.setBackgroundColor(if (f) Color.BLACK else Color.TRANSPARENT)
         if (f) screen.visibility = View.VISIBLE
         web?.evaluateJavascript("document.body.classList.toggle('full', $f)", null)
@@ -286,9 +278,22 @@ class YouTubeTv(private val act: Activity, private val root: FrameLayout, privat
         synchronized(pending) { System.arraycopy(pending, 0, dst, 0, 8) }
         show = pendingShow
         if (isFull) return@Runnable
-        screen.visibility = if (show) View.VISIBLE else View.INVISIBLE
-        if (!show) return@Runnable
-        matrix.setPolyToPoly(src, 0, dst, 0, 4); matrix.invert(inverse)
+        // hidden when the TV faces away, is behind the camera, or is off the screen entirely
+        val minX = minOf(minOf(dst[0], dst[2]), minOf(dst[4], dst[6])); val maxX = maxOf(maxOf(dst[0], dst[2]), maxOf(dst[4], dst[6]))
+        val minY = minOf(minOf(dst[1], dst[3]), minOf(dst[5], dst[7])); val maxY = maxOf(maxOf(dst[1], dst[3]), maxOf(dst[5], dst[7]))
+        val onScreen = maxX > 0 && maxY > 0 && minX < layer.width && minY < layer.height
+        screen.visibility = if (show && onScreen) View.VISIBLE else View.INVISIBLE
+        if (!show || !onScreen) return@Runnable
+        // the glass's corners TL, TR, BL -> position, size and tilt (the TV's slight perspective is averaged out)
+        val ax = (dst[0] + dst[4]) / 2; val ay = (dst[1] + dst[5]) / 2                 // middle of the left edge
+        val bx = (dst[2] + dst[6]) / 2; val by = (dst[3] + dst[7]) / 2                 // middle of the right edge
+        val width = kotlin.math.hypot((bx - ax).toDouble(), (by - ay).toDouble()).toFloat()
+        val height = (kotlin.math.hypot((dst[4] - dst[0]).toDouble(), (dst[5] - dst[1]).toDouble()) + kotlin.math.hypot((dst[6] - dst[2]).toDouble(), (dst[7] - dst[3]).toDouble())).toFloat() / 2
+        val ang = Math.toDegrees(kotlin.math.atan2((by - ay).toDouble(), (bx - ax).toDouble())).toFloat()
+        val cx = (dst[0] + dst[2] + dst[4] + dst[6]) / 4; val cy = (dst[1] + dst[3] + dst[5] + dst[7]) / 4
+        screen.pivotX = SW / 2f; screen.pivotY = SH / 2f
+        screen.scaleX = width / SW; screen.scaleY = height / SH; screen.rotation = ang
+        screen.translationX = cx - SW / 2f; screen.translationY = cy - SH / 2f
         if (ps1Look && kotlin.math.abs(pendingPx - lastPx) > 0.4f) { lastPx = pendingPx; web?.evaluateJavascript("document.body.style.setProperty('--px','${"%.2f".format(java.util.Locale.US, pendingPx / act.resources.displayMetrics.density)}px')", null) }
         layer.invalidate()
     }

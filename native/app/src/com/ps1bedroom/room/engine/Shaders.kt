@@ -262,6 +262,7 @@ uniform vec3 uCameraPos;
 uniform vec3 uLightPos;
 uniform vec3 uLightDir;
 uniform vec3 uLightColor;
+uniform vec3 uSkyTint;
 uniform float uLightCosAngle;
 uniform float uLightPenumbraCos;
 uniform float uFanLightOn;
@@ -355,13 +356,20 @@ void main() {
               float distAtten = 1.0 / (1.0 + 0.065 * distToLightSq);
               // v0.40 stylized shafts: the window light breaks into distinct beams that drift slowly, each brighter
               // near the glass, with specks of dust glinting in them
+              // v0.41: more character. Wide shafts, thin bright streaks running along them, a slow breath, the colour
+              // going from the light's own near the glass to the sky's horizon colour deeper in, and big dust glints.
               float band = 0.5 + 0.5 * sin(winHit.x * 7.5 + winHit.y * 2.6 + uTime * 0.12);
-              band = mix(0.28, 1.0, smoothstep(0.3, 0.7, band));
-              float nearGlass = 1.0 + 0.9 * exp(-(samplePos.z + 3.0) * 0.55);
-              vec3 cell = floor(samplePos * 26.0);
+              band = mix(0.22, 1.0, smoothstep(0.3, 0.7, band));
+              float streak = pow(max(0.0, sin(winHit.x * 23.0 + winHit.y * 5.0 + uTime * 0.31)), 16.0) * 0.85;
+              float breath = 0.86 + 0.14 * sin(uTime * 0.37 + winHit.x * 0.8);
+              float depthIn = clamp((samplePos.z + 3.0) / 4.5, 0.0, 1.0);
+              float nearGlass = 1.0 + 1.1 * exp(-(samplePos.z + 3.0) * 0.55);
+              vec3 tint = mix(uLightColor * 1.15, mix(uLightColor, uSkyTint, 0.65), depthIn);
+              vec3 cell = floor(samplePos * 13.0);
               float h = fract(sin(dot(cell, vec3(12.9898, 78.233, 37.719))) * 43758.5453);
-              float speck = step(0.982, h) * (0.55 + 0.45 * sin(uTime * 1.7 + h * 50.0)) * 2.4;
-              sunRays += uLightColor * (coneAtten * winEdge * distAtten * phase * stepLen * 0.62) * (band * nearGlass + speck);
+              float speck = step(0.975, h) * (0.5 + 0.5 * sin(uTime * 1.4 + h * 50.0)) * 3.2;
+              float k = coneAtten * winEdge * distAtten * phase * stepLen * 0.62;
+              sunRays += tint * k * ((band + streak) * nearGlass * breath) + mix(uLightColor, uSkyTint, 0.5) * k * speck;
             }
           }
         }

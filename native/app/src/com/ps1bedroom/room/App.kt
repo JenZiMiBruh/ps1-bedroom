@@ -279,7 +279,7 @@ class App : GLSurfaceView.Renderer {
                 fan = Fan(room); fan.build()
                 room.extraDynamicRoots += fan.fanBladesGroup; room.extraDynamicRoots += fan.fanPullChain; room.extraDynamicRoots += fan.lightPullChain
                 com.ps1bedroom.room.engine.PS1.syncGrime(256)   // HTML 8225: weather and season FX
-                weatherFx = WeatherFx(room, env, sky); room.extraDynamicRoots.addAll(weatherFx.dynamicRoots())
+                weatherFx = WeatherFx(room, env, sky); weatherFx.renderer = renderer; room.extraDynamicRoots.addAll(weatherFx.dynamicRoots())
                 env.envHooks += { weatherFx.updateSettings() }
                 furniture = Furniture(room); furniture.build()
                 decor = Decor(room, res); decor.build()

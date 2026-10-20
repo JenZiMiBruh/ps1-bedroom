@@ -283,6 +283,8 @@ void main() {
         doubleArrayOf(50.0, 90.0, 40.0, 170.0, 220.0, 110.0, 210.0, 255.0, 190.0, 220.0)
     )
     private val skyCols = DoubleArray(9)
+    /** The sky's horizon colour right now (the light rays and dust pick it up). */
+    val horizonColor: com.ps1bedroom.room.engine.Color get() = dome.hor
     /** skyColorsAt: fills skyCols with top, mid, horizon RGB (0-255, already truncated like the HTML's `| 0`). */
     private fun skyColorsAt(deg: Double) {
         val keys = if (env.skyStyle == "vapor") VAPOR_KEYS else SKY_KEYS

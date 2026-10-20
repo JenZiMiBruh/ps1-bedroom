@@ -48,7 +48,7 @@ class Renderer {
         val volumetric = glGetUniformLocation(p, "uVolumetricStrength"); val ao = glGetUniformLocation(p, "uAOStrength"); val steps = glGetUniformLocation(p, "uMarchSteps")
         val invProj = glGetUniformLocation(p, "uInvProjMatrix"); val invView = glGetUniformLocation(p, "uInvViewMatrix"); val shadowMatrix = glGetUniformLocation(p, "uShadowMatrix")
         val cameraPos = glGetUniformLocation(p, "uCameraPos"); val lightPos = glGetUniformLocation(p, "uLightPos"); val lightDir = glGetUniformLocation(p, "uLightDir")
-        val lightColor = glGetUniformLocation(p, "uLightColor"); val cosAngle = glGetUniformLocation(p, "uLightCosAngle"); val penumbraCos = glGetUniformLocation(p, "uLightPenumbraCos")
+        val lightColor = glGetUniformLocation(p, "uLightColor"); val skyTint = glGetUniformLocation(p, "uSkyTint"); val cosAngle = glGetUniformLocation(p, "uLightCosAngle"); val penumbraCos = glGetUniformLocation(p, "uLightPenumbraCos")
         val fanOn = glGetUniformLocation(p, "uFanLightOn"); val fanPos = glGetUniformLocation(p, "uFanLightPos"); val time = glGetUniformLocation(p, "uTime")
         val tint = glGetUniformLocation(p, "uGradeTint"); val sat = glGetUniformLocation(p, "uGradeSat"); val contrast = glGetUniformLocation(p, "uGradeContrast"); val vignette = glGetUniformLocation(p, "uVignette")
     }
@@ -91,6 +91,8 @@ class Renderer {
         /** The spot light that drives the light rays (moonLight in the HTML). */
         @JvmField var rayLight: SpotLight? = null
         @JvmField val lightColor = Color(0x5b86ff)
+        /** The sky's horizon colour: the far ends of the light shafts and their dust take it on. */
+        @JvmField val skyTint = Color(0x88aaff)
         @JvmField var lightCosAngle = cos(0.66f)
         @JvmField var lightPenumbraCos = cos(0.66f * 0.88f)
     }
@@ -659,6 +661,7 @@ class Renderer {
             glUniform3f(p.lightDir, pv3.x, pv3.y, pv3.z)
         }
         glUniform3f(p.lightColor, post.lightColor.r, post.lightColor.g, post.lightColor.b)
+        glUniform3f(p.skyTint, post.skyTint.r, post.skyTint.g, post.skyTint.b)
         glUniform1f(p.cosAngle, post.lightCosAngle)
         glUniform1f(p.penumbraCos, post.lightPenumbraCos)
         glUniform1f(p.fanOn, post.fanLightOn)

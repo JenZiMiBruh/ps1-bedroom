@@ -24,6 +24,11 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.41", "Light with character, and YouTube fixed", listOf(
+            "The light shafts have more character: thin bright streaks running along them, a slow breath, and their colour going from the light's own by the window to the sky's colour deeper in the room",
+            "Dust in the light is bigger, brighter and more plentiful, each speck tinted between the sunlight (or moonlight) and the colour of the sky",
+            "Fixed: YouTube on the TV showed up in the top-left corner on newer phones; it sits on the TV again, and hides when the TV is off screen"
+        )),
         Entry("0.40", "Stylized light rays", listOf(
             "The light through the window breaks into distinct shafts that drift slowly, brighter near the glass, with specks of dust glinting in them, stepped like the rest of the PS1 picture",
             "Moonlight rays are fainter than sunlight's at the same Light rays setting"

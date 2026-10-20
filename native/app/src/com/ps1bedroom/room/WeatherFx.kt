@@ -46,6 +46,9 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
     private val dustMesh: InstancedMesh
     private val dustMotes: List<Mote>
     private val dustWhite = com.ps1bedroom.room.engine.Color(0xffffff)
+    private val dustTintA = com.ps1bedroom.room.engine.Color(0xffffff); private val dustTintB = com.ps1bedroom.room.engine.Color(0xffffff); private val dustMix = com.ps1bedroom.room.engine.Color(0xffffff)
+    /** For the post pass's sky tint (set by the app). */
+    var renderer: com.ps1bedroom.room.engine.Renderer? = null
     private val beamOrigin = Vec3(0.8f, 2.6f, -2.95f)
     private val beamDir = Vec3(); private val beamSide = Vec3(); private val beamUp = Vec3()
 
@@ -99,9 +102,9 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
 
     init {
         scene.add(dustGroup)
-        val dustMat = PS1.material(color = 0x93c5fd, emissive = 0x60a5fa, emissiveIntensity = 0.28f)
-        dustMesh = makeInstanced(dustGroup, Geo.box(0.011f, 0.011f, 0.011f), dustMat, 64)
-        dustMotes = List(64) { Mote(rand(), randIn(-1f, 1f), randIn(-1f, 1f), randIn(0.2f, 0.6f), randIn(0f, 6.28f), randIn(0.01f, 0.03f)) }
+        val dustMat = PS1.material(color = 0xffffff, emissive = 0x60a5fa, emissiveIntensity = 0.85f)
+        dustMesh = makeInstanced(dustGroup, Geo.box(0.02f, 0.02f, 0.02f), dustMat, 120)   // v0.41: bigger, more of them, brighter
+        dustMotes = List(120) { Mote(rand(), randIn(-1f, 1f), randIn(-1f, 1f), randIn(0.2f, 0.6f), randIn(0f, 6.28f), randIn(0.01f, 0.03f)) }
 
         scene.add(weather3DGroup)
         rainMesh = makeInstanced(weather3DGroup, Geo.box(0.012f, 0.36f, 0.012f), PS1.basic(color = 0xbfdbfe, transparent = true, opacity = 0.55f, depthWrite = false), RAIN_COUNT)
@@ -266,8 +269,17 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
         fireflyGroup.visible = env.currentSeason == "summer" && (env.currentTime == "night" || env.currentTime == "dusk") && env.currentWeather == "clear"
         windowGlowMat.color.copy(room.moonLight.color)
         // Dust motes catch whatever is shining in: warm sunlight, orange at sunset, cool moonlight (native: the HTML keeps them blue)
-        dustMesh.material.color.copy(room.moonLight.color).lerp(dustWhite, 0.35f)
-        dustMesh.material.emissive.copy(room.moonLight.color)
+        // v0.41: each speck sits somewhere between the light shining in and the sky's horizon colour
+        val sunHex = room.moonLight.color.getHex(); val skyHex = sky.horizonColor.getHex()
+        dustTintA.setHex(sunHex); dustTintB.setHex(skyHex)
+        for (i in dustMotes.indices) {
+            val k = (i % 5) / 4f
+            dustMix.copy(dustTintA).lerp(dustTintB, k * 0.7f).lerp(dustWhite, 0.25f)
+            dustMesh.setColorAt(i, dustMix.getHex())
+        }
+        dustMesh.material.color.setHex(0xffffff)
+        dustMesh.material.emissive.copy(dustTintA).lerp(dustTintB, 0.35f)
+        renderer?.post?.skyTint?.copy(sky.horizonColor)
         // Kept faint: it sits over the whole view outside, and stronger values wash out the scenery (fog still thickens it)
         val glowBase = 0.1f + 0.08f * env.daylight.toFloat()
         val glowWeather = if (env.currentWeather == "foggy") 1.4f else if (env.currentWeather == "storm") 0.55f else if (precip) 0.75f else 1f
@@ -303,7 +315,7 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
                 val edge = max(0f, 1 - (m.u * m.u + m.v * m.v) * 0.7f)
                 val ends = min(1f, m.s * 6) * min(1f, (1 - m.s) * 3)
                 val glint = max(0f, sin(t * m.speed * 1.7f + m.phase * 3))
-                val k = if (inRoom) edge * ends * (0.35f + 0.65f * glint) else 0f
+                val k = if (inRoom) edge * ends * (0.5f + 0.7f * glint) else 0f   // (brighter and bigger at the glint)
                 dustMesh.setInstance(i, px, py, pz, 0f, t * m.speed, 0f, k)
             }
             dustMesh.needsUpdate()

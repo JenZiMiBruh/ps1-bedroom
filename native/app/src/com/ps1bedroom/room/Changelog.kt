@@ -24,6 +24,12 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.42", "Lava lamp switch, posters, YouTube buttons", listOf(
+            "The lava lamp switches off: tap it past the last colour (or use Menu → Room). The wax cools and sinks, and warms back up when you turn it on",
+            "The poster above the boombox can be changed: Smash City, Midnight Drive, Mission 2001, Dino Island, Steel Angel, Surf's Up. Tap it, or pick in Menu → Room",
+            "Put your own photo on either poster (Menu → Room → Use my photo)",
+            "The YouTube buttons can be dragged anywhere by their grip, and tucked into a small tab"
+        )),
         Entry("0.41", "Light with character, and YouTube fixed", listOf(
             "The light shafts have more character: thin bright streaks running along them, a slow breath, and their colour going from the light's own by the window to the sky's colour deeper in the room",
             "Dust in the light is bigger, brighter and more plentiful, each speck tinted between the sunlight (or moonlight) and the colour of the sky",

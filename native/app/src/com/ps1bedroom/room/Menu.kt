@@ -449,6 +449,7 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
             Triple("FAN LIGHT: ${if (app.fanLightOn) "ON" else "OFF"}", app.fanLightOn, { post { app.toggleFanLight(); s.changed() } }),
             Triple("LAMP: ${if (app.furniture.lampOn) "ON" else "OFF"}", app.furniture.lampOn, { post { app.furniture.toggleLamp(); s.changed() } }),
             Triple("STRING LIGHTS: ${strNames[app.decor.stringLightsMode]}", app.decor.stringLightsMode > 0, { post { app.decor.cycleStringLights(); s.changed() } }),
+            Triple(if (app.desk.lavaOn) "LAVA LAMP: ${app.desk.LAVA_NAMES[app.desk.lavaIdx].uppercase()}" else "LAVA LAMP: OFF", app.desk.lavaOn, { post { app.toast(app.desk.cycleLava()); app.sfx("lavaSwitch"); s.changed() } }),
             Triple("SPACE HEATER: ${app.extras.heaterMode.uppercase()}", app.extras.heaterMode != "off", { post { app.extras.cycleHeater(); s.changed() } }),
             Triple("📚 GAMES BACK IN ORDER", false, { post { app.library.sortGameShelves(); s.changed() } })
         ))
@@ -467,6 +468,10 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
             h4(title)
             chips(app.extras.colorOptions(part).map { (k, l) -> Triple(l, app.extras.roomColors[part] == k, { post { app.extras.setRoomColor(part, k); s.changed() } }) })
         }
+        h4("Poster above the boombox")
+        chips(app.furniture.BAND_POSTERS.filter { (k, _) -> k != "photo" || app.furniture.photoFor("band") != null }.map { (k, l) -> Triple(l, app.furniture.bandPoster == k, { post { app.furniture.setBandPoster(k); app.sfx("caseClick"); s.changed() } }) })
+        tiles(listOf(Triple("📷 USE MY PHOTO (BOOMBOX)", false, { app.pickPosterPhoto?.invoke("band") }), Triple("📷 USE MY PHOTO (DESK)", false, { app.pickPosterPhoto?.invoke("main") })))
+        note("Pick any picture from your phone: it's cropped to fit the poster. Only a small copy is kept in the app.", true)
         h4("PlayStation under the TV")
         chips(Consoles.NAMES.map { (k, l) -> Triple(l, app.consoles.current == k, { post { if (app.ps1.ps1On) app.ps1.powerToggle(app.lastFrameT); app.consoles.select(k); app.sfx("ui"); s.changed(); app.hud?.overlays?.setConsole(k) } }) })
         note("Each one has its own model, controller, lights, boot-up and sound, and the start screen follows it.", true)

@@ -68,6 +68,97 @@ class Furniture(private val room: Room) {
         return m
     }
 
+    // ---- The poster above the boombox ----
+    private val BAND_WEATHER = Weather(seed = 102.0, blotch = 0.2, creases = 3, edge = 0.25)
+    lateinit var bandPosterTex: CanvasTex
+    var bandPoster = "smash"; private set
+    val BAND_POSTERS = linkedMapOf("smash" to "Smash City tour", "sunset" to "Midnight Drive", "shuttle" to "Mission 2001", "dino" to "Dino Island",
+        "mecha" to "Steel Angel", "surf" to "Surf's Up", "photo" to "Your photo")
+    /** Your picture for a poster ("band" / "main"), set by the app (null until you pick one). */
+    var photoFor: (String) -> android.graphics.Bitmap? = { null }
+    fun setBandPoster(key: String) {
+        bandPoster = if (BAND_POSTERS.containsKey(key)) key else "smash"
+        if (bandPoster == "photo" && photoFor("band") == null) bandPoster = "smash"
+        val c = bandPosterTex.ctx; val w = c.width; val h = c.height
+        c.save(); drawBandPoster(c, w, h, bandPoster); c.restore(); c.textAlign = "left"
+        if (bandPoster != "photo") weatherCanvas(c, w, h, BAND_WEATHER)
+        bandPosterTex.tex.needsUpdate()
+    }
+    fun cycleBandPoster(): String {
+        val keys = BAND_POSTERS.keys.filter { it != "photo" || photoFor("band") != null }
+        setBandPoster(keys[(keys.indexOf(bandPoster) + 1) % keys.size])
+        return "🎸 Poster: ${BAND_POSTERS[bandPoster]}"
+    }
+    private fun drawBandPoster(ctx: Canvas2D, w: Int, h: Int, key: String) {
+        when (key) {
+            "sunset" -> { // synthwave sunset over a neon grid
+                val g = ctx.createLinearGradient(0, 0, 0, h * 0.62); g.addColorStop(0, "#1e0b3a"); g.addColorStop(0.6, "#ff3e8a"); g.addColorStop(1, "#ffb347")
+                ctx.fillStyle = g; ctx.fillRect(0, 0, w, h)
+                ctx.fillStyle = "#ffd166"; ctx.beginPath(); ctx.arc(w / 2, h * 0.5, 17, PI, 0); ctx.fill()
+                ctx.fillStyle = "#ff3e8a"; for (i in 0 until 4) ctx.fillRect(w / 2 - 17, (h * 0.5 - 12 + i * 3.5).toInt(), 34, 1)
+                ctx.fillStyle = "#12002b"; ctx.fillRect(0, (h * 0.5).toInt(), w, h)
+                ctx.strokeStyle = "#e100ff"; ctx.lineWidth = 1f
+                for (i in 0 until 7) { val y = h * 0.5 + i * i * 1.3 + 2; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke() }
+                for (i in -5..5) { ctx.beginPath(); ctx.moveTo(w / 2 + i * 3, h * 0.5); ctx.lineTo(w / 2 + i * 14, h); ctx.stroke() }
+                ctx.fillStyle = "#ff3e8a"; ctx.font = "bold 10px Impact, sans-serif"; ctx.textAlign = "center"; ctx.fillText("MIDNIGHT", w / 2, 13); ctx.fillText("DRIVE", w / 2, 24)
+            }
+            "shuttle" -> { // a space shuttle lifting off into the night
+                ctx.fillStyle = "#050a24"; ctx.fillRect(0, 0, w, h)
+                ctx.fillStyle = "#e2e8f0"; for (i in 0 until 30) ctx.fillRect((i * 23) % w, (i * 37) % (h - 30), 1, 1)
+                ctx.fillStyle = "#cbd5e1"; ctx.beginPath(); ctx.ellipse(w / 2 - 6, h - 32, 8, 22, 0, 0, PI * 2); ctx.fill()
+                ctx.fillStyle = "#f97316"; ctx.beginPath(); ctx.ellipse(w / 2 + 5, h - 34, 5, 24, 0, 0, PI * 2); ctx.fill()
+                ctx.fillStyle = "#f8fafc"; ctx.fillRect(w / 2 - 2, h - 58, 6, 26); ctx.beginPath(); ctx.moveTo(w / 2 - 2, h - 58); ctx.lineTo(w / 2 + 1, h - 66); ctx.lineTo(w / 2 + 4, h - 58); ctx.fill()
+                ctx.fillStyle = "#facc15"; ctx.beginPath(); ctx.moveTo(w / 2 - 4, h - 32); ctx.lineTo(w / 2 + 1, h - 16); ctx.lineTo(w / 2 + 6, h - 32); ctx.fill()
+                ctx.fillStyle = "#e5e7eb"; for (i in 0 until 7) { ctx.beginPath(); ctx.arc(8 + i * 8, h - 8 + (i % 2) * 2, 7, 0, PI * 2); ctx.fill() }
+                ctx.fillStyle = "#facc15"; ctx.font = "bold 8px sans-serif"; ctx.textAlign = "center"; ctx.fillText("MISSION 2001", w / 2, 12)
+            }
+            "dino" -> { // a raptor under a huge moon
+                val g = ctx.createLinearGradient(0, 0, 0, h); g.addColorStop(0, "#0f3b1e"); g.addColorStop(1, "#04140a")
+                ctx.fillStyle = g; ctx.fillRect(0, 0, w, h)
+                ctx.fillStyle = "#fef3c7"; ctx.beginPath(); ctx.arc(w / 2, 36, 18, 0, PI * 2); ctx.fill()
+                ctx.fillStyle = "#020a04"
+                ctx.beginPath(); ctx.moveTo(12, 66); ctx.lineTo(24, 46); ctx.lineTo(36, 42); ctx.lineTo(46, 34); ctx.lineTo(52, 36); ctx.lineTo(46, 42); ctx.lineTo(40, 52); ctx.lineTo(44, 66); ctx.lineTo(38, 66); ctx.lineTo(34, 56); ctx.lineTo(28, 66); ctx.lineTo(22, 66); ctx.lineTo(24, 56); ctx.closePath(); ctx.fill()
+                for (i in 0 until 6) ctx.fillRect(i * 11, h - 14 + (i % 2) * 3, 8, 20)
+                ctx.fillStyle = "#facc15"; ctx.font = "bold 9px Impact, sans-serif"; ctx.textAlign = "center"; ctx.fillText("DINO ISLAND", w / 2, 12)
+            }
+            "mecha" -> { // a giant robot against a red sky
+                ctx.fillStyle = "#3b0a0a"; ctx.fillRect(0, 0, w, h)
+                ctx.fillStyle = "#7f1d1d"; for (i in 0 until 6) ctx.fillRect(0, 20 + i * 12, w, 5)
+                ctx.fillStyle = "#0f172a"
+                ctx.fillRect(w / 2 - 8, 28, 16, 22); ctx.fillRect(w / 2 - 5, 20, 10, 9); ctx.fillRect(w / 2 - 18, 30, 10, 22); ctx.fillRect(w / 2 + 8, 30, 10, 22)
+                ctx.fillRect(w / 2 - 9, 50, 7, 26); ctx.fillRect(w / 2 + 2, 50, 7, 26)
+                ctx.fillStyle = "#22d3ee"; ctx.fillRect(w / 2 - 3, 23, 6, 2)
+                ctx.fillStyle = "#22d3ee"; ctx.font = "bold 9px sans-serif"; ctx.textAlign = "center"; ctx.fillText("STEEL ANGEL", w / 2, 12)
+                ctx.fillStyle = "#fca5a5"; ctx.font = "6px sans-serif"; ctx.fillText("EPISODE 01", w / 2, h - 5)
+            }
+            "surf" -> { // a surfer in a curling wave
+                ctx.fillStyle = "#7dd3fc"; ctx.fillRect(0, 0, w, h)
+                ctx.fillStyle = "#fde68a"; ctx.beginPath(); ctx.arc(50, 18, 7, 0, PI * 2); ctx.fill()
+                ctx.fillStyle = "#0369a1"; ctx.beginPath(); ctx.moveTo(0, h); ctx.lineTo(0, 46); ctx.quadraticCurveTo(26, 22, 50, 40); ctx.quadraticCurveTo(38, 36, 34, 50); ctx.lineTo(w, 66); ctx.lineTo(w, h); ctx.fill()
+                ctx.fillStyle = "#e0f2fe"; ctx.beginPath(); ctx.moveTo(0, 46); ctx.quadraticCurveTo(26, 22, 50, 40); ctx.quadraticCurveTo(26, 30, 4, 50); ctx.fill()
+                ctx.fillStyle = "#f97316"; ctx.fillRect(30, 56, 14, 3); ctx.fillStyle = "#111827"; ctx.fillRect(36, 47, 3, 9)
+                ctx.fillStyle = "#ffffff"; ctx.font = "bold 10px Impact, sans-serif"; ctx.textAlign = "center"; ctx.fillText("SURF'S UP", w / 2, h - 6)
+            }
+            "photo" -> { // your own picture, cropped to the poster
+                ctx.fillStyle = "#000"; ctx.fillRect(0, 0, w, h)
+                photoFor("band")?.let { b -> val r = w.toFloat() / h; val sw: Int; val sh: Int
+                    if (b.width.toFloat() / b.height > r) { sh = b.height; sw = (sh * r).toInt() } else { sw = b.width; sh = (sw / r).toInt() }
+                    ctx.drawImage(b, (b.width - sw) / 2, (b.height - sh) / 2, sw, sh, 0, 0, w, h) }
+            }
+            else -> { // the original SMASH CITY band poster
+                val g = ctx.createLinearGradient(0, 0, 0, h)
+                g.addColorStop(0, "#111827"); g.addColorStop(1, "#7f1d1d")
+                ctx.fillStyle = g; ctx.fillRect(0, 0, w, h)
+                ctx.fillStyle = "#facc15"; ctx.font = "bold 13px Impact, sans-serif"; ctx.textAlign = "center"
+                ctx.fillText("SMASH", w / 2, 18); ctx.fillText("CITY", w / 2, 32)
+                ctx.fillStyle = "#0b0b0f"
+                intArrayOf(16, 32, 48).forEachIndexed { i, x -> ctx.beginPath(); ctx.arc(x, 52 + (i % 2) * 3, 5, 0, PI * 2); ctx.fill(); ctx.fillRect(x - 5, 56 + (i % 2) * 3, 10, 20) }
+                ctx.fillStyle = "#f8fafc"; ctx.font = "bold 6px sans-serif"
+                ctx.fillText("ALL STAR KIDS TOUR 2001", w / 2, h - 6)
+            }
+        }
+    }
+
     fun build() {
         val woodTex = room.tex.wood
         // ---- Dresser on the left wall (front faces +X), six drawers with knobs ----
@@ -119,16 +210,13 @@ class Furniture(private val room: Room) {
         propPart(dresserGroup, Geo.box(0.1f, 0.05f, 0.1f), PS1.material(color = 0x3f2a14), 0f, 1.455f, -0.5f)
         propPart(dresserGroup, Geo.cylinder(0.012f, 0.03f, 0.14f, 6), PS1.material(color = 0xd4a017), 0f, 1.55f, -0.5f)
         propPart(dresserGroup, Geo.cylinder(0.05f, 0.02f, 0.07f, 8), PS1.material(color = 0xd4a017), 0f, 1.65f, -0.5f)
-        wallPicture(0.9f, 1.25f, -3.715f, 2.95f, 2.3f, (PI / 2).toFloat(), Weather(seed = 102.0, blotch = 0.2, creases = 3, edge = 0.25)) { ctx, w, h ->
-            val g = ctx.createLinearGradient(0, 0, 0, h)
-            g.addColorStop(0, "#111827"); g.addColorStop(1, "#7f1d1d")
-            ctx.fillStyle = g; ctx.fillRect(0, 0, w, h)
-            ctx.fillStyle = "#facc15"; ctx.font = "bold 13px Impact, sans-serif"; ctx.textAlign = "center"
-            ctx.fillText("SMASH", w / 2, 18); ctx.fillText("CITY", w / 2, 32)
-            ctx.fillStyle = "#0b0b0f"
-            intArrayOf(16, 32, 48).forEachIndexed { i, x -> ctx.beginPath(); ctx.arc(x, 52 + (i % 2) * 3, 5, 0, PI * 2); ctx.fill(); ctx.fillRect(x - 5, 56 + (i % 2) * 3, 10, 20) }
-            ctx.fillStyle = "#f8fafc"; ctx.font = "bold 6px sans-serif"
-            ctx.fillText("ALL STAR KIDS TOUR 2001", w / 2, h - 6)
+        // The poster above the boombox: switchable (#19), and it can be your own photo (#18). Its texture is redrawn in
+        // place, so the same material keeps working wherever the room's static batching put it.
+        bandPosterTex = createCanvasTex(64, (64 * 1.25f / 0.9f).roundToInt(), weather = BAND_WEATHER) { ctx, w, h -> drawBandPoster(ctx, w, h, "smash") }
+        run {
+            val m = Mesh(Geo.plane(0.9f, 1.25f), PS1.material(map = bandPosterTex.tex, polygonOffset = true, polygonOffsetFactor = -4f, polygonOffsetUnits = -4f))
+            m.position.set(-3.715f, 2.95f, 2.3f); m.rotation.y = (PI / 2).toFloat(); m.translateZ(0.01f)
+            scene.add(m); room.registerInteractable(m, "bandposter")
         }
 
         // ---- Nightstand by the head of the bed, with a reading lamp, water glass and a book ----

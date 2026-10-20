@@ -50,6 +50,10 @@ class App : GLSurfaceView.Renderer {
     @Volatile var onNowPlaying: ((String?, String?, android.graphics.Bitmap?) -> Unit)? = null
     /** Opens the system file picker for songs (false) or a whole album folder (true). */
     @Volatile var pickMusic: ((Boolean) -> Unit)? = null
+    /** Opens the photo picker for a poster ("band" above the boombox, "main" over the desk). */
+    @Volatile var pickPosterPhoto: ((String) -> Unit)? = null
+    /** Loads your saved poster photo (set by the activity). */
+    @Volatile var posterPhotoFor: (String) -> android.graphics.Bitmap? = { null }
     /** YouTube is playing on the bedroom TV (YouTubeTv); the TV's own channel sound steps aside. */
     @Volatile var ytActive = false
     /** Keeps the screen on while the room is in use; the sleep timer hands it back to Android (set by the activity). */
@@ -325,10 +329,12 @@ class App : GLSurfaceView.Renderer {
             jasper.onPet = { achievements.petted() }
             library.onInserted = { achievements.achieve("gamer") }
             myMusic.load()
+            furniture.photoFor = { posterPhotoFor(it) }; extras.photoFor = { posterPhotoFor(it) }   // (before restore: a saved photo poster needs it)
             settings.restore()   // the HTML's applySavedSettings, once everything exists
             ps1.sfx = { sound.sfx(it) }; ps1.stopBootSound = { sound.stopPs1BootSound() }; library.sfx = { sound.sfx(it) }
             env.envHooks += { sound.updateLayered() }
             weatherFx.onThunder = { sound.thunderclap() }
+
             exterior.onTrainPass = { sound.trainPass() }
             player.onStep = { onRug -> sound.sfx(if (onRug) "stepRug" else "step") }
             player.sfx = { sound.sfx(it) }
@@ -471,7 +477,7 @@ class App : GLSurfaceView.Renderer {
         when (tag) {
             "blinds" -> room.cycleWindowBlinds()
             "switch" -> toggleFanLight()
-            "lavalamp" -> desk.cycleLava()
+            "lavalamp" -> toast(desk.cycleLava())
             "cat" -> bedroom.toggleCatEyes()
             "fan" -> toggleFanLight()
             "fanspin" -> fan.toggleCeilingFanSpin()
@@ -494,6 +500,7 @@ class App : GLSurfaceView.Renderer {
             "phone" -> if (phone.ringing) phone.answer() else { toast("📞 56k V.90 MODEM: \"MOM HANG UP THE PHONE! I'M IN A STARCRAFT MATCH!\""); sfx("phone") }
             "door" -> toast("🚧 UNDER CONSTRUCTION: The rest of the house is still being built. Check back in a future update!")
             "surprise" -> surprises.find()
+            "bandposter" -> { toast(furniture.cycleBandPoster()); sfx("caseClick") }
             "discman" -> toast("💿 SONIX D-SPIN Discman: 45-second anti-skip! A burned mix CD is still inside.")
             "gba" -> toast("🎮 GAME KID ADVANCE: The battery light is red. Of course it is.")
             "brickphone" -> toast("📱 NOKA 3310: 1 new text message. You have 2 bars and a high score in Snake.")

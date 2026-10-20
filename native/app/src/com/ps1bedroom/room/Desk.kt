@@ -12,6 +12,8 @@ import com.ps1bedroom.room.engine.createCanvasTex
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.pow
+import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.sin
 import kotlin.random.Random
 
@@ -35,9 +37,21 @@ class Desk(private val room: Room, private val tex: Textures, private val librar
     private lateinit var blobMat: Material
     private val lavaPalettes = arrayOf(intArrayOf(0x6b21a8, 0xff2a85, 0xd946ef), intArrayOf(0x065f46, 0xa3e635, 0x22c55e), intArrayOf(0x1e3a8a, 0x38bdf8, 0x0ea5e9), intArrayOf(0x7c2d12, 0xfacc15, 0xf97316))
     private var currentLavaIdx = 0
-    /** Tap on the lava lamp: next palette (90s Magenta, Slime Green, Cyber Ice Blue, Solar Flare). */
-    fun cycleLava() {
-        currentLavaIdx = (currentLavaIdx + 1) % lavaPalettes.size
+    val LAVA_NAMES = arrayOf("90s Magenta", "Slime Green", "Cyber Ice Blue", "Solar Flare")
+    /** #20: the lamp can be switched off. Off, the wax cools and settles at the bottom; on, it warms up and starts rising. */
+    var lavaOn = true; private set
+    val lavaIdx get() = currentLavaIdx
+    private var lavaWarmth = 1f
+    /** Tap on the lava lamp: next colour (90s Magenta, Slime Green, Cyber Ice Blue, Solar Flare), then off, then back on. */
+    fun cycleLava(): String {
+        if (!lavaOn) setLava(true, 0)
+        else if (currentLavaIdx == lavaPalettes.size - 1) setLava(false, currentLavaIdx)
+        else setLava(true, currentLavaIdx + 1)
+        return if (lavaOn) "🌋 LAVA LAMP: ${LAVA_NAMES[currentLavaIdx]}" else "🌋 LAVA LAMP: Off. The wax cools and sinks to the bottom."
+    }
+    fun setLava(on: Boolean, idx: Int = currentLavaIdx) {
+        lavaOn = on
+        currentLavaIdx = idx.coerceIn(0, lavaPalettes.size - 1)
         val p = lavaPalettes[currentLavaIdx]
         lavaGlassMat.color.setHex(p[0]); lavaGlassMat.emissive.setHex(p[0])
         blobMat.color.setHex(p[1]); blobMat.emissive.setHex(p[1])
@@ -357,14 +371,24 @@ class Desk(private val room: Room, private val tex: Textures, private val librar
     }
 
     /** Lava blobs rise and fall inside the tapered glass (from the HTML's animate loop). */
+    private var lastT = -1f
     fun update(t: Float) {
         hddLedMat.emissiveIntensity = if (pcLedMat.emissiveIntensity > 0.5f && sin(t * 23f) * sin(t * 7.3f) > 0.1f) 1.1f else 0.08f
+        val dt = if (lastT < 0) 0f else min(0.1f, t - lastT); lastT = t
+        // warming up takes about 6 s, cooling down about 3 s
+        lavaWarmth = if (lavaOn) min(1f, lavaWarmth + dt / 6f) else max(0f, lavaWarmth - dt / 3f)
+        val w = lavaWarmth * lavaWarmth * (3 - 2 * lavaWarmth)
+        lavaGlassMat.emissiveIntensity = 0.05f + 0.83f * w
+        blobMat.emissiveIntensity = 0.12f + 0.88f * w
+        room.lavaLight.intensity = 1.15f * w
         for (idx in lavaBlobs.indices) {
             val blob = lavaBlobs[idx]
             val cycle = sin(t * blobSpeed[idx] + blobOffset[idx])
-            blob.position.y = 0.5f + cycle * 0.15f
-            blob.position.x = cos(t * 0.7f + idx) * 0.015f
-            val s = 0.9f + sin(t * 1.5f + idx) * 0.2f
+            val warmY = 0.5f + cycle * 0.15f
+            val coldY = 0.3f + idx * 0.014f            // cold wax resting in a heap at the bottom
+            blob.position.y = coldY + (warmY - coldY) * w
+            blob.position.x = cos(t * 0.7f + idx) * 0.015f * w
+            val s = 0.9f + sin(t * 1.5f + idx) * 0.2f * w
             blob.scale.set(s, s, s)
         }
     }

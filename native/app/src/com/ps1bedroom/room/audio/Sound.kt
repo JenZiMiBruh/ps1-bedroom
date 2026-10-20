@@ -525,7 +525,7 @@ class Sound(private val app: App) {
             hddBusyUntil = tt
         }
         // Lava lamp: a soft wax "bloop" now and then
-        if (now > lavaBusyUntil && rnd.nextDouble() < 0.025) {
+        if (now > lavaBusyUntil && app.desk.lavaOn && rnd.nextDouble() < 0.025) {
             lavaBusyUntil = now + 0.5
             val f = rand(170.0, 260.0)
             lavaBloop.triggerAttack(f, now, 0.6); lavaBloop.frequency.exponentialRampToValueAtTime(f * 0.6, now + 0.3); lavaBloop.triggerRelease(now + 0.32)

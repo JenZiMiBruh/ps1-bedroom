@@ -427,9 +427,17 @@ class Extras(private val room: Room, private val env: Environment, private val t
             ctx.font = "bold 8px sans-serif"; ctx.fillText("BABY", w / 2, 92)
         }
     )
+    /** Your picture for the main poster (set by the app; null until you pick one). */
+    var photoFor: (String) -> android.graphics.Bitmap? = { null }
     val POSTER_NAMES = linkedMapOf("none" to "No poster", "band" to "Band tour", "galaxy" to "Galaxy Racers", "vapor" to "Vapor Dreams", "skate" to "Skate or Die", "kitten" to "Hang in there")
     fun setPoster(key: String) {
-        posterChoice = if (POSTERS.containsKey(key)) key else "none"
+        if (!POSTERS.containsKey("photo")) POSTERS["photo"] = { c, w, h -> c.fillStyle = "#000"; c.fillRect(0, 0, w, h)
+            photoFor("main")?.let { b -> val r = w.toFloat() / h; val sw: Int; val sh: Int
+                if (b.width.toFloat() / b.height > r) { sh = b.height; sw = (sh * r).toInt() } else { sw = b.width; sh = (sw / r).toInt() }
+                c.drawImage(b, (b.width - sw) / 2, (b.height - sh) / 2, sw, sh, 0, 0, w, h) } }
+        if (!POSTER_NAMES.containsKey("photo")) POSTER_NAMES["photo"] = "Your photo"
+        val k0 = if (key == "photo" && photoFor("main") == null) "none" else key
+        posterChoice = if (POSTERS.containsKey(k0)) k0 else "none"
         posterWall.visible = posterChoice != "none"
         POSTERS[posterChoice]?.let { draw ->
             val ctx = posterObj.ctx

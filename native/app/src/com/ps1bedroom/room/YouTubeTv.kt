@@ -79,10 +79,39 @@ class YouTubeTv(private val act: Activity, private val root: FrameLayout, privat
             background = GradientDrawable().apply { setColor(if (red) Color.rgb(204, 0, 0) else Color.rgb(31, 35, 53)); cornerRadius = dp(999f) }
             setOnClickListener { fn() }
         }
-        bar.addView(btn("📺 YouTube", false) { openDialog() })
+        // #21: drag the grip to move the buttons anywhere (remembered), tap – to tuck them into a small tab
+        val grip = btn("⠿", false) { }
+        grip.setOnTouchListener(object : View.OnTouchListener {
+            var sx = 0f; var sy = 0f; var tx = 0f; var ty = 0f
+            override fun onTouch(v: View, e: MotionEvent): Boolean {
+                when (e.actionMasked) {
+                    MotionEvent.ACTION_DOWN -> { sx = e.rawX; sy = e.rawY; tx = bar.translationX; ty = bar.translationY }
+                    MotionEvent.ACTION_MOVE -> {
+                        val maxL = -(root.width - bar.width - dpi(20f)).toFloat(); val maxD = (root.height - bar.height - dpi(80f)).toFloat()
+                        bar.translationX = (tx + e.rawX - sx).coerceIn(maxL, 0f); bar.translationY = (ty + e.rawY - sy).coerceIn(-dpi(50f).toFloat(), maxD)
+                    }
+                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> prefs.edit().putFloat("ytBarX", bar.translationX).putFloat("ytBarY", bar.translationY).apply()
+                }
+                return true
+            }
+        })
+        bar.addView(grip)
+        val main = LinearLayout(act).apply { orientation = LinearLayout.HORIZONTAL }
+        main.addView(btn("📺 YouTube", false) { openDialog() })
         fullBtn = btn("⛶ Full", false) { setFull(!isFull) }
-        bar.addView(fullBtn, LinearLayout.LayoutParams(-2, -2).apply { marginStart = dpi(4f) })
-        bar.addView(btn("✕", true) { stop() }, LinearLayout.LayoutParams(-2, -2).apply { marginStart = dpi(4f) })
+        main.addView(fullBtn, LinearLayout.LayoutParams(-2, -2).apply { marginStart = dpi(4f) })
+        main.addView(btn("✕", true) { stop() }, LinearLayout.LayoutParams(-2, -2).apply { marginStart = dpi(4f) })
+        bar.addView(main, LinearLayout.LayoutParams(-2, -2).apply { marginStart = dpi(4f) })
+        lateinit var tuck: TextView
+        tuck = btn("–", false) {
+            val hide = main.visibility == View.VISIBLE
+            main.visibility = if (hide) View.GONE else View.VISIBLE
+            tuck.text = if (hide) "📺" else "–"
+            prefs.edit().putBoolean("ytBarTucked", hide).apply()
+        }
+        bar.addView(tuck, LinearLayout.LayoutParams(-2, -2).apply { marginStart = dpi(4f) })
+        if (prefs.getBoolean("ytBarTucked", false)) { main.visibility = View.GONE; tuck.text = "📺" }
+        bar.translationX = prefs.getFloat("ytBarX", 0f); bar.translationY = prefs.getFloat("ytBarY", 0f)
         root.addView(bar, FrameLayout.LayoutParams(-2, -2, Gravity.TOP or Gravity.END).apply { topMargin = dpi(58f); marginEnd = dpi(10f) })
         buildDialog()
         root.addView(dialog, FrameLayout.LayoutParams(-1, -1))

@@ -36,8 +36,11 @@ class MainActivity : Activity() {
         app.density = resources.displayMetrics.density
         app.settings = Settings(app, this)
         app.myMusic = MyMusic(app, this)
+        app.posterPhotoFor = { which -> posterPhoto(which) }
         app.achievements = Achievements(app, this); app.alarm = Alarm(app, this)
         app.pickMusic = { folder -> runOnUiThread { pickMusic(folder) } }
+        app.pickPosterPhoto = { which -> runOnUiThread { posterTarget = which
+            @Suppress("DEPRECATION") try { startActivityForResult(android.content.Intent(android.content.Intent.ACTION_OPEN_DOCUMENT).addCategory(android.content.Intent.CATEGORY_OPENABLE).setType("image/*"), 44) } catch (e: Exception) { app.toast("📷 No photo picker on this device") } } }
         app.onMediaState = { s -> runOnUiThread { MediaService.update(this, s); NowPlayingWidget.update(this, s) } }
         MediaService.onControl = { cmd -> app.postOrRun { app.mediaCommand(cmd) } }
         MediaService.onSeek = { ms -> app.postOrRun { app.sound.musicStream?.seek(ms / 1000.0); app.publishMedia() } }
@@ -103,6 +106,7 @@ class MainActivity : Activity() {
     @Deprecated("Activity results")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: android.content.Intent?) {
         @Suppress("DEPRECATION") super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == 44 && resultCode == RESULT_OK && data?.data != null) { savePosterPhoto(data.data!!); return }
         if (resultCode != RESULT_OK || data == null || (requestCode != 40 && requestCode != 41)) return
         val mm = app.myMusic
         Thread {
@@ -126,6 +130,25 @@ class MainActivity : Activity() {
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
         if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN) app.postOrRun { app.myMusic.trim() }
+    }
+
+    // ---- Your own photos on the posters (#18): a small copy (max 512 px) kept in the app ----
+    private var posterTarget = "band"
+    private val posterPhotos = HashMap<String, android.graphics.Bitmap?>()
+    private fun posterFile(which: String) = java.io.File(filesDir, "poster_$which.jpg")
+    private fun posterPhoto(which: String): android.graphics.Bitmap? = posterPhotos.getOrPut(which) { posterFile(which).takeIf { it.exists() }?.let { android.graphics.BitmapFactory.decodeFile(it.path) } }
+    private fun savePosterPhoto(uri: android.net.Uri) {
+        val which = posterTarget
+        Thread {
+            try {
+                val src = contentResolver.openInputStream(uri)?.use { android.graphics.BitmapFactory.decodeStream(it) } ?: throw IllegalStateException()
+                val k = minOf(1f, 512f / maxOf(src.width, src.height))
+                val b = if (k < 1f) android.graphics.Bitmap.createScaledBitmap(src, (src.width * k).toInt().coerceAtLeast(1), (src.height * k).toInt().coerceAtLeast(1), true) else src
+                java.io.FileOutputStream(posterFile(which)).use { b.compress(android.graphics.Bitmap.CompressFormat.JPEG, 88, it) }
+                posterPhotos[which] = b
+                app.post { if (which == "band") app.furniture.setBandPoster("photo") else app.extras.setPoster("photo"); app.toast("📷 Your photo is up on the poster"); app.settings.changed() }
+            } catch (e: Exception) { app.toast("📷 Couldn't open that picture") }
+        }.start()
     }
 
     override fun onResume() {

@@ -37,7 +37,7 @@ class Consoles(private val room: Room, private val ps1: Ps1) {
     class DiscPath(val lid: Boolean, val home: com.ps1bedroom.room.engine.Vec3, val front: com.ps1bedroom.room.engine.Vec3, val scale: Float)
     private val PATHS = mapOf(
         "ps2" to DiscPath(true, com.ps1bedroom.room.engine.Vec3(0.0835f, 0.031f, 0f), com.ps1bedroom.room.engine.Vec3(0.0835f, 0.031f, 0f), 0.93f),
-        "ps3" to DiscPath(false, com.ps1bedroom.room.engine.Vec3(0.09f, 0.056f, 0.12f), com.ps1bedroom.room.engine.Vec3(0.09f, 0.056f, 0.43f), 1f),
+        "ps3" to DiscPath(false, com.ps1bedroom.room.engine.Vec3(0.09f, 0.028f, 0.12f), com.ps1bedroom.room.engine.Vec3(0.09f, 0.028f, 0.43f), 1f),
         "ps4" to DiscPath(false, com.ps1bedroom.room.engine.Vec3(0.04f, 0.028f, 0.1f), com.ps1bedroom.room.engine.Vec3(0.04f, 0.028f, 0.4f), 1f),
         "ps5" to DiscPath(false, com.ps1bedroom.room.engine.Vec3(0.18f, 0.04f, 0.04f), com.ps1bedroom.room.engine.Vec3(0.18f, 0.04f, 0.36f), 1f))
     /** null for the PS1 (its own lid and tray). */
@@ -179,40 +179,38 @@ class Consoles(private val room: Room, private val ps1: Ps1) {
         }
 
         // ================= PS3 Slim (CECH-2000): 290 x 65 x 290 mm -> 0.580 x 0.109 x 0.580 =================
-        // From the photos: one matte charcoal dome rounding down at the sides and over the front; the slot sits in a
-        // recessed glossy pocket across the right of the front with a silver lip under it; SONY on the plain left;
-        // the big embossed PS3 at the front right of the top.
+        // One curved shell (Ps3Shell): the dome, highest toward the back, rolling down over the front and the sides,
+        // rounded corners, the bottom tucked in. Under the front's rolled lip on the right, the recessed glossy pocket
+        // with the slot and the silver lip below it; SONY and two USB ports on the plain left; PS3 on the top.
         run {
             val g = newGroup("ps3")
             val matte = PS1.material(color = 0x232428)
             val gloss = PS1.material(color = 0x08090b)
             val grey = PS1.material(color = 0xa9aeb6)
-            feet(g, 0.27f, 0.27f, rubber)
-            box(g, 0.56f, 0.03f, 0.56f, matte, 0f, 0.019f, 0f, "ps1Body")                                    // base, set in a little
-            box(g, 0.58f, 0.05f, 0.58f, matte, 0f, 0.059f, 0f, "ps1Body")                                    // the shell
-            // the dome, in four steps that shrink to the sides and toward the front
-            box(g, 0.575f, 0.008f, 0.565f, matte, 0f, 0.0875f, -0.005f, "ps1Body")
-            box(g, 0.56f, 0.007f, 0.53f, matte, 0f, 0.0945f, -0.02f, "ps1Body")
-            box(g, 0.53f, 0.006f, 0.48f, matte, 0f, 0.1005f, -0.04f, "ps1Body")
-            box(g, 0.48f, 0.005f, 0.4f, matte, 0f, 0.106f, -0.07f, "ps1Body")
-            val logo = tex(48, 12) { c, w, h -> c.fillStyle = "#232428"; c.fillRect(0, 0, w, h); c.fillStyle = "#3a3c43"; c.font = "bold 11px serif"; c.textAlign = "center"; c.fillText("PS3", w / 2, 11) }
-            part(g, Geo.box(0.13f, 0.002f, 0.024f), logo, 0.14f, 0.0925f, 0.26f)
-            // front (z = 0.29): the recessed glossy pocket (with its shadow under the lip) holding the slot, the eject and
-            // power touch marks, the silver lip below; SONY and two USB ports on the plain left
-            box(g, 0.32f, 0.042f, 0.004f, gloss, 0.1f, 0.052f, 0.2915f)
-            box(g, 0.32f, 0.004f, 0.004f, PS1.material(color = 0x000000), 0.1f, 0.072f, 0.2955f)   // 3 mm proud of the pocket (flush would flicker)
-            box(g, 0.24f, 0.006f, 0.004f, PS1.material(color = 0x000000), 0.09f, 0.056f, 0.2945f)
-            box(g, 0.008f, 0.004f, 0.003f, PS1.material(color = 0xe5e7eb), 0.09f, 0.066f, 0.2945f, "ps1Open")
-            box(g, 0.008f, 0.004f, 0.003f, PS1.material(color = 0xe5e7eb), 0.09f, 0.043f, 0.2945f, "ps1Power")
+            val black = PS1.material(color = 0x000000)
+            feet(g, 0.25f, 0.25f, rubber)
+            part(g, Ps3Shell.geometry(), matte, 0f, 0.004f, 0f, "ps1Body")
+            // the PS3 logo, lying on the curve of the top (tilted to its slope there, 2 mm above it)
+            val logo = tex(48, 12) { c, w, h -> c.fillStyle = "#232428"; c.fillRect(0, 0, w, h); c.fillStyle = "#3d3f46"; c.font = "bold 11px serif"; c.textAlign = "center"; c.fillText("PS3", w / 2, 11) }
+            val lx = 0.15f; val lz = 0.17f
+            val logoMesh = part(g, Geo.box(0.12f, 0.002f, 0.024f), logo, lx, 0.004f + Ps3Shell.topY(lx, lz) + 0.002f, lz)
+            logoMesh.rotation.set(-kotlin.math.atan(Ps3Shell.slopeZ(lx, lz)), 0f, kotlin.math.atan(Ps3Shell.slopeX(lx, lz)))
+            // front (z = 0.29): the pocket (12 mm deep, so it stays in the shell where the bottom tucks in), the shadow
+            // under the lip, the slot, the eject and power touch marks, the LED, the silver lip
+            box(g, 0.32f, 0.028f, 0.012f, gloss, 0.1f, 0.026f, 0.286f)
+            box(g, 0.32f, 0.004f, 0.006f, black, 0.1f, 0.041f, 0.2935f)
+            box(g, 0.24f, 0.006f, 0.004f, black, 0.09f, 0.028f, 0.2945f)
+            box(g, 0.008f, 0.003f, 0.003f, PS1.material(color = 0xe5e7eb), 0.09f, 0.035f, 0.2945f, "ps1Open")
+            box(g, 0.008f, 0.003f, 0.003f, PS1.material(color = 0xe5e7eb), 0.09f, 0.02f, 0.2945f, "ps1Power")
             ps3Led = PS1.material(color = 0x3f1010, emissive = 0xef4444, emissiveIntensity = 0.9f)
-            box(g, 0.005f, 0.003f, 0.003f, ps3Led, 0.105f, 0.043f, 0.2945f)
-            box(g, 0.32f, 0.006f, 0.006f, grey, 0.1f, 0.028f, 0.292f)
+            box(g, 0.005f, 0.003f, 0.003f, ps3Led, 0.105f, 0.02f, 0.2945f)
+            box(g, 0.32f, 0.005f, 0.008f, grey, 0.1f, 0.009f, 0.288f)
             val sony = tex(32, 8) { c, w, h -> c.fillStyle = "#232428"; c.fillRect(0, 0, w, h); c.fillStyle = "#6b6f78"; c.font = "bold 7px sans-serif"; c.textAlign = "center"; c.fillText("SONY", w / 2, 7) }
-            part(g, Geo.box(0.06f, 0.012f, 0.002f), sony, -0.22f, 0.07f, 0.2912f)
-            for (ux in floatArrayOf(-0.25f, -0.22f)) box(g, 0.02f, 0.008f, 0.004f, PS1.material(color = 0x000000), ux, 0.045f, 0.2915f)
-            // vents down both sides and across the back, and the room's plugs
-            for (side in intArrayOf(-1, 1)) for (i in 0 until 4) box(g, 0.003f, 0.006f, 0.38f, recess, side * 0.2905f, 0.042f + i * 0.011f, -0.04f)
-            for (i in 0 until 4) box(g, 0.3f, 0.005f, 0.003f, recess, 0f, 0.042f + i * 0.011f, -0.2915f)
+            part(g, Geo.box(0.06f, 0.01f, 0.002f), sony, -0.22f, 0.026f, 0.2912f)
+            for (ux in floatArrayOf(-0.25f, -0.22f)) box(g, 0.02f, 0.007f, 0.008f, black, ux, 0.012f, 0.2895f)
+            // vents low down both sides and across the back, and the room's plugs
+            for (side in intArrayOf(-1, 1)) for (i in 0 until 3) box(g, 0.003f, 0.005f, 0.3f, recess, side * 0.2905f, 0.022f + i * 0.009f, -0.02f)
+            for (i in 0 until 4) box(g, 0.3f, 0.005f, 0.003f, recess, 0f, 0.03f + i * 0.011f, -0.2915f)
             rearPlugs(g, -0.29f, dark)
             ps3PadLeds = PS1.material(color = 0x3f1010, emissive = 0xef4444, emissiveIntensity = 0f)
             val padBody = PS1.material(color = 0x101114)

@@ -24,6 +24,10 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.38", "A properly round PS3", listOf(
+            "The PS3 Slim is now one smooth curved shell like the real one: the dome rolling down over the front and sides, rounded corners, the bottom tucked in",
+            "Its PS3 logo lies on the curve of the top, and the slot pocket, silver lip, SONY and USB ports sit on the real curved front"
+        )),
         Entry("0.37", "Consoles, take two", listOf(
             "Fixed: switching consoles no longer makes the game in it (and its case) disappear",
             "Discs go into every console: the PS2 Slim's lid flips up and the disc drops in; the PS3, PS4 and PS5 pull it in through the slot",

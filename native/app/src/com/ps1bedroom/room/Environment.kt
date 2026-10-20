@@ -237,7 +237,9 @@ class Environment(private val scene: Scene, private val room: Room, private val 
 
         renderer.post.lightColor.setHex(lightColor)
         renderer.post.volumetricStrength = floatArrayOf(1.0f, 1.0f, 0.15f, 1.3f)[room.blindsOpenState] *
-            userVolumetricSetting * weatherVolMult * min(1f, 0.2f + presence * dim)
+            userVolumetricSetting * weatherVolMult * min(1f, 0.2f + presence * dim) *
+            // moonlight shafts are fainter than sunlight's at the same Light rays setting
+            (0.38f + 0.62f * daylight.toFloat().coerceIn(0f, 1f))
 
         // Snow caps in winter (trees and seasonal foliage come with the places outside)
         for (sc in room.snowCapMeshes) sc.visible = winter

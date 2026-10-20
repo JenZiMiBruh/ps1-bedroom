@@ -318,6 +318,7 @@ void main() {
   }
 
   vec3 volumetricLight = vec3(0.0);
+  vec3 sunRays = vec3(0.0);
   if (uVolumetricStrength > 0.001) {
     vec3 rayVec = surfacePos - uCameraPos;
     float maxRayDist = min(length(rayVec), 9.0);
@@ -352,7 +353,15 @@ void main() {
               float mu2 = mu * mu;
               float phase = 0.22 + 0.32 * mu2 + 0.36 * mu2 * mu2;
               float distAtten = 1.0 / (1.0 + 0.065 * distToLightSq);
-              volumetricLight += uLightColor * (coneAtten * winEdge * distAtten * phase * stepLen * 0.62);
+              // v0.40 stylized shafts: the window light breaks into distinct beams that drift slowly, each brighter
+              // near the glass, with specks of dust glinting in them
+              float band = 0.5 + 0.5 * sin(winHit.x * 7.5 + winHit.y * 2.6 + uTime * 0.12);
+              band = mix(0.28, 1.0, smoothstep(0.3, 0.7, band));
+              float nearGlass = 1.0 + 0.9 * exp(-(samplePos.z + 3.0) * 0.55);
+              vec3 cell = floor(samplePos * 26.0);
+              float h = fract(sin(dot(cell, vec3(12.9898, 78.233, 37.719))) * 43758.5453);
+              float speck = step(0.982, h) * (0.55 + 0.45 * sin(uTime * 1.7 + h * 50.0)) * 2.4;
+              sunRays += uLightColor * (coneAtten * winEdge * distAtten * phase * stepLen * 0.62) * (band * nearGlass + speck);
             }
           }
         }
@@ -385,7 +394,11 @@ void main() {
     }
   }
 
-  vec3 combinedCol = baseCol.rgb + volumetricLight * uVolumetricStrength;
+  // the shafts are posterized into a few dithered steps, like the rest of the PS1 picture
+  vec3 rays = sunRays * uVolumetricStrength;
+  float dq = (bayer4x4(pix) * 255.0 + 4.0) / 8.0;
+  rays = floor(rays * 14.0 + dq) / 14.0;
+  vec3 combinedCol = baseCol.rgb + rays + volumetricLight * uVolumetricStrength;
   combinedCol = clamp(combinedCol / (1.0 + combinedCol * 0.22), 0.0, 1.0);
   float gradeLum = dot(combinedCol, vec3(0.299, 0.587, 0.114));
   combinedCol = mix(vec3(gradeLum), combinedCol, uGradeSat);

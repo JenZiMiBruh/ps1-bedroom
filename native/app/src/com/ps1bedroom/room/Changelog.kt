@@ -24,6 +24,10 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.40", "Stylized light rays", listOf(
+            "The light through the window breaks into distinct shafts that drift slowly, brighter near the glass, with specks of dust glinting in them, stepped like the rest of the PS1 picture",
+            "Moonlight rays are fainter than sunlight's at the same Light rays setting"
+        )),
         Entry("0.39", "The original PS3", listOf(
             "The PS3 is now the original glossy black PS3, matched to a photo of the real one: the domed top that curves side to side, the chrome strip following the front's curve, the card-reader flap, the silver slot panel with the PS logo, PLAYSTATION 3 along the top, the side vents",
             "Every part sits inside the curve of the body (nothing pokes out at the rounded ends)"

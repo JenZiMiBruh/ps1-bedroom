@@ -24,6 +24,10 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.39", "The original PS3", listOf(
+            "The PS3 is now the original glossy black PS3, matched to a photo of the real one: the domed top that curves side to side, the chrome strip following the front's curve, the card-reader flap, the silver slot panel with the PS logo, PLAYSTATION 3 along the top, the side vents",
+            "Every part sits inside the curve of the body (nothing pokes out at the rounded ends)"
+        )),
         Entry("0.38", "A properly round PS3", listOf(
             "The PS3 Slim is now one smooth curved shell like the real one: the dome rolling down over the front and sides, rounded corners, the bottom tucked in",
             "Its PS3 logo lies on the curve of the top, and the slot pocket, silver lip, SONY and USB ports sit on the real curved front"

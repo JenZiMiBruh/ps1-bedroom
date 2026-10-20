@@ -8,6 +8,8 @@ foreach ($p in 'jdk', 'kotlin', 'build-tools', 'platform') { if (-not (Test-Path
 $jdk     = (Get-ChildItem "$tools\jdk" -Directory)[0].FullName
 $java    = "$jdk\bin"
 $kotlinc = "$tools\kotlin\bin\kotlinc.bat"
+# The codebase has outgrown kotlinc's default heap
+$env:JAVA_OPTS = "-Xmx3g -Xss4m"
 $stdlib  = "$tools\kotlin\lib\kotlin-stdlib.jar"
 $bt      = (Get-ChildItem "$tools\build-tools" -Directory)[0].FullName
 $aj      = "$tools\platform\android.jar"

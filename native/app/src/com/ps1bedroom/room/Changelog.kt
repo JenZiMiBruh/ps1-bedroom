@@ -24,6 +24,10 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.43", "YouTube on the TV, for real", listOf(
+            "YouTube now plays on the TV's own screen inside the room: it sits exactly on the curved glass from any angle, with the PS1 look and the TV's glow, and never floats or clips",
+            "Tap the TV (or ⏸ on the bar) to pause and play; ⛶ Full still opens the full player"
+        )),
         Entry("0.42", "Lava lamp switch, posters, YouTube buttons", listOf(
             "The lava lamp switches off: tap it past the last colour (or use Menu → Room). The wax cools and sinks, and warms back up when you turn it on",
             "The poster above the boombox can be changed: Smash City, Midnight Drive, Mission 2001, Dino Island, Steel Angel, Surf's Up. Tap it, or pick in Menu → Room",

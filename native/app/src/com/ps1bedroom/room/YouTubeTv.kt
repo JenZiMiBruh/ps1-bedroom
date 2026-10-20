@@ -56,8 +56,32 @@ class YouTubeTv(private val act: Activity, private val root: FrameLayout, privat
     // player honours on every Android version. (A perspective canvas transform was ignored by newer WebViews, so
     // the player showed up untransformed in the top-left corner.) Touches reach it through normal view dispatch;
     // anywhere else falls through to the room.
-    private val layer = FrameLayout(act).apply { visibility = View.GONE; tag = Cutout.NO_INSET }
-    private val screen = FrameLayout(act).apply { setBackgroundColor(Color.rgb(4, 4, 5)) }
+    private val layer = object : FrameLayout(act) {
+        override fun dispatchTouchEvent(ev: MotionEvent): Boolean = if (isFull) super.dispatchTouchEvent(ev) else false
+    }.apply { visibility = View.GONE; tag = Cutout.NO_INSET }
+    /** The feed's surface (from the GL thread): while YouTube is on the TV, the player draws into it, not onto the screen. */
+    @Volatile private var feedSurface: android.view.Surface? = null
+    private val screen = object : FrameLayout(act) {
+        override fun dispatchDraw(canvas: Canvas) {
+            val s = feedSurface
+            if (isFull || s == null) { super.dispatchDraw(canvas); return }
+            // onto the TV: draw the player into the feed's surface (nothing is drawn on the screen itself)
+            try {
+                val c = s.lockHardwareCanvas()
+                c.drawColor(Color.rgb(4, 4, 5))
+                super.dispatchDraw(c)
+                s.unlockCanvasAndPost(c)
+            } catch (e: Exception) { }
+        }
+    }
+    /** While it's on the TV, redraw the player into the feed every frame (the video keeps changing). */
+    private val pump = object : Runnable {
+        override fun run() {
+            if (!app.ytActive || isFull) return
+            screen.invalidate()
+            screen.postOnAnimation(this)
+        }
+    }
     private var web: WebView? = null
 
     // ---- The bar (YouTube / Full / Stop) and the dialog ----
@@ -66,6 +90,7 @@ class YouTubeTv(private val act: Activity, private val root: FrameLayout, privat
         background = GradientDrawable().apply { setColor(Color.argb(210, 8, 10, 24)); cornerRadius = dp(999f); setStroke(1, Color.argb(40, 255, 255, 255)) }
     }
     private lateinit var fullBtn: TextView
+    private lateinit var playBtn: TextView
     private val dialog = FrameLayout(act).apply { visibility = View.GONE; setBackgroundColor(Color.argb(153, 4, 6, 18)); isClickable = true }
     private lateinit var input: EditText
     private lateinit var recentBox: LinearLayout
@@ -97,7 +122,9 @@ class YouTubeTv(private val act: Activity, private val root: FrameLayout, privat
         })
         bar.addView(grip)
         val main = LinearLayout(act).apply { orientation = LinearLayout.HORIZONTAL }
-        main.addView(btn("📺 YouTube", false) { openDialog() })
+        playBtn = btn("⏸", false) { togglePlay() }
+        main.addView(playBtn)
+        main.addView(btn("📺 YouTube", false) { openDialog() }, LinearLayout.LayoutParams(-2, -2).apply { marginStart = dpi(4f) })
         fullBtn = btn("⛶ Full", false) { setFull(!isFull) }
         main.addView(fullBtn, LinearLayout.LayoutParams(-2, -2).apply { marginStart = dpi(4f) })
         main.addView(btn("✕", true) { stop() }, LinearLayout.LayoutParams(-2, -2).apply { marginStart = dpi(4f) })
@@ -180,7 +207,7 @@ class YouTubeTv(private val act: Activity, private val root: FrameLayout, privat
     }
     private val ORIGIN = "https://ps1bedroom.app"
     private fun embedUrl(v: Vid): String {
-        val p = StringBuilder("autoplay=1&playsinline=1&rel=0&modestbranding=1&iv_load_policy=3&fs=0&origin=").append(URLEncoder.encode(ORIGIN, "UTF-8"))
+        val p = StringBuilder("autoplay=1&playsinline=1&enablejsapi=1&rel=0&modestbranding=1&iv_load_policy=3&fs=0&origin=").append(URLEncoder.encode(ORIGIN, "UTF-8"))
         if (v.list != null) p.append("&list=").append(URLEncoder.encode(v.list, "UTF-8"))
         if (v.start > 0) p.append("&start=").append(v.start)
         return if (v.id != null) "https://www.youtube.com/embed/${v.id}?$p" else "https://www.youtube.com/embed/videoseries?$p"
@@ -222,7 +249,11 @@ class YouTubeTv(private val act: Activity, private val root: FrameLayout, privat
         screen.addView(w, 0, FrameLayout.LayoutParams(-1, -1))
         w.loadDataWithBaseURL("$ORIGIN/", page(v), "text/html", "utf-8", null)
         app.ytActive = true; lastPts.fill(Float.NaN)   // the first placement always lands
-        layer.visibility = View.VISIBLE; screen.visibility = View.INVISIBLE   // until the first placement
+        // the player stays laid out (it has to, to keep playing) but draws onto the TV's screen in the 3D room
+        layer.visibility = View.VISIBLE; screen.visibility = View.VISIBLE
+        screen.scaleX = 1f; screen.scaleY = 1f; screen.rotation = 0f; screen.translationX = 0f; screen.translationY = 0f
+        playing = true
+        app.ensureYtFeed { s -> act.runOnUiThread { feedSurface = s; screen.removeCallbacks(pump); screen.postOnAnimation(pump) } }
         bar.visibility = View.VISIBLE
         closeDialog()
         app.post { app.sound.updateLayered(); app.sfx("tvChannel") }   // the TV's own channel sound steps aside
@@ -248,12 +279,20 @@ class YouTubeTv(private val act: Activity, private val root: FrameLayout, privat
         layer.visibility = View.GONE; bar.visibility = View.GONE
         app.post { app.sound.updateLayered(); if (!quiet) app.toast("📺 Back to ${Tv.TV_CHANNEL_NAMES[app.tv.bedroomTvChannel]}") }
     }
+    /** Play / pause through the YouTube player's own API (the TV can't be touched like a screen). */
+    var playing = true; private set
+    fun togglePlay() {
+        playing = !playing
+        web?.evaluateJavascript("(function(){var f=document.querySelector('iframe');if(f)f.contentWindow.postMessage(JSON.stringify({event:'command',func:'${if (playing) "playVideo" else "pauseVideo"}',args:[]}),'*');})()", null)
+        app.toast(if (playing) "📺 ▶ Playing" else "📺 ⏸ Paused (tap the TV to keep watching)")
+        playBtn.text = if (playing) "⏸" else "▶"
+    }
     fun setFull(f: Boolean) {
         isFull = f
         fullBtn.text = if (f) "📺 On TV" else "⛶ Full"
         screen.layoutParams = if (f) FrameLayout.LayoutParams(-1, -1) else FrameLayout.LayoutParams(SW, SH)
         if (f) { screen.scaleX = 1f; screen.scaleY = 1f; screen.rotation = 0f; screen.translationX = 0f; screen.translationY = 0f }
-        else lastPts.fill(Float.NaN)   // back on the TV: re-place it on the next frame
+        else { screen.removeCallbacks(pump); screen.postOnAnimation(pump) }   // back on the TV: keep feeding it
         layer.setBackgroundColor(if (f) Color.BLACK else Color.TRANSPARENT)
         if (f) screen.visibility = View.VISIBLE
         web?.evaluateJavascript("document.body.classList.toggle('full', $f)", null)

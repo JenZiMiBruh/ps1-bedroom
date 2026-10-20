@@ -222,8 +222,15 @@ class App : GLSurfaceView.Renderer {
             g3.setTheme(game.theme3d!!)
             g3.render(ps1.gameTime(t), SystemClock.uptimeMillis())
             tv.useFeed(g3.rt.texture)
-        } else tv.useFeed(null)
+        } else {
+            // YouTube plays on the TV's own screen (the player draws into the feed's texture), unless it's full screen
+            val f = ytFeed
+            if (ytActive && f != null && hud?.yt?.isFull != true) { f.update(); tv.useFeed(f.rt.texture) } else tv.useFeed(null)
+        }
     }
+    /** YouTube's texture on the TV (made on the GL thread the first time a video plays). */
+    @Volatile var ytFeed: YouTubeFeed? = null
+    fun ensureYtFeed(ready: (android.view.Surface) -> Unit) = post { val f = ytFeed ?: YouTubeFeed(640, 480).also { ytFeed = it }; ready(f.surface) }
     private var lastTvUpdate = 0.05f
     private val SPHERE_TV_C = Vec3(-2.05f, 1.3f, 0.65f)
     /** Set by MainActivity before the GL thread starts (for raw model files). */
@@ -425,7 +432,6 @@ class App : GLSurfaceView.Renderer {
         renderer.post.time = t
         if (windowShotDue(t)) takeWindowShot()
         renderer.render(scene, camera)
-        if (ytActive) placeYouTube()
         photoCallback?.let { cb -> photoCallback = null; cb(readScreen()) }
         camera.position.copy(basePos)
     }
@@ -485,7 +491,7 @@ class App : GLSurfaceView.Renderer {
             "lamp" -> furniture.toggleLamp()
             "string" -> decor.cycleStringLights()
             "dog" -> jasper.petDog(lastT)
-            "tv" -> tv.cycleBedroomTvChannel(lastT)
+            "tv" -> if (ytActive) hud?.yt?.let { yt -> hud?.runUi { yt.togglePlay() } } else tv.cycleBedroomTvChannel(lastT)
             "tvPower" -> tv.toggleBedroomTv(lastT)
             "ps1Power" -> ps1.powerToggle(lastT)
             "ps1Reset" -> ps1.resetPress(lastT)

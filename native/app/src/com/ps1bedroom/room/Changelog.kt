@@ -24,6 +24,12 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.44", "A tidier menu, light mode and themes", listOf(
+            "The menu opens on a home page: quick toggles up top (sound, light, sleep, photo, light / dark UI) and one card per category showing what's on right now",
+            "Each category splits into short sub-tabs instead of one long scroll, and Android back steps back to the home page before closing",
+            "Light mode, dark mode, follow the phone's dark mode, or follow the room's clock (light while the sun is up, dark after sunset)",
+            "Six colour themes for the menus, top bar, dock, boombox and pop-ups: PS1 Night, Memory Card, Vaporwave, Game Boy, Sunset and Arcade"
+        )),
         Entry("0.43", "YouTube on the TV, for real", listOf(
             "YouTube now plays on the TV's own screen inside the room: it sits exactly on the curved glass from any angle, with the PS1 look and the TV's glow, and never floats or clips",
             "Tap the TV (or ⏸ on the bar) to pause and play; ⛶ Full still opens the full player"

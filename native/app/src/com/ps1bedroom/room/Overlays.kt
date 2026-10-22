@@ -32,12 +32,13 @@ import java.util.Locale
  */
 @SuppressLint("SetTextI18n")
 class Overlays(private val act: Activity, private val root: FrameLayout, private val app: App) {
-    private val PANEL = Color.argb((0.94 * 255).toInt(), 9, 11, 28)
-    private val LINE = Color.rgb(0x3a, 0x4b, 0x8c)
-    private val TEXT = Color.rgb(0xd6, 0xdd, 0xff)
-    private val MUTED = Color.rgb(0x8f, 0x9c, 0xd0)
-    private val PINK = Color.rgb(0xff, 0x77, 0xee)
-    private val GOLD = Color.rgb(0xff, 0xd2, 0x3f)
+    private val T = UiTheme
+    private val PANEL get() = T.panel
+    private val LINE get() = T.line
+    private val TEXT get() = T.text
+    private val MUTED get() = T.muted
+    private val PINK get() = T.accent
+    private val GOLD get() = T.gold
     private val MONO = Typeface.create("monospace", Typeface.BOLD)
     private fun dp(v: Float) = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, v, act.resources.displayMetrics)
     private fun dpi(v: Float) = dp(v).toInt()
@@ -45,11 +46,12 @@ class Overlays(private val act: Activity, private val root: FrameLayout, private
         text = t; setTextColor(color); typeface = MONO; setTextSize(TypedValue.COMPLEX_UNIT_SP, size); letterSpacing = spacing; gravity = Gravity.CENTER
     }
     private fun panel(fill: Int, stroke: Int, radius: Float, shadow: Float): LayerDrawable {
-        val sh = GradientDrawable().apply { setColor(Color.BLACK); cornerRadius = dp(radius) }
+        val sh = GradientDrawable().apply { setColor(T.shadow); cornerRadius = dp(radius) }
         val bg = GradientDrawable().apply { setColor(fill); cornerRadius = dp(radius); setStroke(dpi(2f), stroke) }
         return LayerDrawable(arrayOf(sh, bg)).apply { setLayerInset(0, dpi(shadow), dpi(shadow), 0, 0); setLayerInset(1, 0, 0, dpi(shadow), dpi(shadow)) }
     }
-    private fun pill(t: String, color: Int) = text(t, color, 12f, 0.04f).apply { setPadding(dpi(11f), dpi(7f), dpi(14f), dpi(10f)); background = panel(PANEL, LINE, 6f, 3f) }
+    private val themedPills = ArrayList<TextView>()
+    private fun pill(t: String, color: Int) = text(t, color, 12f, 0.04f).apply { setPadding(dpi(11f), dpi(7f), dpi(14f), dpi(10f)); background = panel(PANEL, LINE, 6f, 3f); themedPills += this }
     /** A fresh full-size layout each time: one shared params object across several views moved them all together. */
     private val MATCH get() = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
 
@@ -162,13 +164,14 @@ class Overlays(private val act: Activity, private val root: FrameLayout, private
     )
     private var tutStep = 0
     private val tutOverlay = FrameLayout(act).apply { setBackgroundColor(Color.argb(184, 2, 3, 10)); visibility = View.GONE; isClickable = true }
+    private val tutBox = LinearLayout(act).apply { orientation = LinearLayout.VERTICAL; setPadding(dpi(14f), dpi(12f), dpi(18f), dpi(16f)) }
     private val tutIcon = text("", TEXT, 40f)
     private val tutTitle = text("", PINK, 15f, 0.07f)
     private val tutText = TextView(act).apply { setTextColor(TEXT); typeface = Typeface.create("monospace", Typeface.NORMAL); setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f); gravity = Gravity.CENTER; setLineSpacing(0f, 1.4f); minHeight = dpi(54f) }
     private val tutDots = LinearLayout(act).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
     private val tutNext = pill("NEXT →", PINK)
     init {
-        val box = LinearLayout(act).apply { orientation = LinearLayout.VERTICAL; background = panel(PANEL, LINE, 10f, 4f); setPadding(dpi(14f), dpi(12f), dpi(18f), dpi(16f)) }
+        val box = tutBox.apply { background = panel(PANEL, LINE, 10f, 4f) }
         box.addView(tutIcon, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = dpi(8f); bottomMargin = dpi(8f) })
         box.addView(tutTitle, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dpi(6f) })
         box.addView(tutText)
@@ -181,6 +184,13 @@ class Overlays(private val act: Activity, private val root: FrameLayout, private
         box.addView(actions)
         tutOverlay.addView(box, FrameLayout.LayoutParams(minOf(dpi(420f), (act.resources.displayMetrics.widthPixels - dpi(28f))), FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.CENTER))
         root.addView(tutOverlay, MATCH)
+        T.listeners += { restyle() }
+    }
+    private fun restyle() {
+        for (p in themedPills) { p.setTextColor(if (p === tutNext) PINK else TEXT); p.background = panel(PANEL, LINE, 6f, 3f) }
+        tutBox.background = panel(PANEL, LINE, 10f, 4f)
+        tutTitle.setTextColor(PINK); tutText.setTextColor(TEXT)
+        if (tutorialOpen) renderTutorial()
     }
     val tutorialOpen get() = tutOverlay.visibility == View.VISIBLE
     fun startTutorial() { tutStep = 0; tutOverlay.visibility = View.VISIBLE; renderTutorial() }

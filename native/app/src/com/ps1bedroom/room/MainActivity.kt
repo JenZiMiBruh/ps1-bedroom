@@ -49,6 +49,7 @@ class MainActivity : Activity() {
         app.pipEnabled = getSharedPreferences("ps1bedroom", MODE_PRIVATE).getBoolean("pip", true)
         app.onWindowShot = { clear, blinds, weather, place -> Thread { WindowWidget.saveInfo(this, weather, place); WindowWidget.saveShots(this, clear, blinds); clear.recycle(); blinds.recycle() }.start() }
         app.keepScreenOn = { on -> runOnUiThread { if (on) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) } }
+        UiTheme.load(this)
         app.hud = Hud(this, root, app).also { it.attachMenu() }
         setContentView(root)
         pacer = FramePacer(this, view, app)

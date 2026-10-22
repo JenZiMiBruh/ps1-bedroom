@@ -24,21 +24,23 @@ import kotlin.math.hypot
  */
 @SuppressLint("ClickableViewAccessibility", "SetTextI18n")
 class Hud(private val act: Activity, private val root: FrameLayout, private val app: App) {
-    // ---- CSS variables ----
-    private val PANEL = Color.argb((0.94 * 255).toInt(), 9, 11, 28)
-    private val LINE = Color.rgb(0x3a, 0x4b, 0x8c)
-    private val MUTED = Color.rgb(0x8f, 0x9c, 0xd0)
-    private val PINK = Color.rgb(0xff, 0x77, 0xee)
-    private val CYAN = Color.rgb(0x7f, 0xf3, 0xff)
-    private val GOLD = Color.rgb(0xff, 0xd2, 0x3f)
-    private val ACTIVE_BG = Color.rgb(0x2a, 0x18, 0x44)
+    // ---- CSS variables (from UiTheme) ----
+    private val T = UiTheme
+    private val PANEL get() = T.panel
+    private val LINE get() = T.line
+    private val MUTED get() = T.muted
+    private val PINK get() = T.accent
+    private val CYAN get() = T.accent2
+    private val GOLD get() = T.gold
+    private val ACTIVE_BG get() = T.activeBg
+    private val ON_TEXT get() = T.activeText
     private val MONO = Typeface.create("monospace", Typeface.BOLD)
     private fun dp(v: Float) = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, v, act.resources.displayMetrics)
     private fun dpi(v: Float) = dp(v).toInt()
 
-    /** A panel with the HTML's hard black drop shadow (box-shadow: Npx Npx 0 #000). */
+    /** A panel with the HTML's hard drop shadow (box-shadow: Npx Npx 0 shadow). */
     private fun panel(fill: Int, stroke: Int, radius: Float, shadow: Float): LayerDrawable {
-        val sh = GradientDrawable().apply { setColor(Color.BLACK); cornerRadius = dp(radius) }
+        val sh = GradientDrawable().apply { setColor(T.shadow); cornerRadius = dp(radius) }
         val bg = GradientDrawable().apply { setColor(fill); cornerRadius = dp(radius); setStroke(dpi(2f), stroke) }
         return LayerDrawable(arrayOf(sh, bg)).apply {
             setLayerInset(0, dpi(shadow), dpi(shadow), 0, 0)
@@ -129,20 +131,46 @@ class Hud(private val act: Activity, private val root: FrameLayout, private val 
 
         // Toast: drops in from the top, 4.2 s
         toastView.apply {
-            setTextColor(Color.rgb(0xf5, 0xd0, 0xfe)); typeface = MONO; setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f); gravity = Gravity.CENTER
+            setTextColor(T.toastText); typeface = MONO; setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f); gravity = Gravity.CENTER
             setPadding(dpi(14f), dpi(9f), dpi(18f), dpi(13f))
-            background = panel(PANEL, Color.rgb(0xc0, 0x84, 0xfc), 8f, 4f)
+            background = panel(PANEL, T.toastLine, 8f, 4f)
             maxWidth = minOf(dpi(560f), (act.resources.displayMetrics.widthPixels * 0.92f).toInt())
             visibility = View.INVISIBLE
         }
         root.addView(toastView, FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply { topMargin = dpi(58f) })
+        T.listeners += { restyle() }
+    }
+
+    private fun restyle() {
+        dock.background = panel(PANEL, LINE, 14f, 4f)
+        dockSep.setBackgroundColor(LINE)
+        pullChair.setTextColor(CYAN); pullChair.background = panel(PANEL, LINE, 6f, 3f)
+        putBack.setTextColor(GOLD); putBack.background = panel(PANEL, LINE, 6f, 3f)
+        toastView.setTextColor(T.toastText); toastView.background = panel(PANEL, T.toastLine, 8f, 4f)
+        setActive(currentMode)
+        refreshDockStates()
+    }
+
+    private fun refreshDockStates() {
+        dockBtns["audio"]?.let { b ->
+            val on = app.isBuilt && app.sound.playing
+            b.icon.text = if (on) "🔊" else "🔈"
+            b.view.background = if (on) GradientDrawable().apply { setColor(ACTIVE_BG); cornerRadius = dp(10f); setStroke(dpi(2f), PINK) } else null
+            b.label.setTextColor(if (on) ON_TEXT else MUTED)
+        }
+        dockBtns["timer"]?.let { b ->
+            val on = app.isBuilt && app.settings.sleepEnd > 0
+            b.view.background = if (on) GradientDrawable().apply { setColor(ACTIVE_BG); cornerRadius = dp(10f); setStroke(dpi(2f), PINK) } else if (currentMode == "timer") b.view.background else null
+            b.label.setTextColor(if (on) ON_TEXT else MUTED)
+        }
     }
 
     private fun setActive(mode: String) {
         for ((k, b) in dockBtns) {
+            if (k == "audio" || k == "timer") continue
             val on = k == mode
             b.view.background = if (on) GradientDrawable().apply { setColor(ACTIVE_BG); cornerRadius = dp(10f); setStroke(dpi(2f), PINK) } else null
-            b.label.setTextColor(if (on) Color.WHITE else MUTED)
+            b.label.setTextColor(if (on) ON_TEXT else MUTED)
         }
     }
 
@@ -241,10 +269,10 @@ class Hud(private val act: Activity, private val root: FrameLayout, private val 
         root.addView(sleepOverlay, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
         overlays.showBoot(app.settings.peek("startScreen", true))
     }
-    fun refreshMenu() = act.runOnUiThread { menu.build(); dockBtns["timer"]?.let { b -> val on = app.settings.sleepEnd > 0; b.view.background = if (on) GradientDrawable().apply { setColor(ACTIVE_BG); cornerRadius = dp(10f); setStroke(dpi(2f), PINK) } else if (currentMode == "timer") b.view.background else null } }
+    fun refreshMenu() = act.runOnUiThread { menu.build(); refreshDockStates() }
     fun refreshStatus() = act.runOnUiThread { menu.refreshStatus() }
     /** The dock's Sound button mirrors the audio state (🔊 / 🔈). */
-    fun audioChanged(on: Boolean) = act.runOnUiThread { dockBtns["audio"]?.let { b -> b.icon.text = if (on) "🔊" else "🔈"; b.view.background = if (on) GradientDrawable().apply { setColor(ACTIVE_BG); cornerRadius = dp(10f); setStroke(dpi(2f), PINK) } else null; b.label.setTextColor(if (on) Color.WHITE else MUTED) } }
+    fun audioChanged(on: Boolean) = act.runOnUiThread { dockBtns["audio"]?.let { b -> b.icon.text = if (on) "🔊" else "🔈"; b.view.background = if (on) GradientDrawable().apply { setColor(ACTIVE_BG); cornerRadius = dp(10f); setStroke(dpi(2f), PINK) } else null; b.label.setTextColor(if (on) ON_TEXT else MUTED) } }
     /** setTimeout on the UI thread. */
     fun later(ms: Long, fn: () -> Unit) { root.postDelayed(fn, ms) }
     fun showSleeping(on: Boolean) = act.runOnUiThread { sleepOverlay.visibility = if (on) View.VISIBLE else View.GONE }
@@ -259,7 +287,7 @@ class Hud(private val act: Activity, private val root: FrameLayout, private val 
         if (pcDesktop.isOpen) { pcDesktop.close(); return true }
         if (app.ytActive || yt.dialogOpen) { if (yt.back()) return true }
         if (overlays.back()) return true
-        if (menu.isOpen) { menu.close(); return true }
+        if (menu.isOpen) { menu.back(); return true }
         if (currentMode != "orbit") { app.post { app.setPlayerMode("orbit") }; return true }
         return false
     }

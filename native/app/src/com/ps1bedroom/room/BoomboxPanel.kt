@@ -20,28 +20,43 @@ import android.widget.TextView
  * the GL thread; the panel redraws when MyMusic says something changed.
  */
 class BoomboxPanel(private val act: Activity, private val root: FrameLayout, private val app: App) {
+    private val T = UiTheme
     private fun dp(v: Float) = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, v, act.resources.displayMetrics)
     private fun dpi(v: Float) = dp(v).toInt()
-    private val BG = Color.rgb(18, 20, 31); private val PANEL = Color.rgb(31, 35, 53); private val LINE = Color.rgb(43, 48, 71)
-    private val TEXT = Color.rgb(229, 231, 235); private val MUTED = Color.rgb(156, 163, 175); private val PINK = Color.rgb(0xff, 0x77, 0xee)
-    private val ORANGE = Color.rgb(0xf9, 0x73, 0x16)
+    private val BG get() = T.panel
+    private val PANEL get() = T.panel2
+    private val LINE get() = T.line
+    private val TEXT get() = T.text
+    private val MUTED get() = T.muted
+    private val PINK get() = T.accent
+    private val ORANGE get() = T.accent2
+    private val ACTIVE_BG get() = T.activeBg
+    private val ON_TEXT get() = T.activeText
 
-    private val scrim = FrameLayout(act).apply { setBackgroundColor(Color.argb(150, 4, 6, 18)); visibility = View.GONE; isClickable = true; setOnClickListener { close() } }
+    private val scrim = FrameLayout(act).apply { setBackgroundColor(T.scrim); visibility = View.GONE; isClickable = true; setOnClickListener { close() } }
     private val body = LinearLayout(act).apply { orientation = LinearLayout.VERTICAL; setPadding(dpi(14f), dpi(12f), dpi(14f), dpi(14f)) }
+    private val card = FrameLayout(act)
     val isOpen get() = scrim.visibility == View.VISIBLE
 
     init {
-        val card = FrameLayout(act).apply {
-            background = GradientDrawable().apply { setColor(BG); cornerRadius = dp(16f); setStroke(dpi(2f), ORANGE) }
+        card.apply {
             isClickable = true
             addView(ScrollView(act).apply { addView(body) })
         }
         val w = minOf(dpi(440f), act.resources.displayMetrics.widthPixels - dpi(24f))
         scrim.addView(card, FrameLayout.LayoutParams(w, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.CENTER).apply { topMargin = dpi(40f); bottomMargin = dpi(40f) })
         root.addView(scrim, FrameLayout.LayoutParams(-1, -1))
+        T.listeners += { restyle() }
+        restyle()
     }
 
-    fun open() { scrim.visibility = View.VISIBLE; scrim.bringToFront(); render() }
+    private fun restyle() {
+        scrim.setBackgroundColor(T.scrim)
+        card.background = GradientDrawable().apply { setColor(BG); cornerRadius = dp(16f); setStroke(dpi(2f), LINE) }
+        if (isOpen) render()
+    }
+
+    fun open() { restyle(); scrim.visibility = View.VISIBLE; scrim.bringToFront(); render() }
     fun close() { scrim.visibility = View.GONE }
     /** MyMusic changed (any thread): redraw if it's showing. */
     fun refresh() { if (isOpen) act.runOnUiThread { if (isOpen) render() } }
@@ -49,9 +64,9 @@ class BoomboxPanel(private val act: Activity, private val root: FrameLayout, pri
     private fun text(t: String, color: Int = TEXT, size: Float = 12f, bold: Boolean = false) = TextView(act).apply {
         text = t; setTextColor(color); setTextSize(TypedValue.COMPLEX_UNIT_SP, size); typeface = Typeface.create(Typeface.MONOSPACE, if (bold) Typeface.BOLD else Typeface.NORMAL)
     }
-    private fun pill(t: String, on: Boolean, size: Float = 12f, fn: () -> Unit) = text(t, if (on) Color.WHITE else TEXT, size, true).apply {
+    private fun pill(t: String, on: Boolean, size: Float = 12f, fn: () -> Unit) = text(t, if (on) ON_TEXT else TEXT, size, true).apply {
         gravity = Gravity.CENTER; setPadding(dpi(10f), dpi(8f), dpi(10f), dpi(8f))
-        background = GradientDrawable().apply { setColor(if (on) Color.rgb(0x3b, 0x1d, 0x4f) else PANEL); cornerRadius = dp(999f); setStroke(dpi(if (on) 2f else 1f), if (on) PINK else LINE) }
+        background = GradientDrawable().apply { setColor(if (on) ACTIVE_BG else PANEL); cornerRadius = dp(999f); setStroke(dpi(if (on) 2f else 1f), if (on) PINK else LINE) }
         setOnClickListener { fn() }
     }
     private fun row(vararg views: View, weights: Boolean = true) = LinearLayout(act).apply {
@@ -85,7 +100,7 @@ class BoomboxPanel(private val act: Activity, private val root: FrameLayout, pri
             st == 0 -> "Radio off"
             onMusic -> cur?.title ?: "MY MUSIC"
             else -> app.extras.RADIO_STATIONS[st].substringBefore(':')
-        }, Color.WHITE, 14f, true).apply { maxLines = 2; ellipsize = TextUtils.TruncateAt.END }
+        }, TEXT, 14f, true).apply { maxLines = 2; ellipsize = TextUtils.TruncateAt.END }
         val sub = text(when {
             st == 0 -> "Pick a station or play your music"
             onMusic -> cur?.let { listOf(it.artist, it.album).filter { s -> s.isNotEmpty() }.joinToString(" · ") }?.ifEmpty { null } ?: mm.statusText()
@@ -118,7 +133,7 @@ class BoomboxPanel(private val act: Activity, private val root: FrameLayout, pri
             val cover = ImageView(act).apply { scaleType = ImageView.ScaleType.CENTER_CROP; mm.art(a.key)?.let { setImageBitmap(it) }; background = GradientDrawable().apply { setColor(LINE); cornerRadius = dp(4f) }; clipToOutline = true }
             val label = LinearLayout(act).apply {
                 orientation = LinearLayout.VERTICAL
-                addView(text(a.title, if (isCur) PINK else Color.WHITE, 12f, true).apply { maxLines = 1; ellipsize = TextUtils.TruncateAt.END })
+                addView(text(a.title, if (isCur) PINK else TEXT, 12f, true).apply { maxLines = 1; ellipsize = TextUtils.TruncateAt.END })
                 addView(text("${a.artist.ifEmpty { "Unknown artist" }} · ${a.tracks.size} song${if (a.tracks.size > 1) "s" else ""}", MUTED, 10f).apply { maxLines = 1; ellipsize = TextUtils.TruncateAt.END })
             }
             add(LinearLayout(act).apply {

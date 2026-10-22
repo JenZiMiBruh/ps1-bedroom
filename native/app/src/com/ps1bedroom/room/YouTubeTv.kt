@@ -38,6 +38,7 @@ import java.net.URLEncoder
  */
 class YouTubeTv(private val act: Activity, private val root: FrameLayout, private val app: App) {
     class Vid(val id: String?, val list: String?, val start: Int = 0)
+    private val T = UiTheme
     private val prefs = act.getSharedPreferences("ps1bedroom", Context.MODE_PRIVATE)
     private fun dp(v: Float) = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, v, act.resources.displayMetrics)
     private fun dpi(v: Float) = dp(v).toInt()
@@ -87,11 +88,16 @@ class YouTubeTv(private val act: Activity, private val root: FrameLayout, privat
     // ---- The bar (YouTube / Full / Stop) and the dialog ----
     private val bar = LinearLayout(act).apply {
         orientation = LinearLayout.HORIZONTAL; visibility = View.GONE; setPadding(dpi(4f), dpi(4f), dpi(4f), dpi(4f))
-        background = GradientDrawable().apply { setColor(Color.argb(210, 8, 10, 24)); cornerRadius = dp(999f); setStroke(1, Color.argb(40, 255, 255, 255)) }
     }
+    private val barBtns = ArrayList<Pair<TextView, Boolean>>()
     private lateinit var fullBtn: TextView
     private lateinit var playBtn: TextView
-    private val dialog = FrameLayout(act).apply { visibility = View.GONE; setBackgroundColor(Color.argb(153, 4, 6, 18)); isClickable = true }
+    private val dialog = FrameLayout(act).apply { visibility = View.GONE; isClickable = true }
+    private lateinit var dialogBox: LinearLayout
+    private lateinit var dialogTitle: TextView
+    private lateinit var recentHead: TextView
+    private lateinit var dialogNote: TextView
+    private val dialogBtns = ArrayList<Pair<TextView, Boolean>>()
     private lateinit var input: EditText
     private lateinit var recentBox: LinearLayout
 
@@ -99,10 +105,10 @@ class YouTubeTv(private val act: Activity, private val root: FrameLayout, privat
         layer.addView(screen, FrameLayout.LayoutParams(SW, SH))
         root.addView(layer, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         fun btn(t: String, red: Boolean, fn: () -> Unit) = TextView(act).apply {
-            text = t; setTextColor(Color.rgb(243, 244, 246)); typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD); setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
+            text = t; typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD); setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
             setPadding(dpi(10f), dpi(6f), dpi(10f), dpi(6f))
-            background = GradientDrawable().apply { setColor(if (red) Color.rgb(204, 0, 0) else Color.rgb(31, 35, 53)); cornerRadius = dp(999f) }
             setOnClickListener { fn() }
+            barBtns += this to red
         }
         // #21: drag the grip to move the buttons anywhere (remembered), tap – to tuck them into a small tab
         val grip = btn("⠿", false) { }
@@ -142,31 +148,32 @@ class YouTubeTv(private val act: Activity, private val root: FrameLayout, privat
         root.addView(bar, FrameLayout.LayoutParams(-2, -2, Gravity.TOP or Gravity.END).apply { topMargin = dpi(58f); marginEnd = dpi(10f) })
         buildDialog()
         root.addView(dialog, FrameLayout.LayoutParams(-1, -1))
+        T.listeners += { restyle() }
+        restyle()
     }
 
     private fun buildDialog() {
-        val box = LinearLayout(act).apply {
+        dialogBox = LinearLayout(act).apply {
             orientation = LinearLayout.VERTICAL; setPadding(dpi(14f), dpi(14f), dpi(14f), dpi(14f))
-            background = GradientDrawable().apply { setColor(Color.rgb(18, 20, 31)); cornerRadius = dp(14f); setStroke(dpi(2f), Color.rgb(43, 48, 71)) }
             isClickable = true
         }
-        fun tv(t: String, size: Float, color: Int = Color.rgb(229, 231, 235), bold: Boolean = false) = TextView(act).apply {
+        fun tv(t: String, size: Float, color: Int = T.text, bold: Boolean = false) = TextView(act).apply {
             text = t; setTextColor(color); setTextSize(TypedValue.COMPLEX_UNIT_SP, size); typeface = Typeface.create(Typeface.MONOSPACE, if (bold) Typeface.BOLD else Typeface.NORMAL)
         }
-        box.addView(tv("▶  Watch on the bedroom TV", 15f, bold = true))
+        dialogTitle = tv("▶  Watch on the bedroom TV", 15f, bold = true)
+        dialogBox.addView(dialogTitle)
         input = EditText(act).apply {
-            hint = "Paste a YouTube link, or type something to search"; setHintTextColor(Color.rgb(107, 114, 128)); setTextColor(Color.WHITE)
+            hint = "Paste a YouTube link, or type something to search"
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f); typeface = Typeface.MONOSPACE; isSingleLine = true; imeOptions = EditorInfo.IME_ACTION_GO
             setPadding(dpi(10f), dpi(10f), dpi(10f), dpi(10f))
-            background = GradientDrawable().apply { setColor(Color.rgb(10, 11, 18)); cornerRadius = dp(8f); setStroke(1, Color.rgb(59, 65, 96)) }
             setOnEditorActionListener { _, _, _ -> goOrSearch(); true }
         }
-        box.addView(input, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dpi(8f) })
+        dialogBox.addView(input, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dpi(8f) })
         val row = LinearLayout(act).apply { orientation = LinearLayout.HORIZONTAL }
-        fun rb(t: String, go: Boolean, fn: () -> Unit) = tv(t, 12f, Color.WHITE, true).apply {
+        fun rb(t: String, go: Boolean, fn: () -> Unit) = tv(t, 12f, if (go) Color.WHITE else T.text, true).apply {
             gravity = Gravity.CENTER; setPadding(dpi(6f), dpi(9f), dpi(6f), dpi(9f))
-            background = GradientDrawable().apply { setColor(if (go) Color.rgb(204, 0, 0) else Color.rgb(42, 47, 69)); cornerRadius = dp(8f) }
             setOnClickListener { fn() }
+            dialogBtns += this to go
         }
         row.addView(rb("▶ PLAY / 🔎", true) { goOrSearch() }, LinearLayout.LayoutParams(0, -2, 1.4f))
         row.addView(rb("📋 PASTE", false) {
@@ -175,15 +182,34 @@ class YouTubeTv(private val act: Activity, private val root: FrameLayout, privat
             if (s.isNullOrEmpty()) app.toast("Long-press the box and choose Paste") else input.setText(s)
         }, LinearLayout.LayoutParams(0, -2, 1f).apply { marginStart = dpi(6f) })
         row.addView(rb("CLOSE", false) { closeDialog() }, LinearLayout.LayoutParams(0, -2, 1f).apply { marginStart = dpi(6f) })
-        box.addView(row, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dpi(8f) })
-        box.addView(tv("RECENTLY WATCHED", 12f, Color.rgb(156, 163, 175)).apply { letterSpacing = 0.1f }, LinearLayout.LayoutParams(-2, -2).apply { topMargin = dpi(12f) })
+        dialogBox.addView(row, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dpi(8f) })
+        recentHead = tv("RECENTLY WATCHED", 12f, T.muted).apply { letterSpacing = 0.1f }
+        dialogBox.addView(recentHead, LinearLayout.LayoutParams(-2, -2).apply { topMargin = dpi(12f) })
         recentBox = LinearLayout(act).apply { orientation = LinearLayout.VERTICAL }
-        box.addView(recentBox)
-        box.addView(tv("Plays through YouTube's own player and needs the internet. Some videos don't allow playing inside other apps; YouTube will say so. Searching opens YouTube: find a video, tap Share, and pick PS1 Bedroom (or copy the link and paste it here).", 11f, Color.rgb(156, 163, 175)),
-            LinearLayout.LayoutParams(-1, -2).apply { topMargin = dpi(8f) })
-        val scroll = ScrollView(act).apply { addView(box) }
+        dialogBox.addView(recentBox)
+        dialogNote = tv("Plays through YouTube's own player and needs the internet. Some videos don't allow playing inside other apps; YouTube will say so. Searching opens YouTube: find a video, tap Share, and pick PS1 Bedroom (or copy the link and paste it here).", 11f, T.muted)
+        dialogBox.addView(dialogNote, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dpi(8f) })
+        val scroll = ScrollView(act).apply { addView(dialogBox) }
         dialog.addView(scroll, FrameLayout.LayoutParams(minOf(dpi(520f), act.resources.displayMetrics.widthPixels - dpi(32f)), -2, Gravity.CENTER))
         dialog.setOnClickListener { closeDialog() }
+    }
+
+    private fun restyle() {
+        bar.background = GradientDrawable().apply { setColor(T.panel); cornerRadius = dp(999f); setStroke(dpi(1f), T.line) }
+        for ((b, red) in barBtns) {
+            b.setTextColor(if (red) Color.WHITE else T.text)
+            b.background = GradientDrawable().apply { setColor(if (red) Color.rgb(204, 0, 0) else T.panel2); cornerRadius = dp(999f) }
+        }
+        dialog.setBackgroundColor(T.scrim)
+        dialogBox.background = GradientDrawable().apply { setColor(T.panel); cornerRadius = dp(14f); setStroke(dpi(2f), T.line) }
+        dialogTitle.setTextColor(T.text); recentHead.setTextColor(T.muted); dialogNote.setTextColor(T.muted)
+        input.setHintTextColor(T.muted); input.setTextColor(T.text)
+        input.background = GradientDrawable().apply { setColor(T.field); cornerRadius = dp(8f); setStroke(1, T.line) }
+        for ((b, go) in dialogBtns) {
+            b.setTextColor(if (go) Color.WHITE else T.text)
+            b.background = GradientDrawable().apply { setColor(if (go) Color.rgb(204, 0, 0) else T.panel2); cornerRadius = dp(8f); if (!go) setStroke(1, T.line) }
+        }
+        if (dialogOpen) renderRecent()
     }
 
     // ---- Links: youtu.be, watch?v=, shorts/, live/, embed/, playlists, bare IDs, or "Check this out https://..." ----
@@ -299,20 +325,23 @@ class YouTubeTv(private val act: Activity, private val root: FrameLayout, privat
         layer.invalidate()
     }
     val dialogOpen get() = dialog.visibility == View.VISIBLE
-    fun openDialog() {
+    private fun renderRecent() {
         recentBox.removeAllViews()
         val rec = loadRecent()
-        if (rec.isEmpty()) recentBox.addView(TextView(act).apply { text = "Nothing yet."; setTextColor(Color.rgb(156, 163, 175)); setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f) })
+        if (rec.isEmpty()) recentBox.addView(TextView(act).apply { text = "Nothing yet."; setTextColor(T.muted); setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f) })
         for (r in rec) {
             val id = r.optString("id").ifEmpty { null }; val list = r.optString("list").ifEmpty { null }; val title = r.optString("title")
             recentBox.addView(TextView(act).apply {
-                text = "▶  $title"; setTextColor(Color.rgb(229, 231, 235)); setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f); typeface = Typeface.MONOSPACE
+                text = "▶  $title"; setTextColor(T.text); setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f); typeface = Typeface.MONOSPACE
                 isSingleLine = true; ellipsize = android.text.TextUtils.TruncateAt.END
                 setPadding(dpi(8f), dpi(9f), dpi(8f), dpi(9f))
-                background = GradientDrawable().apply { setColor(Color.rgb(10, 11, 18)); cornerRadius = dp(8f); setStroke(1, Color.rgb(43, 48, 71)) }
+                background = GradientDrawable().apply { setColor(T.panel2); cornerRadius = dp(8f); setStroke(1, T.line) }
                 setOnClickListener { play(Vid(id, list), title) }
             }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dpi(6f) })
         }
+    }
+    fun openDialog() {
+        renderRecent()
         dialog.visibility = View.VISIBLE
         app.post { app.sfx("ui") }
     }

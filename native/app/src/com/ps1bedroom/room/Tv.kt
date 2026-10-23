@@ -36,6 +36,10 @@ class Tv(private val room: Room, private val env: Environment) {
         val PS1_TV_CHANNEL = TV_CHANNEL_NAMES.size - 1 // the A/V input is always the last channel
     }
     var bedroomTvOn = true; private set
+    /** True while YouTube is pinned over the CRT glass so the underlying channel canvas stays dark. */
+    var ytShowing = false
+    /** Fired whenever the TV turns on or off from any source (power button, channel wrap-around, menu, etc.). */
+    var onPowerChanged: ((Boolean) -> Unit)? = null
     /** The weather channel's temperature, in the player's °F / °C (set by the app). */
     var tempText: () -> String = { "--" }
     /** The picture (YouTube is pinned over it). */
@@ -217,10 +221,12 @@ class Tv(private val room: Room, private val env: Environment) {
     // ---- Power and channels ----
     fun toggleBedroomTv(t: Float) {
         bedroomTvOn = !bedroomTvOn
+        if (!bedroomTvOn) ytShowing = false
         tvScreenMat.emissiveIntensity = if (bedroomTvOn) 0.95f else 0.04f
         room.bedroomTvLight.intensity = if (bedroomTvOn) 1.15f else 0.0f
         tvLedMat.emissiveIntensity = if (bedroomTvOn) 1.0f else 0.05f
         updateBedroomTvScreen(t) // the screen isn't redrawn while the TV is off, so blank (or restore) it once here
+        onPowerChanged?.invoke(bedroomTvOn)
     }
     fun cycleBedroomTvChannel(t: Float) {
         if (!bedroomTvOn) { toggleBedroomTv(t); return }
@@ -241,7 +247,7 @@ class Tv(private val room: Room, private val env: Environment) {
         ctx.setTransform(2, 0, 0, 2, 0, 0)
         if (tvLastChannel == -1) tvLastChannel = bedroomTvChannel // first draw: no channel-change effect
         else if (bedroomTvChannel != tvLastChannel) { tvLastChannel = bedroomTvChannel; tvChannelChangedAt = t }
-        if (!bedroomTvOn) {
+        if (!bedroomTvOn || ytShowing) {
             ctx.fillStyle = "#05060a"; ctx.fillRect(0, 0, w, h)
             ctx.setTransform(1, 0, 0, 1, 0, 0)
             tvCanvasObj.tex.needsUpdate()

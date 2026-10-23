@@ -1,7 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="widget_desc">Now playing in your room: the song or the room, with play, pause and skip</string>
-    <string name="window_widget_desc">The view out of your bedroom window, with the time, date and weather</string>
+    <string name="window_widget_desc">The view out of your bedroom window, with the time, date, weather and configurable refresh rate</string>
+    <string name="clock_weather_widget_desc">Retro 90s digital alarm clock with live room weather, temperature and place</string>
+    <string name="quick_controls_widget_desc">One-tap toggles for room Sound, Fan Light, Bedroom TV, Blinds and Sleep Mode</string>
+    <string name="sleep_alarm_widget_desc">Start Sleep Mode, set a sleep timer, or toggle your Sunrise Alarm from the home screen</string>
+    <string name="jasper_widget_desc">Check on Jasper and feed, water, play with, or tuck him into bed right from your home screen</string>
     <string name="sc_sleep">Sleep mode</string>
     <string name="sc_sleep_long">Start sleep mode</string>
     <string name="sc_music">My Music</string>

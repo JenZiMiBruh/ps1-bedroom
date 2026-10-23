@@ -60,29 +60,8 @@ class YouTubeTv(private val act: Activity, private val root: FrameLayout, privat
     private val layer = object : FrameLayout(act) {
         override fun dispatchTouchEvent(ev: MotionEvent): Boolean = if (isFull) super.dispatchTouchEvent(ev) else false
     }.apply { visibility = View.GONE; tag = Cutout.NO_INSET }
-    /** The feed's surface (from the GL thread): while YouTube is on the TV, the player draws into it, not onto the screen. */
-    @Volatile private var feedSurface: android.view.Surface? = null
-    private val screen = object : FrameLayout(act) {
-        override fun dispatchDraw(canvas: Canvas) {
-            val s = feedSurface
-            if (isFull || s == null) { super.dispatchDraw(canvas); return }
-            // onto the TV: draw the player into the feed's surface (nothing is drawn on the screen itself)
-            try {
-                val c = s.lockHardwareCanvas()
-                c.drawColor(Color.rgb(4, 4, 5))
-                super.dispatchDraw(c)
-                s.unlockCanvasAndPost(c)
-            } catch (e: Exception) { }
-        }
-    }
-    /** While it's on the TV, redraw the player into the feed every frame (the video keeps changing). */
-    private val pump = object : Runnable {
-        override fun run() {
-            if (!app.ytActive || isFull) return
-            screen.invalidate()
-            screen.postOnAnimation(this)
-        }
-    }
+    private val screen = FrameLayout(act).apply { setBackgroundColor(Color.rgb(4, 4, 5)) }
+    @Volatile var active = false; private set
     private var web: WebView? = null
 
     // ---- The bar (YouTube / Full / Stop) and the dialog ----
@@ -103,7 +82,8 @@ class YouTubeTv(private val act: Activity, private val root: FrameLayout, privat
 
     init {
         layer.addView(screen, FrameLayout.LayoutParams(SW, SH))
-        root.addView(layer, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        // Insert right above the GLSurfaceView (index 1) so the HUD dock, menu, PC desktop, and boombox sit above it when on the TV
+        root.addView(layer, minOf(1, root.childCount), FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         fun btn(t: String, red: Boolean, fn: () -> Unit) = TextView(act).apply {
             text = t; typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD); setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
             setPadding(dpi(10f), dpi(6f), dpi(10f), dpi(6f))
@@ -282,7 +262,11 @@ class YouTubeTv(private val act: Activity, private val root: FrameLayout, privat
         settings.javaScriptEnabled = true
         settings.domStorageEnabled = true
         settings.mediaPlaybackRequiresUserGesture = false
+        // Strip the Android WebView "; wv" marker so YouTube's embed player doesn't block playback inside WebView
+        settings.userAgentString = settings.userAgentString.replace("; wv", "").replace("Version/4.0 ", "")
         webChromeClient = WebChromeClient()
+        webViewClient = android.webkit.WebViewClient()
+        try { android.webkit.CookieManager.getInstance().setAcceptThirdPartyCookies(this, true) } catch (_: Exception) { }
         setBackgroundColor(Color.rgb(4, 4, 5))
     }
 
@@ -292,23 +276,35 @@ class YouTubeTv(private val act: Activity, private val root: FrameLayout, privat
 
     fun play(v: Vid?, label: String? = null) {
         if (v == null) { app.toast("📺 That doesn't look like a YouTube link"); return }
-        app.post { if (!app.tv.bedroomTvOn) app.tvPower() }
-        web?.let { screen.removeView(it); it.destroy() }
+        web?.let {
+            try { it.loadUrl("about:blank"); it.onPause() } catch (_: Exception) { }
+            screen.removeView(it)
+            it.destroy()
+        }
         val w = newWeb(); web = w
         screen.addView(w, 0, FrameLayout.LayoutParams(-1, -1))
         w.loadDataWithBaseURL("$ORIGIN/", page(v), "text/html", "utf-8", null)
-        app.ytActive = true; lastPts.fill(Float.NaN)   // the first placement always lands
-        // the player stays laid out (it has to, to keep playing) but draws onto the TV's screen in the 3D room
-        layer.visibility = View.VISIBLE; screen.visibility = View.VISIBLE
+        active = true
+        lastPts.fill(Float.NaN)   // the first placement always lands
+        layer.visibility = View.VISIBLE
+        screen.visibility = if (isFull) View.VISIBLE else View.INVISIBLE
         screen.scaleX = 1f; screen.scaleY = 1f; screen.rotation = 0f; screen.translationX = 0f; screen.translationY = 0f
         playing = true
         playBtn.text = "⏸"
-        app.ensureYtFeed { s -> act.runOnUiThread { feedSurface = s; screen.removeCallbacks(pump); screen.postOnAnimation(pump) } }
         bar.visibility = View.VISIBLE
         bar.bringToFront()
         bar.post { clampBar() }
         closeDialog()
-        app.post { app.sound.updateLayered(); app.sfx("tvChannel"); app.settings.changed() }   // the TV's own channel sound steps aside
+        // Turn on the TV synchronously on the GL thread BEFORE setting ytActive = true so updateGtaTvFeed never mistakes startup for TV-off
+        app.post {
+            if (!app.tv.bedroomTvOn) app.tv.toggleBedroomTv(app.lastFrameT)
+            app.tv.ytShowing = true
+            app.tv.updateBedroomTvScreen(app.lastFrameT)
+            app.ytActive = active
+            app.sound.updateLayered()
+            app.sfx("tvChannel")
+            app.settings.changed()
+        }
         val rec = loadRecent().filter { !(it.optString("id") == (v.id ?: "") && it.optString("list") == (v.list ?: "")) }.toMutableList()
         rec.add(0, JSONObject().put("id", v.id ?: "").put("list", v.list ?: "").put("title", label ?: (if (v.id != null) "youtu.be/${v.id}" else "Playlist")))
         saveRecent(rec)
@@ -325,17 +321,26 @@ class YouTubeTv(private val act: Activity, private val root: FrameLayout, privat
     }
     fun playLink(text: String?) = play(parse(text))
     fun stop(quiet: Boolean = false) {
+        active = false
+        app.ytActive = false
         web?.let {
-            try { it.loadUrl("about:blank"); it.onPause() } catch (_: Exception) { }
+            try {
+                it.evaluateJavascript("(function(){var f=document.querySelector('iframe');if(f)f.src='about:blank';})()", null)
+                it.loadUrl("about:blank")
+                it.onPause()
+                it.pauseTimers()
+            } catch (_: Exception) { }
             screen.removeView(it)
             it.destroy()
         }
         web = null
-        app.ytActive = false
+        try { android.webkit.WebView(act).resumeTimers() } catch (_: Exception) { }
         setFull(false)
-        layer.visibility = View.GONE; bar.visibility = View.GONE
+        layer.visibility = View.GONE; screen.visibility = View.GONE; bar.visibility = View.GONE
         app.post {
+            app.tv.ytShowing = false
             app.tv.useFeed(null)
+            app.tv.updateBedroomTvScreen(app.lastFrameT)
             app.sound.updateLayered()
             app.settings.changed()
             if (!quiet && app.tv.bedroomTvOn) app.toast("📺 Back to ${Tv.TV_CHANNEL_NAMES[app.tv.bedroomTvChannel]}")
@@ -353,10 +358,16 @@ class YouTubeTv(private val act: Activity, private val root: FrameLayout, privat
         isFull = f
         fullBtn.text = if (f) "📺 On TV" else "⛶ Full"
         screen.layoutParams = if (f) FrameLayout.LayoutParams(-1, -1) else FrameLayout.LayoutParams(SW, SH)
-        if (f) { screen.scaleX = 1f; screen.scaleY = 1f; screen.rotation = 0f; screen.translationX = 0f; screen.translationY = 0f }
-        else { screen.removeCallbacks(pump); screen.postOnAnimation(pump) }   // back on the TV: keep feeding it
+        layer.elevation = if (f) dp(20f) else 0f
+        bar.elevation = dp(26f)
+        if (f) {
+            screen.scaleX = 1f; screen.scaleY = 1f; screen.rotation = 0f; screen.translationX = 0f; screen.translationY = 0f
+            screen.visibility = View.VISIBLE
+            bar.bringToFront()
+        } else {
+            lastPts.fill(Float.NaN)
+        }
         layer.setBackgroundColor(if (f) Color.BLACK else Color.TRANSPARENT)
-        if (f) screen.visibility = View.VISIBLE
         web?.evaluateJavascript("document.body.classList.toggle('full', $f)", null)
         layer.invalidate()
     }

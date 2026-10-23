@@ -333,18 +333,35 @@ object Buffers {
             }
         }
     }
-    /** Crack + rolling rumble swells over brown noise. */
+    /** Sharp lightning crack + chesty low-mid thunder boom & rolling rumble swells (90–600 Hz body + sub punch). */
     fun thunder(ctx: AudioCtx) = make(ctx, 6.5) { d, sr ->
         var brown = 0.0
-        val swells = arrayOf(doubleArrayOf(0.0, 0.12, 1.0), doubleArrayOf(rand(0.3, 0.6), 0.45, 0.8), doubleArrayOf(rand(1.0, 1.7), 0.8, 0.6), doubleArrayOf(rand(2.2, 3.0), 1.1, 0.4))
+        var lowMid = 0.0
+        var midCrack = 0.0
+        val swells = arrayOf(
+            doubleArrayOf(0.04, 0.16, 1.35),
+            doubleArrayOf(rand(0.28, 0.55), 0.42, 1.05),
+            doubleArrayOf(rand(0.95, 1.55), 0.75, 0.80),
+            doubleArrayOf(rand(2.05, 2.85), 1.05, 0.55),
+            doubleArrayOf(rand(3.40, 4.30), 1.25, 0.32)
+        )
         for (i in d.indices) {
             val t = i / sr
             val w = Random.nextDouble() * 2 - 1
-            brown = (brown + 0.03 * w) / 1.03
-            var env = kotlin.math.exp(-t * 0.7) * 0.25
+            brown = (brown + 0.045 * w) / 1.045
+            lowMid = (lowMid + 0.18 * w) / 1.18
+            midCrack = (midCrack + 0.42 * w) / 1.42
+            var env = kotlin.math.exp(-t * 0.55) * 0.42
             for ((c, width, a) in swells) env += a * kotlin.math.exp(-((t - c) / width).pow(2))
-            val crack = if (t < 0.2) w * kotlin.math.exp(-t * 22) * 0.35 else 0.0
-            d[i] = (brown * env * 3.0 + crack).toFloat()
+            // Crisp electric tear / crackle in first 0.38s + deep resonant boom sweep (145 Hz -> 42 Hz)
+            val snap = if (t < 0.38) (w * 0.55 + midCrack * 0.85) * kotlin.math.exp(-t * 11.0) * (0.65 + 0.35 * sin(t * 95.0)) else 0.0
+            val boomFreq = 42.0 + 105.0 * kotlin.math.exp(-t * 4.2)
+            val boom = sin(2 * PI * boomFreq * t) * kotlin.math.exp(-t * 1.65) * 0.95
+            val subRumble = sin(2 * PI * (58.0 + 18.0 * sin(t * 2.7)) * t) * env * 0.55
+            val body = (brown * 2.2 + (lowMid - brown) * 2.8) * env
+            // Soft saturation so the crack and rumble sit evenly without squashing the tail
+            val raw = body + boom + subRumble + snap
+            d[i] = kotlin.math.tanh(raw * 0.85).toFloat()
         }
     }
     @Suppress("unused") private fun unused() = ln(min(1.0, 1.0))

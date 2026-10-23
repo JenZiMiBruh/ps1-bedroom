@@ -79,10 +79,14 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
     private val WINTER_DEBRIS_COLS = intArrayOf(0xe2e8f0, 0xcbd5e1, 0x94a3b8, 0x78350f, 0x14532d)
     private val DESERT_DEBRIS_COLS = intArrayOf(0xfde68a, 0xf59e0b, 0xd97706, 0xb45309, 0xa16207)
     private var leafPalette: IntArray? = null
-    // User-configurable debris / leaf multipliers (amount, speed, frequency)
+    // User-configurable debris / leaf mode & multipliers (mode: "weather" | "always" | "off", plus amount, speed, frequency)
+    var debrisMode = "weather"
+        set(v) { field = v; updateSettings() }
     var debrisAmount = 1.0f; private set
     var debrisSpeed = 1.0f; private set
     var debrisFreq = 1.0f; private set
+    private var lastWeatherKind = ""
+    private var stormIntroTimer = 0f
     fun setDebrisParams(amount: Float, speed: Float, freq: Float) {
         debrisAmount = amount.coerceIn(0f, 2.5f)
         debrisSpeed = speed.coerceIn(0.2f, 2.5f)
@@ -252,7 +256,7 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
                 glassDrops += GlassDrop(rand() * w, rand() * (h - 6), 0.75f + rand() * 1.35f, 0f, 0f)
             }
         }
-        val windSlant = -env.W.wind * 0.32f
+        val windSlant = 0.08f + env.W.wind * 0.30f
         var i = glassDrops.size - 1
         while (i >= 0) {
             val d = glassDrops[i]
@@ -269,9 +273,10 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
             if (d.v > 0f) {
                 val streakLen = min(10f, 3.5f + d.v * 0.25f)
                 ctx.strokeStyle = "rgba(220, 235, 255, 0.22)"
-                ctx.beginPath(); ctx.moveTo(d.x, d.y); ctx.lineTo(d.x - windSlant * streakLen, d.y - streakLen); ctx.stroke()
+                // Trail extends up (+X, -Y) behind the drop as the drop streaks down-left (-X, +Y), matching 3D rain & leaves
+                ctx.beginPath(); ctx.moveTo(d.x, d.y); ctx.lineTo(d.x + windSlant * streakLen, d.y - streakLen); ctx.stroke()
                 d.y += d.v * dt
-                d.x += (windSlant * d.v * 0.16f + (rand() - 0.5f) * 3.0f) * dt
+                d.x -= (windSlant * d.v + (rand() - 0.5f) * 2.2f) * dt
             }
             if (!raining && rand() < 0.08f) d.r -= 0.25f // dries up when the rain stops
             if (d.y > h + 3 || d.x < -3 || d.x > w + 3 || d.r <= 0.2f) { glassDrops.removeAt(i); i--; continue }
@@ -337,11 +342,26 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
         snowMesh.visible = snowing
         ledgeSnowGroup.visible = env.currentSeason == "winter" || snowing
         ledgeLeavesGroup.visible = env.currentSeason == "fall" && !snowing && sky.outsideEnv !in setOf("space", "ocean", "underwater")
-        // Falling leaves, blossoms & outdoor debris across seasons and windy weather (unless in space / underwater)
+        if (env.weatherKind != lastWeatherKind) {
+            if (env.weatherKind == "storm" || env.W.base == "storm") stormIntroTimer = 0.65f
+            lastWeatherKind = env.weatherKind
+        }
+        // Falling leaves, blossoms & outdoor debris tied to weather and trees (with user mode: "weather", "always", "off")
         val noDebrisPlace = sky.outsideEnv in setOf("space", "underwater", "ocean")
-        val desertPlace = sky.outsideEnv in setOf("desert", "canyon", "pyramid", "redrock", "oasis", "beach")
-        val seasonalDebris = env.currentSeason == "fall" || env.currentSeason == "spring" || env.W.wind >= 0.25f || debrisAmount > 1.01f
-        foliage3DGroup.visible = !noDebrisPlace && debrisAmount > 0.01f && seasonalDebris
+        val desertPlace = sky.outsideEnv in setOf("desert", "canyon", "pyramid", "redrock", "oasis", "beach", "arizona")
+        val hasTrees = Places.OUTSIDE_ENVS[sky.outsideEnv]?.trees == true || sky.outsideEnv in setOf("suburbs", "house", "forest", "lake", "mountains", "countryside", "neighborhood", "city")
+        val weatherActive = when (debrisMode) {
+            "off" -> false
+            "always" -> true
+            else -> {
+                // "weather": tied to wind, rain/storm, season, and whether the place has trees (or desert wind dust)
+                val windyOrStormy = env.W.wind >= 0.22f || env.isRainingNow() || env.W.base == "storm"
+                val seasonalTrees = hasTrees && !snowing && (env.currentSeason == "fall" || env.currentSeason == "spring" || windyOrStormy)
+                val desertWind = desertPlace && env.W.wind >= 0.45f
+                seasonalTrees || desertWind
+            }
+        }
+        foliage3DGroup.visible = !noDebrisPlace && debrisAmount > 0.01f && weatherActive
         val palette = when {
             desertPlace -> DESERT_DEBRIS_COLS
             env.currentSeason == "fall" -> FALL_LEAF_COLS
@@ -426,7 +446,7 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
                     d.x = randIn(OUT.x0, OUT.x1 + 1.2f)
                     d.z = randIn(OUT.z0, OUT.z1)
                 }
-                rainMesh.setInstance(i, d.x, d.y, d.z, 0f, 0f, slant, 1f)
+                rainMesh.setInstance(i, d.x, d.y, d.z, 0f, 0f, -slant, 1f)
             }
             rainMesh.needsUpdate()
             for (i in 0 until SPLASH_COUNT) {
@@ -454,16 +474,24 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
             snowMesh.needsUpdate()
         }
         if (foliage3DGroup.visible) {
-            val baseFrac = when (env.currentSeason) {
-                "fall" -> 0.55f
-                "spring" -> 0.48f
-                else -> 0.26f
-            } + W.wind * 0.42f
-            val activeCount = (LEAF_COUNT * (baseFrac * (debrisAmount / 1.5f)).coerceIn(0f, 1f)).roundToInt()
-            val gust = (0.75f + W.wind * 1.65f) * debrisSpeed
-            val freqBoost = max(0.2f, debrisFreq)
+            val weatherFactor = if (debrisMode == "always") {
+                0.55f + W.wind * 0.35f
+            } else {
+                val seasonBase = when (env.currentSeason) {
+                    "fall" -> 0.38f
+                    "spring" -> 0.30f
+                    else -> 0.08f
+                }
+                val rainBoost = if (env.isRainingNow()) 0.18f + W.rain * 0.22f else 0f
+                val stormBoost = if (W.base == "storm") 0.25f else 0f
+                seasonBase + W.wind * 0.55f + rainBoost + stormBoost
+            }
+            val activeCount = (LEAF_COUNT * (weatherFactor * (debrisAmount / 1.35f)).coerceIn(0.05f, 1f)).roundToInt()
+            val gust = (0.65f + W.wind * 1.75f + (if (env.isRainingNow()) W.rain * 0.35f else 0f)) * debrisSpeed
+            val windSlantX = (0.12f + W.wind * 1.45f) * debrisSpeed
+            val freqBoost = max(0.2f, debrisFreq * (0.7f + W.wind * 0.9f))
             val scale = when {
-                sky.outsideEnv in setOf("desert", "canyon", "pyramid", "redrock", "oasis", "beach") -> 0.48f
+                sky.outsideEnv in setOf("desert", "canyon", "pyramid", "redrock", "oasis", "beach", "arizona") -> 0.48f
                 env.currentSeason == "spring" -> 0.68f
                 env.currentSeason == "summer" -> 0.58f
                 env.currentSeason == "winter" -> 0.55f
@@ -480,24 +508,25 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
                     leafMesh.setInstance(i, 0f, -50f, 0f, 0f, 0f, 0f, 0f)
                     if (l.wait <= 0f) {
                         l.y = OUT.y1 + rand() * 0.35f
-                        l.x = randIn(OUT.x0 - 0.6f, OUT.x1)
+                        l.x = randIn(OUT.x0, OUT.x1 + 1.2f + W.wind * 1.2f)
                         l.z = randIn(OUT.z0, OUT.z1)
                     }
                     continue
                 }
                 l.y -= l.vy * gust * dt
-                val swirl = sin(t * (1.8f + debrisSpeed * 0.6f) + l.ph) * 0.48f
-                l.x += (swirl + l.vx * gust) * dt
-                if (l.y < OUT.y0 + 0.1f || l.x > OUT.x1 + 0.5f || l.x < OUT.x0 - 0.8f) {
+                val swirl = sin(t * (1.8f + debrisSpeed * 0.6f) + l.ph) * 0.32f
+                // Blow in -X (right to left), matching rain, snow, and window raindrops
+                l.x += (swirl - (l.vx * gust + windSlantX)) * dt
+                if (l.y < OUT.y0 + 0.1f || l.x < OUT.x0 - 0.8f || l.x > OUT.x1 + 1.8f) {
                     if (debrisFreq >= 1.8f) {
                         l.y = OUT.y1 + rand() * 0.35f
-                        l.x = randIn(OUT.x0 - 0.5f, OUT.x1)
+                        l.x = randIn(OUT.x0, OUT.x1 + 1.2f + W.wind * 1.2f)
                         l.z = randIn(OUT.z0, OUT.z1)
                     } else {
                         l.wait = randIn(0.08f, 1.5f) / freqBoost
                     }
                 }
-                leafMesh.setInstance(i, l.x, l.y, l.z, t * l.rs * debrisSpeed, t * l.rs * 0.8f * debrisSpeed, sin(t * debrisSpeed + l.ph), scale)
+                leafMesh.setInstance(i, l.x, l.y, l.z, t * l.rs * debrisSpeed, t * l.rs * 0.8f * debrisSpeed, -0.25f - W.wind * 0.35f + sin(t * debrisSpeed + l.ph) * 0.5f, scale)
             }
             leafMesh.needsUpdate()
         }
@@ -520,7 +549,11 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
     /** The animate loop's lightning: a random flash in storms (and far-off heat lightning), the room lights spiking with it. */
     fun updateLightning(frameScale: Float) {
         val W = env.W
-        if (W.lightning && rand() < (if (W.base == "storm") 0.009f else 0.004f) * frameScale) {
+        val triggerIntro = if (stormIntroTimer > 0f) {
+            stormIntroTimer -= frameScale / 60f
+            stormIntroTimer <= 0f && W.base == "storm"
+        } else false
+        if (triggerIntro || (W.lightning && rand() < (if (W.base == "storm") 0.012f else 0.004f) * frameScale)) {
             lightningFlash = if (W.base == "storm") 1.0f else 0.6f
             if (W.base == "storm") onThunder?.invoke() // heat lightning is too far away to hear
         }

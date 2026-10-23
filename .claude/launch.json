@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "ps1-bedroom",
+      "runtimeExecutable": "powershell",
+      "runtimeArgs": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "C:\\Users\\sophi\\AppData\\Local\\Temp\\claude\\C--Users-sophi-OneDrive-Desktop-PS1-Dev-Folder\\38314973-b65e-47ec-8c8f-13d71cd2ac62\\scratchpad\\capserve.ps1", "-Root", "C:\\Users\\sophi\\OneDrive\\Desktop\\PS1 Dev Folder", "-Out", "C:\\Users\\sophi\\AppData\\Local\\Temp\\caps"],
+      "port": 8769
+    }
+  ]
+}

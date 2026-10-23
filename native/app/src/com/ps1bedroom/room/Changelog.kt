@@ -24,6 +24,16 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.46", "New widgets, thunderstorm audio & crash fix, YouTube TV fix, dynamic world & Jasper care", listOf(
+            "Fixed thunderstorm weather crash (ConcurrentModificationException on the audio thread) and added crisp electric lightning crack + deep rolling thunder audio",
+            "Fixed YouTube TV playback on the CRT glass and ensured turning off the TV from any source immediately stops YouTube",
+            "Added 4 new interactive home-screen widgets (Retro Clock & Weather, Room Quick Controls, Sleep & Sunrise Alarm, and Jasper Companion) plus configurable refresh intervals & manual refresh button for the Window widget",
+            "Added optional Jasper care mechanics (Feed, Water, Play, Sleep) with tappable food & water bowls in the room",
+            "Unified wind direction across 3D rain, snow, falling leaves, window raindrops, and chimney smoke, and tied falling leaves to weather & trees with options in World → Weather / Sky",
+            "Parked cars in Suburbs, City Block, and Trailer Park now randomize on every visit and drive off / arrive over time (configurable in World → Sky)",
+            "Lit windows across houses, trailers, apartments, and downtown skyscrapers gradually turn off late at night (configurable in World → Time / Sky)",
+            "Fixed Trailer Park house side clipping, rebuilt the PlayStation symbol on the PS5 startup screen, and sped up the ceiling fan"
+        )),
         Entry("0.45", "Thumb-friendly UI, full controller support, weather & room fixes", listOf(
             "Big-screen & thumb-friendly UI: moved the status bar, menu button, sub-tabs, Back/Close bar, YouTube bar, achievement pop-ups and toasts to the bottom so nothing is out of reach at the top",
             "Full controller support across the whole app: walk with the left stick or D-pad, look/orbit with the right stick, press A to interact at the center crosshair, L1/R1 to cycle postures or sub-tabs, and navigate all menus",

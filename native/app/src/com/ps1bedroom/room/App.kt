@@ -70,13 +70,20 @@ class App : GLSurfaceView.Renderer {
     /** ytPlaceOverlay: the TV glass's 4 corners on screen, snapped like the PS1 vertex shader snaps the TV. */
     private fun placeYouTube() {
         val yt = hud?.yt ?: return
-        if (!tv.bedroomTvOn) { hud?.runUi { yt.stop(true) }; ytActive = false; return }
+        if (!tv.bedroomTvOn) {
+            ytActive = false
+            tv.ytShowing = false
+            tv.useFeed(null)
+            hud?.runUi { yt.stop(true) }
+            return
+        }
         if (yt.isFull) return
+        val modalOpen = hud?.let { it.menu.isOpen || it.pcDesktop.isOpen || it.isBoomboxOpen || it.isSleeping } == true
         val m = tv.screenMesh.matrixWorld
         ytC.set(0f, 0f, 0.02f).applyMatrix4(m)
         ytN.set(0f, 0f, 1f).applyMatrix4Dir(m).normalize()
         ytTmp.subVectors(camera.position, ytC)
-        var show = ytN.dot(ytTmp) > 0.05f
+        var show = !modalOpen && ytN.dot(ytTmp) > 0.05f
         val jg = renderer.ps1Uniforms.jitterGrid
         if (show) for (i in 0 until 4) {
             ytTmp.copy(YT_CORNERS[i]).applyMatrix4(m)
@@ -101,13 +108,14 @@ class App : GLSurfaceView.Renderer {
     /** Hands the two snapshots (blinds hidden / as in the room) plus the weather line to the widget. */
     @Volatile var onWindowShot: ((android.graphics.Bitmap, android.graphics.Bitmap, String, String) -> Unit)? = null
     @Volatile var windowShotNow = false
+    @Volatile var windowShotIntervalSec = 300f
     private var lastShotT = -1000f
     private var lastShotKey = ""
     private fun windowShotDue(t: Float): Boolean {
         if (!windowWidgets || onWindowShot == null || !built) return false
-        // every 10 minutes, and straight away when the place, the weather or the time of day changes
+        // every N minutes (configured in WindowWidgetConfig), and straight away when the place, the weather or the time of day changes
         val key = sky.outsideEnv + "|" + env.weatherKind + "|" + env.currentTime + "|" + room.blindsOpenState
-        if (windowShotNow || key != lastShotKey || t - lastShotT > 600f) { windowShotNow = false; lastShotKey = key; lastShotT = t; return true }
+        if (windowShotNow || key != lastShotKey || t - lastShotT > windowShotIntervalSec) { windowShotNow = false; lastShotKey = key; lastShotT = t; return true }
         return false
     }
     private val shotPos = Vec3()
@@ -215,23 +223,22 @@ class App : GLSurfaceView.Renderer {
     private var gta3d: Gta3d? = null
     /** The 3D-era GTA games render a chase-cam drive into a texture that the TV shows (only while one is playing). */
     private fun updateGtaTvFeed(t: Float) {
-        if (ytActive && !tv.bedroomTvOn) {
+        if ((ytActive || hud?.yt?.active == true) && !tv.bedroomTvOn) {
             ytActive = false
+            tv.ytShowing = false
             tv.useFeed(null)
             hud?.runUi { hud?.yt?.stop(true) }
             return
         }
         val game = library.currentGame()
-        val active = tv.bedroomTvOn && tv.bedroomTvChannel == Tv.PS1_TV_CHANNEL && game.template == "gta3d" && ps1.phase(t) == "game"
+        val active = tv.bedroomTvOn && tv.bedroomTvChannel == Tv.PS1_TV_CHANNEL && game.template == "gta3d" && ps1.phase(t) == "game" && !ytActive
         if (active) {
             val g3 = gta3d ?: Gta3d(renderer, env).also { gta3d = it }
             g3.setTheme(game.theme3d!!)
             g3.render(ps1.gameTime(t), SystemClock.uptimeMillis())
             tv.useFeed(g3.rt.texture)
         } else {
-            // YouTube plays on the TV's own screen (the player draws into the feed's texture), unless it's full screen
-            val f = ytFeed
-            if (ytActive && tv.bedroomTvOn && f != null && hud?.yt?.isFull != true) { f.update(); tv.useFeed(f.rt.texture) } else tv.useFeed(null)
+            tv.useFeed(null)
         }
     }
     /** YouTube's texture on the TV (made on the GL thread the first time a video plays). */
@@ -337,6 +344,14 @@ class App : GLSurfaceView.Renderer {
             myMusic.onChanged = { hud?.refreshMenu(); hud?.refreshBoombox(); publishMedia() }
             scene.add(alarm.light)
             tv.tempText = { settings.formatTemp(settings.currentTempC()) }
+            tv.onPowerChanged = { on ->
+                if (!on) {
+                    ytActive = false
+                    tv.ytShowing = false
+                    tv.useFeed(null)
+                    hud?.runUi { hud?.yt?.stop(true) }
+                }
+            }
             exterior.tempReadout = { settings.formatTemp(settings.currentTempC()) }
             exterior.cityReadout = { if (settings.weatherMode == "live") settings.cityName else "" }
             exterior.nowPlayingReadout = { if (ps1.ps1On) library.currentGame().title.uppercase() else "PS1 BEDROOM" }
@@ -443,6 +458,7 @@ class App : GLSurfaceView.Renderer {
         renderer.post.time = t
         if (windowShotDue(t)) takeWindowShot()
         renderer.render(scene, camera)
+        if (ytActive) placeYouTube()
         photoCallback?.let { cb -> photoCallback = null; cb(readScreen()) }
         camera.position.copy(basePos)
     }
@@ -502,6 +518,8 @@ class App : GLSurfaceView.Renderer {
             "lamp" -> furniture.toggleLamp()
             "string" -> decor.cycleStringLights()
             "dog" -> jasper.petDog(lastT)
+            "dogFood" -> jasper.feed(lastT)
+            "dogWater" -> jasper.giveWater(lastT)
             "tv" -> if (ytActive) hud?.yt?.let { yt -> hud?.runUi { yt.togglePlay() } } else tv.cycleBedroomTvChannel(lastT)
             "tvPower" -> tvPower()
             "ps1Power" -> ps1.powerToggle(lastT)
@@ -560,8 +578,9 @@ class App : GLSurfaceView.Renderer {
     fun tvNextChannel() = tv.cycleBedroomTvChannel(lastT)
     fun tvPower() {
         tv.toggleBedroomTv(lastT)
-        if (!tv.bedroomTvOn && ytActive) {
+        if (!tv.bedroomTvOn) {
             ytActive = false
+            tv.ytShowing = false
             tv.useFeed(null)
             hud?.runUi { hud?.yt?.stop(true) }
         }

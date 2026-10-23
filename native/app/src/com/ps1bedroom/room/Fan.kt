@@ -25,7 +25,7 @@ class Fan(private val room: Room) {
     private val shadeObj = createCanvasTex(64, 64) { _, _, _ -> }
     var fanSpinning = true; private set
     private var fanSpinAngle = 0f
-    private var fanSpeedCurrent = 1.35f
+    private var fanSpeedCurrent = 4.2f
     /** For the sound: the real (coasting) blade speed and angle. */
     val speed get() = fanSpeedCurrent.toDouble()
     val angle get() = fanSpinAngle.toDouble()
@@ -127,8 +127,8 @@ class Fan(private val room: Room) {
 
     /** Spin up / coast the blades; pulled chains spring back. */
     fun update(dt: Float) {
-        val targetFanSpeed = if (fanSpinning) 1.85f else 0.0f
-        fanSpeedCurrent += (targetFanSpeed - fanSpeedCurrent) * dt * 1.8f
+        val targetFanSpeed = if (fanSpinning) 4.2f else 0.0f
+        fanSpeedCurrent += (targetFanSpeed - fanSpeedCurrent) * dt * 2.2f
         fanSpinAngle += fanSpeedCurrent * dt
         fanBladesGroup.rotation.y = fanSpinAngle
         if (abs(lightChainOffset) > 0.0005f) {

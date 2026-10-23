@@ -102,6 +102,11 @@ class Places(
     private val laundryItems = ArrayList<Mesh>()
     private val snowCaps = ArrayList<Mesh>()
     private val nightGlowMats = ArrayList<Material>() // lamps, porch lights, string lights: on after dark
+    /** Lit windows with the activity level (0..1) below which each one goes dark late at night, so they switch off one by one. */
+    private val windowMats = ArrayList<Pair<Material, Float>>()
+    private var litBuckets: List<Material> = emptyList()
+    private var tvBuckets: List<Material> = emptyList()
+    private var lightsCheckT = 0f
     private val neonMats = ArrayList<Material>()
     private val crowns = ArrayList<Mesh>()
     private val summerOnly = ArrayList<Mesh>()
@@ -194,6 +199,89 @@ class Places(
         group.add(v)
         return v
     }
+
+    // ---- Parked cars: a different few on every street each time you come back; they drive off and others turn up as time passes ----
+    /** "random" (default) · "classic" (the same cars, parked for good) · "none". */
+    var carsMode = "random"
+    /** 0..1: how likely each parking space is taken. */
+    var carsDensity = 0.7f
+    /** Average minutes a car stays before it drives off (and an empty space waits before a new one arrives); 0 = they never leave. */
+    var carsStayMinutes = 20f
+    private class Slot(val x: Float, val z: Float, val rot: Float) {
+        var car: Group? = null
+        var state = 0            // 0 parked / empty · 1 driving off · 2 pulling in
+        var at = Long.MAX_VALUE  // when the next car leaves (parked) or arrives (empty)
+        var speed = 0f
+        var kinds: List<String> = emptyList()
+        lateinit var parent: Group
+    }
+    private val slots = HashMap<String, ArrayList<Slot>>()
+    private val carRnd = java.util.Random()
+    private var carsCheckT = 0f
+    private fun addSlots(place: String, g: Group, list: List<Slot>, kinds: List<String> = listOf("sedan", "hatch", "van")) {
+        for (s in list) { s.parent = g; s.kinds = kinds }
+        slots[place] = ArrayList(list)
+    }
+    private fun nextCarEvent(now: Long): Long =
+        if (carsStayMinutes <= 0f) Long.MAX_VALUE else now + (carsStayMinutes * 60000f * (0.4f + carRnd.nextFloat() * 1.2f)).toLong()
+    private fun dropCar(s: Slot) { s.car?.let { s.parent.remove(it) }; s.car = null; s.state = 0 }
+    /** A new street scene: which spaces are taken, and by what. Runs whenever you arrive at a place and whenever the options change. */
+    fun reshuffleCars(place: String = outsideEnv) {
+        val list = slots[place] ?: return
+        val now = System.currentTimeMillis()
+        for ((i, s) in list.withIndex()) {
+            dropCar(s)
+            s.at = Long.MAX_VALUE
+            when (carsMode) {
+                "none" -> {}
+                "classic" -> s.car = parkedCar(s.parent, s.kinds[i % s.kinds.size], s.x, s.z, s.rot)
+                else -> {
+                    if (carRnd.nextFloat() < carsDensity) s.car = parkedCar(s.parent, s.kinds[carRnd.nextInt(s.kinds.size)], s.x, s.z, s.rot)
+                    s.at = nextCarEvent(now)
+                }
+            }
+        }
+        onShadows()
+    }
+    /** Is another car in the way along this lane, on the side the car is heading to? */
+    private fun laneBlocked(list: List<Slot>, s: Slot, heading: Float): Boolean {
+        for (o in list) if (o !== s && kotlin.math.abs(o.z - s.z) < 0.5f && o.car != null && (o.x - s.x) * heading > 0f) return true
+        return false
+    }
+    private fun updateCars(dt: Float) {
+        if (carsMode != "random") return
+        val list = slots[outsideEnv] ?: return
+        val now = System.currentTimeMillis()
+        for (s in list) {
+            val heading = if (s.rot == 0f) 1f else -1f
+            when (s.state) {
+                0 -> {
+                    if (now < s.at) continue
+                    if (s.car != null) {
+                        if (laneBlocked(list, s, heading)) s.at = now + 4000 else { s.state = 1; s.speed = 0f }
+                    } else if (carRnd.nextFloat() < 0.35f + carsDensity * 0.65f) {
+                        if (laneBlocked(list, s, -heading)) s.at = now + 4000
+                        else {
+                            val c = parkedCar(s.parent, s.kinds[carRnd.nextInt(s.kinds.size)], s.x - heading * 14f, s.z, s.rot)
+                            s.car = c; s.state = 2; s.speed = 2.2f
+                        }
+                    } else s.at = nextCarEvent(now)
+                }
+                1 -> {
+                    val c = s.car ?: continue
+                    s.speed = kotlin.math.min(2.2f, s.speed + dt * 1.1f)
+                    c.position.x += heading * s.speed * dt
+                    if (kotlin.math.abs(c.position.x - s.x) > 14f) { dropCar(s); s.at = nextCarEvent(now); onShadows() }
+                }
+                2 -> {
+                    val c = s.car ?: continue
+                    val left = (s.x - c.position.x) * heading
+                    if (left <= 0.02f) { c.position.x = s.x; s.state = 0; s.speed = 0f; s.at = nextCarEvent(now); onShadows() }
+                    else { s.speed = kotlin.math.min(2.2f, kotlin.math.max(0.3f, left * 0.9f)); c.position.x += heading * s.speed * dt }
+                }
+            }
+        }
+    }
     private fun road(group: Group, z: Float, wdt: Float, col: Int = 0x2b2f36): Mesh { val m = add(group, planeG(30f, wdt), mat(col), 0.8f, 0.335f, z); m.rotation.x = -P2; return m }
     private fun lampPost(group: Group, x: Float, z: Float, glowMats: MutableList<Material>) {
         cyl(group, 0.03f, 0.04f, 2.2f, 0x2f3540, x, 1.42f, z, 5)
@@ -268,8 +356,9 @@ class Places(
     private var winPick = 0 // deterministic mix: most windows warm, some TV-blue, a third dark
     private fun windowPane(group: Object3D, w: Float, h: Float, x: Float, y: Float, z: Float, rotY: Float = 0f): Mesh {
         val frame = add(group, Geo.box(w + 0.08f, h + 0.08f, 0.03f), mat(0xf1f1ea), x, y, z); frame.rotation.y = rotY
-        val mix = (winPick++ * 7) % 10 // 0-2 dark, 3 TV blue, the rest warm
-        val pane = add(group, planeG(w, h), if (mix < 3) darkWinMat else (if (mix == 3) tvWinMat else litWinMat), x + sin(rotY) * 0.02f, y, z + cos(rotY) * 0.02f); pane.rotation.y = rotY
+        val n = winPick++
+        val mix = (n * 7) % 10 // 0-2 dark, 3 TV blue, the rest warm
+        val pane = add(group, planeG(w, h), if (mix < 3) darkWinMat else (if (mix == 3) tvBuckets[n % tvBuckets.size] else litBuckets[n % litBuckets.size]), x + sin(rotY) * 0.02f, y, z + cos(rotY) * 0.02f); pane.rotation.y = rotY
         return pane
     }
     // Simple low-poly deciduous tree with a textured, lumpy crown (bare in winter)
@@ -391,11 +480,13 @@ class Places(
             c.fillStyle = "#c99652"; c.fillRect(15, 0, 2, 32); c.fillRect(0, 15, 32, 2)
             c.fillStyle = "rgba(255,255,255,0.35)"; c.fillRect(3, 3, 8, 4)
         }.tex
-        litWinMat = PS1.material(color = 0x334155, map = windowLitTex, emissive = 0xffb860, emissiveMap = windowLitTex, emissiveIntensity = 0f)
-        tvWinMat = PS1.material(color = 0x334155, map = windowLitTex, emissive = 0x6fa8ff, emissiveMap = windowLitTex, emissiveIntensity = 0f)
+        fun windowMatOf(emissive: Int, threshold: Float) =
+            PS1.material(color = 0x334155, map = windowLitTex, emissive = emissive, emissiveMap = windowLitTex, emissiveIntensity = 0f).also { windowMats += it to threshold }
+        litBuckets = List(5) { windowMatOf(0xffb860, (it + 1) / 5f) }
+        tvBuckets = listOf(windowMatOf(0x6fa8ff, 0.5f), windowMatOf(0x6fa8ff, 0.9f))
+        litWinMat = litBuckets[2]
+        tvWinMat = tvBuckets[0]
         darkWinMat = PS1.material(color = 0x2a3340, map = windowLitTex)
-        nightGlowMats += tvWinMat
-        nightGlowMats += litWinMat
         leafMats["green"] = kitMat("leaves", "#3f7a35"); leafMats["fall"] = kitMat("leaves", "#c2702a"); leafMats["spring"] = kitMat("leaves", "#5fa04a")
         buildFirstPass()
         buildDetailPass()
@@ -450,7 +541,7 @@ class Places(
             box(g, 30f, 0.08f, 0.9f, 0x8e8e8a, 0.8f, 0.36f, -4.9f)
             cyl(g, 0.09f, 0.1f, 0.42f, 0xd32f2f, 1.9f, 0.6f, -4.8f); cyl(g, 0.11f, 0.11f, 0.06f, 0xd32f2f, 1.9f, 0.83f, -4.8f)
             lampPost(g, -1.2f, -5.0f, nightGlowMats)
-            parkedCar(g, "sedan", 0.4f, -5.85f); parkedCar(g, "van", 3.2f, -5.85f); parkedCar(g, "hatch", -2.6f, -7.0f, PF)
+            addSlots("neighborhood", g, listOf(Slot(0.4f, -5.85f, 0f), Slot(3.2f, -5.85f, 0f), Slot(-2.6f, -7.0f, PF), Slot(2.0f, -7.0f, PF)))
         }
         // Suburbs: picket fence, mailbox, the houses across the street
         suburbWindowMat = PS1.material(color = 0x1f2937, emissive = 0xffc977, emissiveIntensity = 0f)
@@ -461,12 +552,14 @@ class Places(
             box(g, 24f, 0.05f, 0.03f, 0, 0.8f, 0.68f, -4.6f, white)
             box(g, 0.2f, 0.16f, 0.3f, 0x1d4ed8, 2.7f, 1.0f, -4.9f); box(g, 0.05f, 0.7f, 0.05f, 0, 2.7f, 0.65f, -4.9f, white)
             road(g, -6.4f, 2.2f)
-            parkedCar(g, "sedan", -1.6f, -7.3f, PF)
-            for ((x, col) in listOf(-2.2f to 0xd6c7a1, 1.0f to 0x9fb7c9, 4.2f to 0xc99a9a)) {
+            addSlots("suburbs", g, listOf(Slot(-1.6f, -7.3f, PF), Slot(0.8f, -5.75f, 0f), Slot(4.0f, -7.3f, PF)))
+            for ((hi, hp) in listOf(-2.2f to 0xd6c7a1, 1.0f to 0x9fb7c9, 4.2f to 0xc99a9a).withIndex()) {
+                val (x, col) = hp
                 val h = sub(g, x, 0.32f, -9.4f)
                 box(h, 2.2f, 1.3f, 1.6f, col, 0f, 0.65f, 0f)
                 val roof = add(h, Geo.cone(1.75f, 0.9f, 4), mat(0x5b3a32), 0f, 1.75f, 0f); roof.rotation.y = P4; roof.scale.set(1f, 1f, 0.75f)
-                for (wx in floatArrayOf(-0.6f, 0.6f)) add(h, Geo.plane(0.4f, 0.35f), suburbWindowMat, wx, 0.8f, 0.81f)
+                val houseWin = PS1.material(color = 0x1f2937, emissive = 0xffc977, emissiveIntensity = 0f); windowMats += houseWin to floatArrayOf(0.35f, 0.65f, 0.95f)[hi]
+                for (wx in floatArrayOf(-0.6f, 0.6f)) add(h, Geo.plane(0.4f, 0.35f), houseWin, wx, 0.8f, 0.81f)
                 add(h, Geo.plane(0.35f, 0.65f), mat(0x4a2f22), 0f, 0.33f, 0.81f)
                 suburbPlaceholders += h
             }
@@ -501,16 +594,21 @@ class Places(
         // Trailer park: mobile homes, chain-link fence, satellite dish, clothesline, string lights, a pink flamingo
         run {
             val g = G.getValue("trailer")
+            var trailerNo = 0
             fun trailer(x: Float, z: Float, col: Int, stripe: Int, rotY: Float): Group {
                 val t = sub(g, x, 0.32f, z, rotY)
-                trailerBodies += box(t, 4.2f, 1.15f, 1.4f, col, 0f, 0.85f, 0f)
-                box(t, 4.2f, 0.12f, 1.42f, stripe, 0f, 0.75f, 0f)
+                // Non-overlapping vertical slices (skirt y=0..0.28, lower wall y=0.28..0.68, stripe y=0.68..0.82, upper wall y=0.82..1.42, roof y=1.42..1.48)
+                // with identical 4.2 x 1.4 wall/stripe footprint so PS1 vertex snapping can never cause side or front face clipping
+                trailerSkirts += box(t, 4.1f, 0.28f, 1.3f, 0x6b6560, 0f, 0.14f, 0f)
+                trailerBodies += box(t, 4.2f, 0.40f, 1.4f, col, 0f, 0.48f, 0f)
+                box(t, 4.2f, 0.14f, 1.4f, stripe, 0f, 0.75f, 0f)
+                trailerBodies += box(t, 4.2f, 0.60f, 1.4f, col, 0f, 1.12f, 0f)
                 box(t, 4.3f, 0.06f, 1.5f, 0x9ca3af, 0f, 1.45f, 0f)
-                trailerSkirts += box(t, 4.1f, 0.3f, 1.3f, 0x6b6560, 0f, 0.15f, 0f)
-                val winMat = PS1.material(color = 0x1f2937, emissive = 0xffc977, emissiveIntensity = 0f); nightGlowMats += winMat
-                for (wx in floatArrayOf(-1.2f, 0.6f)) box(t, 0.5f, 0.35f, 0.02f, 0, wx, 1.0f, 0.71f, winMat)
-                box(t, 0.35f, 0.25f, 0.25f, 0xd1d5db, 1.4f, 0.95f, 0.82f) // window AC
-                box(t, 0.6f, 0.3f, 0.4f, 0x8a6a4a, -0.3f, 0.15f, 0.9f) // steps
+                val winMat = PS1.material(color = 0x1f2937, emissive = 0xffc977, emissiveIntensity = 0f, polygonOffset = true, polygonOffsetFactor = -2f, polygonOffsetUnits = -2f)
+                windowMats += winMat to floatArrayOf(0.5f, 0.8f, 0.3f)[trailerNo++ % 3]
+                for (wx in floatArrayOf(-1.2f, 0.6f)) add(t, Geo.plane(0.5f, 0.35f), winMat, wx, 1.08f, 0.73f)
+                box(t, 0.35f, 0.25f, 0.25f, 0xd1d5db, 1.4f, 0.98f, 0.86f) // window AC
+                box(t, 0.6f, 0.28f, 0.4f, 0x8a6a4a, -0.3f, 0.14f, 0.92f) // steps
                 return t
             }
             trailer(-1.4f, -6.2f, 0xe8e6df, 0x0f766e, 0f)
@@ -535,7 +633,8 @@ class Places(
             cyl(g, 0.22f, 0.22f, 0.7f, 0xf8fafc, 2.0f, 0.6f, -5.7f, 8).rotation.z = P2 // propane tank
             val fl = sub(g, 0.9f, 0.32f, -5.0f)
             box(fl, 0.14f, 0.12f, 0.22f, 0xff6fb5, 0f, 0.55f, 0f); cyl(fl, 0.01f, 0.01f, 0.5f, 0x111111, 0f, 0.25f, 0f, 3); box(fl, 0.03f, 0.18f, 0.03f, 0xff6fb5, 0f, 0.7f, 0.1f); box(fl, 0.05f, 0.05f, 0.08f, 0xff6fb5, 0f, 0.8f, 0.14f)
-            parkedCar(g, "truck", 1.6f, -10.8f, 0f)
+            // Parked along the open strip between the trailers, so they can drive in and out without passing through a home
+            addSlots("trailer", g, listOf(Slot(-2.6f, -7.85f, 0f), Slot(2.2f, -7.85f, 0f)), listOf("sedan", "hatch", "van", "truck"))
         }
         // Arizona: block wall with a cap, gravel, a saguaro, tall fan palms, a citrus tree, a basketball hoop
         run {
@@ -916,7 +1015,7 @@ class Places(
         scatter(G.getValue("countryside"), decidMat, 12, -11f, 12.6f, -13.5f, -15.4f, 1.6f, 2.6f, 1.6f, 515)
         scatter(G.getValue("countryside"), tuftMat, 30, -8f, 9f, -6.4f, -11f, 0.4f, 0.7f, 0.5f, 516, listOf(fa(2.8f, -12.5f, 2.6f), fa(5.0f, -12.0f, 0.8f), fa(1.6f, -8.0f, 0.6f), fa(2.6f, -8.6f, 0.6f), fa(-0.8f, -9.5f, 0.6f)))
         scatter(G.getValue("trailer"), dryBush, 10, -11f, 12.6f, -13f, -15.2f, 1.0f, 1.8f, 0.6f, 517)
-        scatter(G.getValue("trailer"), dryTuft, 20, -8f, 9f, -4.7f, -12.5f, 0.3f, 0.5f, 0.5f, 518, listOf(fa(-1.4f, -6.2f, 2.3f), fa(3.6f, -9.5f, 2.3f), fa(-2.8f, -12.0f, 2.3f), fa(1.6f, -10.8f, 1.2f)))
+        scatter(G.getValue("trailer"), dryTuft, 20, -8f, 9f, -4.7f, -12.5f, 0.3f, 0.5f, 0.5f, 518, listOf(fa(-1.4f, -6.2f, 2.3f), fa(3.6f, -9.5f, 2.3f), fa(-2.8f, -12.0f, 2.3f), fa(-2.6f, -7.85f, 1.6f), fa(2.2f, -7.85f, 1.6f)))
         scatter(G.getValue("neighborhood"), decidMat, 6, -11f, 12.6f, -12.0f, -14.5f, 1.6f, 2.4f, 1.6f, 519)
         // Hot places: palms, cacti, desert scrub and rocks
         scatter(G.getValue("arizona"), palmSpr, 10, -11f, 12.6f, -12.8f, -15.4f, 1.6f, 2.4f, 2f, 521)
@@ -976,6 +1075,7 @@ class Places(
             o.visible = if (isTree) e.trees else city
         }
         for ((k, g) in G) g.visible = k == outsideEnv
+        reshuffleCars(outsideEnv)   // every visit is a different street scene
         weatherFx.outdoorGround.visible = !e.noGround
         abyss.visible = e.noGround
         env.applyEnvironmentSettings() // re-tints everything, redraws the ground, leaves only where there are trees
@@ -991,9 +1091,10 @@ class Places(
         for (c in snowCaps) c.visible = (winter || snowing) && !envDef().noSnow
         palmLeafMat.color.setHex(if (env.currentSeason == "fall" && !envDef().noSnow) 0x5f7a2a else 0x2f7a3a)
         val lit = night > 0.4 || env.isPrecipNow() && night > 0.2
-        suburbWindowMat.emissiveIntensity = if (lit && (env.hour < 0.5 || env.hour > 17 || env.isPrecipNow())) 1.0f else 0f
+        // Lit windows go dark one by one late at night (each has its own cut-off); "never" keeps them all on
+        val act = if (env.lightsOut == "never") 1f else (env.windowActivity() / 0.65).coerceIn(0.0, 1.0).toFloat()
+        for ((m, th) in windowMats) m.emissiveIntensity = if (lit && th <= act + 0.001f) 0.95f else 0f
         for (m in nightGlowMats) m.emissiveIntensity = if (lit) 1.0f else 0f
-        litWinMat.emissiveIntensity = if (lit) 0.95f else 0f
         // Tree crowns follow the season (bare in winter, except where it never snows)
         val bare = winter && !envDef().noSnow
         val leafMat = leafMats.getValue(if (env.currentSeason == "fall") "fall" else (if (env.currentSeason == "spring") "spring" else "green"))
@@ -1012,6 +1113,8 @@ class Places(
     fun update(t: Float, dt: Float) {
         val e = outsideEnv
         if (e == "city") return
+        if (t - lightsCheckT > 15f) { lightsCheckT = t; updateOutsideEnvLook() }   // windows follow the clock, going dark one by one late at night
+        updateCars(dt)
         val W = env.W
         val sway = 0.04f + W.wind * 0.14f
         if (e == "beach" || e == "island" || e == "arizona") swayers.forEachIndexed { i, top -> if (top.parent?.parent?.visible == true) top.rotation.x = sin(t * (1.1f + W.wind) + i) * sway }

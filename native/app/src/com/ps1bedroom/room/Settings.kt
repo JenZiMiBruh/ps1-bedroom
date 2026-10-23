@@ -28,7 +28,8 @@ class Settings(private val app: App, private val ctx: Context) {
     var sleepDim = true
     var masterVolume = 0.85f
     var debugFreeCam = false
-    // Falling leaves & outdoor debris controls (0f..2.5f, default 1.0f = 100%)
+    // Falling leaves & outdoor debris controls (mode: "weather" | "always" | "off", multipliers: 0f..2.5f)
+    @JvmField var debrisMode = "weather"
     @JvmField var debrisAmount = 1.0f
     @JvmField var debrisSpeed = 1.0f
     @JvmField var debrisFreq = 1.0f
@@ -112,6 +113,34 @@ class Settings(private val app: App, private val ctx: Context) {
     }
     fun setRealisticMoon(on: Boolean) { env.realisticMoon = on; env.applyEnvironmentSettings(); changed() }
     fun setCycleMinutes(m: Double) { env.cycleMinutes = m; setTimeMode("cycle") }
+    fun setLightsOut(mode: String) {
+        env.lightsOut = if (mode in listOf("gradual", "early", "never")) mode else "gradual"
+        app.sky.cityStaticDirty = true
+        env.applyEnvironmentSettings()
+        changed()
+    }
+    fun setCarsMode(mode: String) {
+        app.places.carsMode = if (mode in listOf("random", "classic", "none")) mode else "random"
+        app.places.reshuffleCars()
+        changed()
+    }
+    fun setCarsDensity(v: Float) {
+        app.places.carsDensity = v.coerceIn(0.25f, 1.0f)
+        app.places.reshuffleCars()
+        changed()
+    }
+    fun setCarsStayMinutes(m: Int) {
+        app.places.carsStayMinutes = m.coerceIn(0, 240).toFloat()
+        app.places.reshuffleCars()
+        changed()
+    }
+    fun setDebrisMode(mode: String) {
+        debrisMode = if (mode in listOf("weather", "always", "off")) mode else "weather"
+        app.weatherFx.debrisMode = debrisMode
+        if (debrisMode == "off") { debrisAmount = 0f; app.weatherFx.setDebrisParams(0f, debrisSpeed, debrisFreq) }
+        else if (debrisAmount <= 0.01f) { debrisAmount = 1.0f; app.weatherFx.setDebrisParams(1.0f, debrisSpeed, debrisFreq) }
+        changed()
+    }
     fun setDebrisAmount(v: Float) { debrisAmount = v.coerceIn(0f, 2.5f); app.weatherFx.setDebrisParams(debrisAmount, debrisSpeed, debrisFreq); changed() }
     fun setDebrisSpeed(v: Float) { debrisSpeed = v.coerceIn(0.2f, 2.5f); app.weatherFx.setDebrisParams(debrisAmount, debrisSpeed, debrisFreq); changed() }
     fun setDebrisFreq(v: Float) { debrisFreq = v.coerceIn(0.2f, 2.5f); app.weatherFx.setDebrisParams(debrisAmount, debrisSpeed, debrisFreq); changed() }
@@ -375,8 +404,12 @@ class Settings(private val app: App, private val ctx: Context) {
         put("jitter", app.jitterBase.toDouble()); put("affine", app.renderer.ps1Uniforms.affineStrength.toDouble()); put("dither", app.renderer.post.ditherStrength.toDouble())
         put("volumetric", env.userVolumetricSetting.toDouble()); put("sway", app.swayAmount.toDouble()); put("ao", app.aoBase.toDouble())
         put("tempUnit", tempUnit); put("fpsChoice", fpsChoice); put("ecoIdle", ecoIdle)
-        put("debrisAmount", debrisAmount.toDouble()); put("debrisSpeed", debrisSpeed.toDouble()); put("debrisFreq", debrisFreq.toDouble())
-        put("poster", app.extras.posterChoice); put("colors", JSONObject(app.extras.roomColors as Map<*, *>)); put("decor", app.extras.decorMode); put("bandPoster", app.furniture.bandPoster); put("lava", if (app.desk.lavaOn) app.desk.lavaIdx else -1); put("console", app.consoles.current); put("jasper", JSONObject().put("preset", app.jasper.colorPreset).put("coat", app.jasper.colors.coat).put("dark", app.jasper.colors.dark).put("light", app.jasper.colors.light)); put("heater", app.extras.heaterMode)
+        put("debrisMode", debrisMode); put("debrisAmount", debrisAmount.toDouble()); put("debrisSpeed", debrisSpeed.toDouble()); put("debrisFreq", debrisFreq.toDouble())
+        put("lightsOut", env.lightsOut)
+        put("carsMode", app.places.carsMode); put("carsDensity", app.places.carsDensity.toDouble()); put("carsStayMin", app.places.carsStayMinutes.roundToInt())
+        put("poster", app.extras.posterChoice); put("colors", JSONObject(app.extras.roomColors as Map<*, *>)); put("decor", app.extras.decorMode); put("bandPoster", app.furniture.bandPoster); put("lava", if (app.desk.lavaOn) app.desk.lavaIdx else -1); put("console", app.consoles.current)
+        put("jasper", JSONObject().put("preset", app.jasper.colorPreset).put("coat", app.jasper.colors.coat).put("dark", app.jasper.colors.dark).put("light", app.jasper.colors.light).put("care", app.jasper.careEnabled).put("hunger", app.jasper.hunger.toDouble()).put("thirst", app.jasper.thirst.toDouble()).put("energy", app.jasper.energy.toDouble()).put("fun", app.jasper.funLevel.toDouble()))
+        put("heater", app.extras.heaterMode)
         put("outside", app.sky.outsideEnv); put("startScreen", startScreenEnabled); put("tutorialSeen", tutorialSeen); put("sleepDim", sleepDim)
     }
     fun saveNow() {
@@ -386,6 +419,7 @@ class Settings(private val app: App, private val ctx: Context) {
         if (json == lastJson) return
         lastJson = json; dirty = false
         prefs.edit().putString("settings.v1", json).apply()
+        try { RoomWidgetReceiver.updateAllWidgets(ctx, app) } catch (_: Exception) { }
     }
     /** A saved value read straight from storage (the start screen decides before the room is built). */
     fun peekString(key: String, def: String): String = prefs.getString("settings.v1", null)?.let { try { JSONObject(it).optString(key, def) } catch (e: Exception) { def } } ?: def
@@ -425,10 +459,16 @@ class Settings(private val app: App, private val ctx: Context) {
             app.swayAmount = s.optDouble("sway", 0.4).toFloat()
             fpsChoice = s.optString("fpsChoice", "auto")
             ecoIdle = s.optBoolean("ecoIdle", false)
+            debrisMode = s.optString("debrisMode", "weather").let { if (it in listOf("weather", "always", "off")) it else "weather" }
+            app.weatherFx.debrisMode = debrisMode
             debrisAmount = s.optDouble("debrisAmount", 1.0).toFloat().coerceIn(0f, 2.5f)
             debrisSpeed = s.optDouble("debrisSpeed", 1.0).toFloat().coerceIn(0.2f, 2.5f)
             debrisFreq = s.optDouble("debrisFreq", 1.0).toFloat().coerceIn(0.2f, 2.5f)
             app.weatherFx.setDebrisParams(debrisAmount, debrisSpeed, debrisFreq)
+            env.lightsOut = s.optString("lightsOut", "gradual").let { if (it in listOf("gradual", "early", "never")) it else "gradual" }
+            app.places.carsMode = s.optString("carsMode", "random").let { if (it in listOf("random", "classic", "none")) it else "random" }
+            app.places.carsDensity = s.optDouble("carsDensity", 0.7).toFloat().coerceIn(0.25f, 1.0f)
+            app.places.carsStayMinutes = s.optInt("carsStayMin", 20).coerceIn(0, 240).toFloat()
             setQuality(s.optString("quality", "balanced"), true)
             if (s.has("ao")) app.aoBase = s.getDouble("ao").toFloat()
             if (s.has("res")) app.setResolution(s.getInt("res"))
@@ -444,8 +484,13 @@ class Settings(private val app: App, private val ctx: Context) {
                 val k = j.optString("preset", "classic")
                 val p = Jasper.PRESETS[k] ?: Jasper.Preset("Custom", j.optString("coat", "#b97a3e"), j.optString("dark", "#1b1410"), j.optString("light", "#d9b27a"))
                 app.jasper.applyColors(p, if (Jasper.PRESETS.containsKey(k)) k else "custom")
+                app.jasper.careEnabled = j.optBoolean("care", false)
+                app.jasper.hunger = j.optDouble("hunger", 88.0).toFloat().coerceIn(10f, 100f)
+                app.jasper.thirst = j.optDouble("thirst", 90.0).toFloat().coerceIn(10f, 100f)
+                app.jasper.energy = j.optDouble("energy", 85.0).toFloat().coerceIn(10f, 100f)
+                app.jasper.funLevel = j.optDouble("fun", 86.0).toFloat().coerceIn(10f, 100f)
             }
-            s.optString("outside", "city").let { if (it != "city") app.places.setOutsideEnv(it) }
+            s.optString("outside", "city").let { if (it != "city") app.places.setOutsideEnv(it) else app.places.reshuffleCars() }
             val heater = s.optString("heater", "auto"); var guard = 0
             while (app.extras.heaterMode != heater && guard++ < 3) app.extras.cycleHeater()
             startScreenEnabled = s.optBoolean("startScreen", true)

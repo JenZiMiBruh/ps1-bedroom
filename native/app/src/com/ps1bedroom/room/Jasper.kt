@@ -80,6 +80,32 @@ class Jasper(private val room: Room, private val env: Environment) {
     var bedroomTvOn = true
     var sittingAtDesk = false
 
+    // ---- Optional care mechanics (Eat, Drink, Sleep, Play) ----
+    var careEnabled = false
+        set(v) { field = v; if (::bowlsGroup.isInitialized) bowlsGroup.visible = true }
+    var hunger = 88f      // 0..100 (100 = full)
+    var thirst = 90f      // 0..100 (100 = hydrated)
+    var energy = 85f      // 0..100 (100 = rested)
+    var funLevel = 86f    // 0..100 (100 = happy)
+    private var actionUntil = 0f
+    private var actionKind = "" // "eat", "drink", "play"
+    private lateinit var bowlsGroup: Group
+    private lateinit var kibbleMesh: Mesh
+    private lateinit var waterMesh: Mesh
+    var onStateChanged: (() -> Unit)? = null
+
+    fun moodLabel(): String = when {
+        actionKind == "eat" -> "Eating kibble 🍖"
+        actionKind == "drink" -> "Drinking water 💧"
+        actionKind == "play" -> "Playing zoomies 🎾"
+        pose == "sleep" || onBed -> "Sleeping zZz 💤"
+        careEnabled && hunger < 30f -> "Hungry 🍖"
+        careEnabled && thirst < 30f -> "Thirsty 💧"
+        careEnabled && energy < 25f -> "Sleepy 💤"
+        careEnabled && funLevel < 30f -> "Wants to play 🎾"
+        else -> "Happy & cozy 🐾"
+    }
+
     private fun dogPart(parent: Object3D, w: Float, h: Float, d: Float, mat: Material, x: Float, y: Float, z: Float, rx: Float = 0f, ry: Float = 0f, rz: Float = 0f): Mesh {
         val m = Mesh(Geo.box(w, h, d), mat)
         m.position.set(x, y, z); m.rotation.set(rx, ry, rz)
@@ -172,7 +198,36 @@ class Jasper(private val room: Room, private val env: Environment) {
             tailSegs += j; tailParent = j
         }
         applyColors(PRESETS.getValue("classic"))
+        buildBowls()
         sendDog(pickDogSpot())
+    }
+
+    private fun buildBowls() {
+        bowlsGroup = Group()
+        bowlsGroup.position.set(1.82f, 0f, 2.08f)
+        room.scene.add(bowlsGroup)
+        val matMat = PS1.material(color = 0x334155)
+        val matRim = PS1.material(color = 0x94a3b8)
+        val matFoodBowl = PS1.material(color = 0xdc2626)
+        val matWaterBowl = PS1.material(color = 0x2563eb)
+        val matKibble = PS1.material(color = 0x78350f)
+        val matWater = PS1.material(color = 0x38bdf8, emissive = 0x0284c7, emissiveIntensity = 0.25f)
+        val pad = Mesh(Geo.box(0.66f, 0.014f, 0.34f), matMat)
+        pad.position.set(0f, 0.007f, 0f); pad.receiveShadow = true; bowlsGroup.add(pad)
+        // Food bowl (left)
+        val fb = Mesh(Geo.cylinder(0.11f, 0.13f, 0.07f, 8), matFoodBowl)
+        fb.position.set(-0.16f, 0.038f, 0f); fb.castShadow = true; bowlsGroup.add(fb); room.registerInteractable(fb, "dogFood")
+        val fbRim = Mesh(Geo.cylinder(0.115f, 0.115f, 0.012f, 8), matRim)
+        fbRim.position.set(-0.16f, 0.072f, 0f); bowlsGroup.add(fbRim); room.registerInteractable(fbRim, "dogFood")
+        kibbleMesh = Mesh(Geo.cylinder(0.095f, 0.10f, 0.025f, 8), matKibble)
+        kibbleMesh.position.set(-0.16f, 0.064f, 0f); bowlsGroup.add(kibbleMesh); room.registerInteractable(kibbleMesh, "dogFood")
+        // Water bowl (right)
+        val wb = Mesh(Geo.cylinder(0.11f, 0.13f, 0.07f, 8), matWaterBowl)
+        wb.position.set(0.16f, 0.038f, 0f); wb.castShadow = true; bowlsGroup.add(wb); room.registerInteractable(wb, "dogWater")
+        val wbRim = Mesh(Geo.cylinder(0.115f, 0.115f, 0.012f, 8), matRim)
+        wbRim.position.set(0.16f, 0.072f, 0f); bowlsGroup.add(wbRim); room.registerInteractable(wbRim, "dogWater")
+        waterMesh = Mesh(Geo.cylinder(0.098f, 0.10f, 0.02f, 8), matWater)
+        waterMesh.position.set(0.16f, 0.062f, 0f); bowlsGroup.add(waterMesh); room.registerInteractable(waterMesh, "dogWater")
     }
 
     private val eyeCanvases = ArrayList<Pair<CanvasTex, Boolean>>()
@@ -241,7 +296,8 @@ class Jasper(private val room: Room, private val env: Environment) {
             Spot("door", Vec3(2.3f, 0f, 2.65f), "sit", if (doorOpen) 3f else 1f),
             Spot("bed", Vec3(2.75f, 0.85f, 0.25f), "sleep", if (night) 6f else 1f, bed = true),
             Spot("tv", Vec3(-1.25f, 0f, 1.55f), "lie", if (bedroomTvOn) 2.5f else 0.5f),
-            Spot("desk", Vec3(-0.35f, 0f, 0.15f), "sit", if (sittingAtDesk) 5f else 0.6f)
+            Spot("desk", Vec3(-0.35f, 0f, 0.15f), "sit", if (sittingAtDesk) 5f else 0.6f),
+            Spot("bowls", Vec3(1.55f, 0f, 1.92f), "sit", if (careEnabled && (hunger < 45f || thirst < 45f)) 4.5f else 0.7f)
         )
         val sun = if (env.daylight > 0.35 && room.blindsOpenState != 2 && env.moonBaseIntensity > 0.5f) sunbeamFloorPoint() else null
         if (sun != null) spots += Spot("sunbeam", sun, "lie", 5f)
@@ -334,11 +390,32 @@ class Jasper(private val room: Room, private val env: Environment) {
             dogLegs[i].rotation.x = walk * standK + lie[0] * lieK + sit[0] * sitK
             dogKnees[i].rotation.x = (if (front) -0.25f else 0.35f) * max(0f, walk * phase * (if (front) -1f else 1f)) * standK + lie[1] * lieK + sit[1] * sitK
         }
-        // Head: looks around, rests down when asleep, tilts when you pet him
+        // Head: looks around, rests down when asleep, tilts when you pet him, or bobs when eating/drinking/playing
         val petting = t < wagUntil
-        dogHead.rotation.x = if (pose == "sleep") HEAD_SLEEP else sin(t * 0.4f) * 0.08f
-        dogHead.rotation.y = if (pose == "sleep") 0.3f else sin(t * 0.27f) * 0.35f
-        dogHead.rotation.z = if (petting) sin(t * 3) * 0.25f else 0f
+        if (careEnabled) {
+            // Gentle need decay over ~30-45 minutes; sleeping restores energy
+            hunger = (hunger - dt * 0.032f).coerceIn(10f, 100f)
+            thirst = (thirst - dt * 0.042f).coerceIn(10f, 100f)
+            funLevel = (funLevel - dt * 0.028f).coerceIn(10f, 100f)
+            energy = if (pose == "sleep" || onBed) (energy + dt * 0.25f).coerceIn(10f, 100f) else (energy - dt * 0.022f).coerceIn(10f, 100f)
+            if (::kibbleMesh.isInitialized) kibbleMesh.scale.y = (0.3f + 0.7f * (hunger / 100f)).coerceIn(0.3f, 1f)
+            if (::waterMesh.isInitialized) waterMesh.scale.y = (0.35f + 0.65f * (thirst / 100f)).coerceIn(0.35f, 1f)
+        }
+        if (actionUntil > 0f && t >= actionUntil) {
+            actionUntil = 0f
+            actionKind = ""
+            onStateChanged?.invoke()
+        }
+        val eatingOrDrinking = t < actionUntil && (actionKind == "eat" || actionKind == "drink")
+        val playingNow = t < actionUntil && actionKind == "play"
+        dogHead.rotation.x = when {
+            eatingOrDrinking -> 0.42f + sin(t * 11f) * 0.12f
+            playingNow -> -0.15f + sin(t * 9f) * 0.18f
+            pose == "sleep" -> HEAD_SLEEP
+            else -> sin(t * 0.4f) * 0.08f
+        }
+        dogHead.rotation.y = if (pose == "sleep") 0.3f else sin(t * (if (playingNow) 4.5f else 0.27f)) * 0.35f
+        dogHead.rotation.z = if (petting || playingNow) sin(t * (if (playingNow) 6f else 3f)) * 0.25f else 0f
         // Tail: hangs in a soft curve, wags side to side, rests on the floor when he's down
         dogTail.rotation.x = TAIL_STAND * standK + TAIL_LIE * lieK + TAIL_SIT * sitK
         tailSegs[1].rotation.x = -0.25f * standK + TAIL_LIE2 * lieK + TAIL_SIT2 * sitK
@@ -382,10 +459,47 @@ class Jasper(private val room: Room, private val env: Environment) {
     /** Tap: tail thumps and a head tilt; a sleeping Jasper opens one eye and lies awake (unless curled up on the bed). */
     /** 1.3 hooks: petting (achievements), sleep mode sends him to bed, the alarm makes him wag. */
     var onPet: () -> Unit = {}
-    fun goToBed() { dogSpots().firstOrNull { it.name == "bed" }?.let { sendDog(it) } }
+    fun goToBed() { dogSpots().firstOrNull { it.name == "bed" }?.let { sendDog(it) }; onStateChanged?.invoke() }
     fun wag(t: Float, secs: Float) { wagUntil = t + secs }
+    fun feed(t: Float) {
+        hunger = 100f
+        funLevel = (funLevel + 10f).coerceAtMost(100f)
+        if (::kibbleMesh.isInitialized) kibbleMesh.scale.y = 1f
+        actionKind = "eat"; actionUntil = t + 5.5f; wagUntil = t + 5.5f
+        sendDog(Spot("bowls", Vec3(1.55f, 0f, 1.92f), "sit", 5f))
+        toast("🍖 Filled Jasper's food bowl! He trots over for a crunchy snack.")
+        onSound("boof", soundPos())
+        onStateChanged?.invoke()
+    }
+    fun giveWater(t: Float) {
+        thirst = 100f
+        if (::waterMesh.isInitialized) waterMesh.scale.y = 1f
+        actionKind = "drink"; actionUntil = t + 5.0f; wagUntil = t + 4.5f
+        sendDog(Spot("bowls", Vec3(1.65f, 0f, 1.92f), "sit", 5f))
+        toast("💧 Fresh cool water for Jasper! *lap lap lap*")
+        onSound("boof", soundPos())
+        onStateChanged?.invoke()
+    }
+    fun playWith(t: Float) {
+        funLevel = 100f
+        energy = (energy - 8f).coerceAtLeast(15f)
+        actionKind = "play"; actionUntil = t + 6.0f; wagUntil = t + 6.5f
+        onPet()
+        sendDog(Spot("rug", Vec3(0.6f, 0f, 1.5f), "sit", 5f))
+        toast("🎾 Playtime! Jasper does a play-bow, spins around on the rug, and wags his whole body!")
+        onSound("boof", soundPos())
+        onStateChanged?.invoke()
+    }
+    fun sendToSleep(t: Float) {
+        energy = (energy + 35f).coerceAtMost(100f)
+        actionKind = ""; actionUntil = 0f; wagUntil = t + 2.0f
+        goToBed()
+        toast("🛏️ Tucked Jasper in on the bed for a cozy nap.")
+        onStateChanged?.invoke()
+    }
     fun petDog(t: Float) {
         onPet()
+        funLevel = (funLevel + 15f).coerceAtMost(100f)
         wagUntil = t + 2.5f
         if (onBed) {
             pose = "sleep"
@@ -397,6 +511,7 @@ class Jasper(private val room: Room, private val env: Environment) {
             toast("🐕 JASPER: ${DOG_PETS[rnd.nextInt(DOG_PETS.size)]}")
         }
         onSound("boof", soundPos())
+        onStateChanged?.invoke()
     }
 
 }

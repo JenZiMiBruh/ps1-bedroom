@@ -383,20 +383,68 @@ object ConsoleScreens {
         max(0f, min(1f, min((e - a) / inT, (b - e) / outT)))
     private fun centerText(c: Canvas2D, s: String, x: Number, y: Number, font: String, color: String) { c.font = font; c.fillStyle = color; c.textAlign = "center"; c.fillText(s, x, y) }
 
-    /** The PlayStation symbol: the bold P standing on the flattened S (checked against the real logo). (cx, cy) is its centre, s its height. */
+    /**
+     * The official PlayStation family mark: the upright 3D 'P' standing above the perspective-foreshortened 'S'
+     * lying on the ground plane. Drawn from the exact SVG proportions of the PlayStation symbol so it looks crisp
+     * both on the 128x96 CRT TV and full-screen on the PS4/PS5 app startup screen.
+     */
     fun psSymbol(c: Canvas2D, cx: Double, cy: Double, s: Double, color: String, bg: String) {
+        fun px(nx: Double) = cx + nx * s
+        fun py(ny: Double) = cy + ny * s
+
+        // 1. Back-left and front-left ribbon of the flat 'S' (emerges from left of P stem, loops around left nose, crosses front)
         c.fillStyle = color
-        // the P: a tall stem, and the big round bowl at the top right with its hole
-        c.beginPath(); c.moveTo(cx - 0.16 * s, cy - 0.5 * s); c.lineTo(cx + 0.04 * s, cy - 0.45 * s); c.lineTo(cx + 0.04 * s, cy + 0.3 * s); c.lineTo(cx - 0.16 * s, cy + 0.4 * s); c.closePath(); c.fill()
-        c.beginPath(); c.moveTo(cx, cy - 0.46 * s); c.bezierCurveTo(cx + 0.44 * s, cy - 0.4 * s, cx + 0.46 * s, cy, cx + 0.12 * s, cy + 0.02 * s); c.lineTo(cx + 0.02 * s, cy - 0.02 * s); c.closePath(); c.fill()
+        c.beginPath()
+        c.moveTo(px(-0.20), py(0.14))
+        c.lineTo(px(-0.46), py(0.23))
+        c.bezierCurveTo(px(-0.62), py(0.28), px(-0.60), py(0.39), px(-0.41), py(0.43))
+        c.bezierCurveTo(px(-0.29), py(0.46), px(-0.15), py(0.43), px(-0.02), py(0.38))
+        c.lineTo(px(-0.02), py(0.28))
+        c.bezierCurveTo(px(-0.14), py(0.33), px(-0.25), py(0.35), px(-0.34), py(0.33))
+        c.bezierCurveTo(px(-0.41), py(0.31), px(-0.40), py(0.27), px(-0.31), py(0.24))
+        c.lineTo(px(-0.20), py(0.20))
+        c.closePath()
+        c.fill()
+
+        // 2. Right-side ribbon of the flat 'S' (sweeps out to the right of P stem, loops around right nose, tucks back in)
+        c.beginPath()
+        c.moveTo(px(0.08), py(0.25))
+        c.lineTo(px(0.31), py(0.16))
+        c.bezierCurveTo(px(0.42), py(0.12), px(0.55), py(0.13), px(0.60), py(0.19))
+        c.bezierCurveTo(px(0.65), py(0.25), px(0.57), py(0.32), px(0.42), py(0.37))
+        c.lineTo(px(0.08), py(0.49))
+        c.lineTo(px(0.08), py(0.39))
+        c.lineTo(px(0.34), py(0.30))
+        c.bezierCurveTo(px(0.43), py(0.27), px(0.44), py(0.22), px(0.36), py(0.21))
+        c.bezierCurveTo(px(0.29), py(0.20), px(0.20), py(0.23), px(0.08), py(0.28))
+        c.closePath()
+        c.fill()
+
+        // 3. Center bridge of the 'S' passing behind the upright 'P' stem (with a clean gap around the stem)
         c.fillStyle = bg
-        c.beginPath(); c.moveTo(cx + 0.04 * s, cy - 0.3 * s); c.bezierCurveTo(cx + 0.16 * s, cy - 0.27 * s, cx + 0.17 * s, cy - 0.16 * s, cx + 0.08 * s, cy - 0.15 * s); c.lineTo(cx + 0.04 * s, cy - 0.16 * s); c.closePath(); c.fill()
+        c.beginPath()
+        c.moveTo(px(-0.21), py(-0.52))
+        c.lineTo(px(0.09), py(-0.45))
+        c.lineTo(px(0.09), py(0.49))
+        c.lineTo(px(-0.21), py(0.52))
+        c.closePath()
+        c.fill()
+
+        // 4. Upright 'P' outer silhouette (tall vertical stem + isometric top slant + curved upper-right bowl)
         c.fillStyle = color
-        // the S, lying flat in front: its left arm folds back on itself, its right arm sweeps up to the right
-        c.beginPath(); c.moveTo(cx - 0.54 * s, cy + 0.3 * s); c.lineTo(cx - 0.18 * s, cy + 0.15 * s); c.lineTo(cx - 0.18 * s, cy + 0.27 * s); c.lineTo(cx - 0.33 * s, cy + 0.33 * s)
-        c.lineTo(cx - 0.18 * s, cy + 0.37 * s); c.lineTo(cx - 0.18 * s, cy + 0.48 * s); c.lineTo(cx - 0.56 * s, cy + 0.39 * s); c.closePath(); c.fill()
-        c.beginPath(); c.moveTo(cx + 0.06 * s, cy + 0.27 * s); c.lineTo(cx + 0.46 * s, cy + 0.1 * s); c.bezierCurveTo(cx + 0.6 * s, cy + 0.09 * s, cx + 0.58 * s, cy + 0.25 * s, cx + 0.42 * s, cy + 0.3 * s)
-        c.lineTo(cx + 0.06 * s, cy + 0.42 * s); c.closePath(); c.fill()
+        c.beginPath()
+        c.moveTo(px(-0.17), py(-0.50))
+        c.lineTo(px(0.16), py(-0.40))
+        c.bezierCurveTo(px(0.42), py(-0.32), px(0.47), py(-0.04), px(0.22), py(0.04))
+        c.lineTo(px(0.04), py(0.00))
+        c.lineTo(px(0.04), py(-0.12))
+        c.lineTo(px(0.13), py(-0.10))
+        c.bezierCurveTo(px(0.24), py(-0.08), px(0.25), py(-0.23), px(0.12), py(-0.27))
+        c.lineTo(px(0.04), py(-0.30))
+        c.lineTo(px(0.04), py(0.43))
+        c.lineTo(px(-0.17), py(0.49))
+        c.closePath()
+        c.fill()
     }
 
     fun boot(key: String, c: Canvas2D, w: Int, h: Int, e: Float, light: (Int) -> Unit = {}) {
@@ -474,11 +522,16 @@ object ConsoleScreens {
                 }
             }
             // PS5 (from the real boot): the silver PlayStation symbol on black, the dark navy glow with the health warning,
-            // drifting specks of light, then into the console.
+            // drifting specks of light + PS5 emblem, then into the console.
             else -> {
                 if (e < 3.4f) {
-                    c.globalAlpha = fade(e, 0.2f, 3.4f, 0.8f, 0.4f)
-                    psSymbol(c, cx, cy - 2 * u, 22 * u, "#c9ccd3", "#000000")
+                    val a = fade(e, 0.15f, 3.4f, 0.7f, 0.4f)
+                    c.globalAlpha = a * 0.45f
+                    val halo = c.createRadialGradient(cx, cy - 2 * u, 0, cx, cy - 2 * u, 28 * u)
+                    halo.addColorStop(0, "rgba(148,163,184,0.35)"); halo.addColorStop(1, "rgba(0,0,0,0)")
+                    c.fillStyle = halo; c.fillRect(0, 0, w, h)
+                    c.globalAlpha = a
+                    psSymbol(c, cx, cy - 2 * u, 25 * u, "#e2e8f0", "#000000")
                     light(0x475569)
                 } else {
                     val g = c.createRadialGradient(cx, cy, 0, cx, cy, max(w, h) * 0.75)
@@ -489,11 +542,14 @@ object ConsoleScreens {
                         c.fillStyle = "#9aa7bd"
                         for (i in 0 until 4) { val lw = (70 - (if (i == 3) 34 else 0)) * u; c.fillRect(cx - 35 * u, cy - 6 * u + i * 3.5 * u, lw, 1.2 * u) }
                     } else {
-                        c.globalAlpha = min(1f, (e - 5.2f) / 0.5f)
+                        val a = min(1f, (e - 5.2f) / 0.5f)
+                        c.globalAlpha = a
                         for (i in 0 until 46) {
                             val px = (i * 37.7 + e * (3 + i % 4) * u) % w; val py = (i * 23.3 + sin(e + i) * 3 * u) % h
                             c.fillStyle = if (i % 4 == 0) "#e0f2fe" else "#94a3b8"; c.fillRect(px, py, max(1.0, u * 0.6), max(1.0, u * 0.6))
                         }
+                        psSymbol(c, cx - 15 * u, cy, 12 * u, "#f8fafc", "#0a1830")
+                        centerText(c, "PS5", cx + 7 * u, cy + 3.5 * u, "bold ${(11 * u).toInt()}px sans-serif", "#f8fafc")
                     }
                     light(0x1e3a8a)
                 }

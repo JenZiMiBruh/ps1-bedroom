@@ -112,6 +112,7 @@ class Sound(private val app: App) {
     private lateinit var rain: Gain; private lateinit var glassSpot: Spot; private lateinit var rainGlass: Gain; private lateinit var rainHeavy: Gain
     private lateinit var wind: Gain; private lateinit var windFilter: Filter
     private lateinit var thunderBufs: List<AudioBuffer>; private lateinit var thunderFilter: Filter
+    private lateinit var lightningSnap: NoiseSynth; private lateinit var thunderBoom: MembraneSynth
     private lateinit var crickets: Gain; private lateinit var leaves: Gain; private lateinit var breeze: Gain
     private lateinit var howl: Gain; private lateinit var howlFilter: Filter; private lateinit var city: Gain
     private lateinit var birds: List<Synth>; private lateinit var peeper: Synth
@@ -271,9 +272,22 @@ class Sound(private val app: App) {
         val windGust = gain(0.6)
         lfos += Lfo(ctx, windGust.gain, 0.045, 0.25, 1.0)
         Noise(ctx, "brown").start().chain(windFilter, windGust, gain(1.5), wind)
-        thunderBufs = listOf(Buffers.thunder(ctx), Buffers.thunder(ctx))
-        thunderFilter = filt(900.0, "lowpass"); thunderFilter.connect(weatherBus)
-        val thunderFar = gain(0.5); thunderFilter.connect(thunderFar); thunderFar.connect(farIn)
+        thunderBufs = listOf(Buffers.thunder(ctx), Buffers.thunder(ctx), Buffers.thunder(ctx))
+        thunderFilter = filt(1600.0, "lowpass")
+        val thunderBoost = gain(2.6)
+        thunderFilter.connect(thunderBoost)
+        thunderBoost.connect(weatherBus)
+        // Also feed a room-rattling low-end sub directly to master (scaled by weather volume) so thunder is felt inside the room even when the blinds are shut
+        val thunderRoom = gain(0.55)
+        thunderBoost.chain(filt(280.0, "lowpass"), thunderRoom, windowLevel)
+        val thunderFar = gain(0.85); thunderBoost.connect(thunderFar); thunderFar.connect(farIn)
+        lightningSnap = NoiseSynth(ctx, "white", Envelope(ctx, 0.001, 0.09, 0.0, 0.06)).also {
+            it.chain(filt(2200.0, "bandpass", 0.9), gain(1.4), weatherBus)
+        }
+        thunderBoom = MembraneSynth(ctx, 0.08, 3.5, Envelope(ctx, 0.005, 0.65, 0.0, 0.45)).also {
+            it.volume.value = 2.0
+            it.chain(filt(240.0, "lowpass"), thunderBoost)
+        }
         // ---- Season / time layers
         crickets = gain(0.0); crickets.chain(filt(6000.0, "lowpass"), natureBus)
         val cr = Player(ctx, Buffers.crickets(ctx)); cr.loop = true; cr.chain(gain(0.12), crickets); cr.start()
@@ -465,19 +479,24 @@ class Sound(private val app: App) {
         }
     }
 
-    /** Lightning: thunder arrives 0.15-2.8 s after the flash, quieter and darker the farther it is. */
+    /** Lightning: crisp electric crack on flash + rolling thunder boom 0.08-1.15 s later. */
     fun thunderclap() {
         if (!ready || !playing) return
         ctx.sync {
-            val distance = rnd.nextDouble()
-            val t = ctx.currentTime + 0.15 + distance * 2.6
+            val distance = rnd.nextDouble() * 0.75
+            val now = ctx.currentTime + 0.02
+            // Immediate electric lightning snap / sizzle at the moment of the flash
+            lightningSnap.triggerAttackRelease(0.08, now, (0.95 - distance * 0.45).coerceIn(0.35, 1.0))
+            val t = now + 0.06 + distance * 1.05
+            // Deep low-end boom punch + rolling multi-swell thunder buffer
+            thunderBoom.triggerAttackRelease(if (distance < 0.35) "G1" else "E1", 0.55, t, (1.0 - distance * 0.4).coerceIn(0.45, 1.0))
             val p = Player(ctx, pick(thunderBufs))
-            p.playbackRate = rand(0.75, 1.1)
-            p.volume.value = -2 - distance * 9
+            p.playbackRate = rand(0.82, 1.12)
+            p.volume.value = 3.5 - distance * 5.0
             p.connect(thunderFilter)
-            thunderFilter.frequency.setValueAtTime(1600 - distance * 1200, t)
-            p.onstop = { p.dispose() }
+            thunderFilter.frequency.setValueAtTime(2400.0 - distance * 1200.0, t)
             p.start(t)
+            pendingDispose += (t + 7.5) to { p.dispose() }
         }
     }
 
@@ -502,12 +521,12 @@ class Sound(private val app: App) {
         val ct = env.currentTime
         val night = ct == "night"; val dusk = ct == "dusk"; val dawn = ct == "dawn"; val day = ct == "day"
         // Ceiling fan follows the real (coasting) blade speed
-        val sp = min(1.0, app.fan.speed / 1.85)
+        val sp = min(1.0, app.fan.speed / 4.2)
         if (abs(sp - lastFanSp) > 0.003) {
             lastFanSp = sp
             fanSpeed.gain.rampTo(sp, 0.15)
-            fanLfo.osc.frequency.setTargetAtTime(max(0.05, app.fan.speed * 1.4), now, 0.1)
-            fanFilter.frequency.setTargetAtTime(170 + 170 * sp, now, 0.05)
+            fanLfo.osc.frequency.setTargetAtTime(max(0.05, app.fan.speed * 0.95), now, 0.1)
+            fanFilter.frequency.setTargetAtTime(170 + 190 * sp, now, 0.05)
         }
         val rev = floor(app.fan.angle / (PI * 2)).toInt()
         if (rev != lastFanRev) { lastFanRev = rev; if (sp > 0.2) fanTick.triggerAttackRelease(0.02, now, 0.6 * sp) }

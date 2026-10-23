@@ -207,7 +207,8 @@ class Param(private val ctx: AudioCtx, initial: Double, val minValue: Double = -
             if (events.isNotEmpty() && events[0].time <= t) advance(t)
             buf[i] = (if (events.isEmpty()) currentNoEvents(t) else valueAt(t)).coerceIn(minValue, maxValue).toFloat()
         }
-        for (m in mods) { m.pull(blockId); if (!m.silent) { val ml = m.outL; for (i in 0 until BLOCK) buf[i] += ml[i] } }
+        var mi = 0
+        while (mi < mods.size) { val m = mods[mi]; mi++; m.pull(blockId); if (!m.silent) { val ml = m.outL; for (i in 0 until BLOCK) buf[i] += ml[i] } }
         return buf
     }
     /** k-rate: one value per block (filters, panners). */
@@ -215,7 +216,8 @@ class Param(private val ctx: AudioCtx, initial: Double, val minValue: Double = -
         val t = frame0 / sr
         advance(t)
         var v = if (events.isEmpty()) currentNoEvents(t) else valueAt(t)
-        for (m in mods) { m.pull(blockId); if (!m.silent) v += m.outL[0] }
+        var mi = 0
+        while (mi < mods.size) { val m = mods[mi]; mi++; m.pull(blockId); if (!m.silent) v += m.outL[0] }
         return v.coerceIn(minValue, maxValue)
     }
 }
@@ -240,7 +242,11 @@ abstract class Node(val ctx: AudioCtx) {
     fun fan(vararg nodes: Node): Node { for (n in nodes) connect(n); return this }
     open fun disconnect() {
         val o = output
-        for (d in o.outputs) when (d) { is Node -> d.inputs.remove(o); is Param -> d.mods.remove(o) }
+        var oi = 0
+        while (oi < o.outputs.size) {
+            val d = o.outputs[oi]; oi++
+            when (d) { is Node -> d.inputs.remove(o); is Param -> d.mods.remove(o) }
+        }
         o.outputs.clear()
     }
     open fun dispose() { if (disposed) return; disposed = true; disconnect(); inputs.clear() }
@@ -256,8 +262,12 @@ abstract class Node(val ctx: AudioCtx) {
     /** Sums every input into outL / outR; returns false if all inputs are silent. */
     protected fun sumInputs(blockId: Long): Boolean {
         var any = false; var st = false
-        for (n in inputs) {
+        var idx = 0
+        while (idx < inputs.size) {
+            val n = inputs[idx]
             n.pull(blockId)
+            // If n.pull() disposed/disconnected n from inputs, don't advance past the next element
+            if (idx < inputs.size && inputs[idx] === n) idx++
             if (n.silent) continue
             if (!any) { System.arraycopy(n.outL, 0, outL, 0, BLOCK); System.arraycopy(if (n.stereo) n.outR else n.outL, 0, outR, 0, BLOCK); any = true }
             else { val a = n.outL; val b = if (n.stereo) n.outR else n.outL; for (i in 0 until BLOCK) { outL[i] += a[i]; outR[i] += b[i] } }

@@ -50,7 +50,8 @@ class MainActivity : Activity() {
         app.cutout = Cutout(this, root, view)
         app.onHaptic = { view.post { view.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK) } }
         app.pipEnabled = getSharedPreferences("ps1bedroom", MODE_PRIVATE).getBoolean("pip", true)
-        app.onWindowShot = { clear, blinds, weather, place -> Thread { WindowWidget.saveInfo(this, weather, place); WindowWidget.saveShots(this, clear, blinds); clear.recycle(); blinds.recycle() }.start() }
+        app.onWindowShot = { clear, blinds, weather, place -> Thread { WindowWidget.saveInfo(this, weather, place); WindowWidget.saveShots(this, clear, blinds); RoomWidgetReceiver.updateAllWidgets(this, app); clear.recycle(); blinds.recycle() }.start() }
+        RoomWidgetReceiver.onCommand = { cmd -> handleWidgetCommand(cmd) }
         app.keepScreenOn = { on -> runOnUiThread { if (on) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) } }
         UiTheme.load(this)
         app.hud = Hud(this, root, app).also { it.attachMenu() }
@@ -67,9 +68,38 @@ class MainActivity : Activity() {
         handleShare(intent)
         handleShortcut(intent)
     }
-    /** Long-press app shortcuts (res/xml/shortcuts.xml) and the Quick Settings tile. */
+    private fun handleWidgetCommand(cmd: String): Boolean {
+        if (!app.isBuilt) return false
+        app.postOrRun {
+            when (cmd) {
+                "toggle_sound" -> app.toggleAudio()
+                "toggle_light" -> { app.toggleFanLight(); app.settings.changed() }
+                "toggle_tv" -> { app.tvPower(); app.settings.changed() }
+                "cycle_blinds" -> { app.room.cycleWindowBlinds(); app.settings.changed() }
+                "step_weather" -> app.settings.stepStatus("weather")
+                "step_place" -> app.settings.stepStatus("place")
+                "sleep_mode" -> app.settings.startSleepMode()
+                "sleep_15" -> app.settings.setSleepTimer(if (app.settings.sleepEnd > 0) 0 else 15)
+                "toggle_alarm" -> { app.alarm.set(on = !app.alarm.on); app.settings.changed() }
+                "jasper_feed" -> { app.jasper.feed(app.lastFrameT); app.settings.changed() }
+                "jasper_water" -> { app.jasper.giveWater(app.lastFrameT); app.settings.changed() }
+                "jasper_play" -> { app.jasper.playWith(app.lastFrameT); app.settings.changed() }
+                "jasper_sleep" -> { app.jasper.sendToSleep(app.lastFrameT); app.settings.changed() }
+                "refresh_window" -> { app.windowShotNow = true; app.toast("🪟 Updated Window widget snapshot!") }
+            }
+            app.settings.saveNow()
+        }
+        return true
+    }
+
+    /** Long-press app shortcuts (res/xml/shortcuts.xml), widget actions, and the Quick Settings tile. */
     private fun handleShortcut(i: android.content.Intent?) {
         val a = i?.action ?: return
+        if (a.startsWith("com.ps1bedroom.room.WIDGET_")) {
+            val cmd = a.removePrefix("com.ps1bedroom.room.WIDGET_")
+            view.postDelayed({ handleWidgetCommand(cmd) }, if (app.isBuilt) 0L else 2800L)
+            return
+        }
         val run: () -> Unit = when (a) {
             "com.ps1bedroom.room.SLEEP" -> { { app.post { app.settings.startSleepMode() } } }
             "com.ps1bedroom.room.MUSIC" -> { { app.hud?.openBoombox() } }
@@ -161,10 +191,13 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume(); app.glActive = true; view.onResume(); pacer.interacted(); pacer.start(); hideSystemBars()
-        app.windowWidgets = WindowWidget.hasWidgets(this); if (app.windowWidgets) app.windowShotNow = true
+        app.windowWidgets = WindowWidget.hasWidgets(this)
+        app.windowShotIntervalSec = WindowWidget.refreshIntervalSec(this)
+        if (app.windowWidgets) app.windowShotNow = true
+        RoomWidgetReceiver.updateAllWidgets(this, if (app.isBuilt) app else null)
     }
     private fun askNotifications() { if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 7) }
-    override fun onDestroy() { MediaService.onControl = null; MediaService.onSeek = null; MediaService.stop(this); NowPlayingWidget.update(this, null); app.sound.shutdown(); super.onDestroy() }
+    override fun onDestroy() { RoomWidgetReceiver.onCommand = null; MediaService.onControl = null; MediaService.onSeek = null; MediaService.stop(this); NowPlayingWidget.update(this, null); app.sound.shutdown(); super.onDestroy() }
     @Deprecated("Activity back handling")
     override fun onBackPressed() { if (app.hud?.back() != true) @Suppress("DEPRECATION") super.onBackPressed() }
     override fun onPause() {

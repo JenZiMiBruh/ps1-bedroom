@@ -551,33 +551,38 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
         chips(listOf("live" to "Auto (today)", "spring" to "Spring", "summer" to "Summer", "fall" to "Fall", "winter" to "Winter").map { (v, l) ->
             Triple(l + (if (v == "live" && env.seasonMode == "live") " · ${env.currentSeason}" else ""), if (v == "live") env.seasonMode == "live" else env.seasonMode != "live" && env.currentSeason == v, { post { s.setSeasonChoice(v) } })
         })
+        h4("Nighttime window lights")
+        seg(listOf("gradual" to "Turn off late", "early" to "Turn off early", "never" to "Stay on all night"), env.lightsOut) { m -> post { s.setLightsOut(m) } }
+        note("Windows in houses, trailers, apartments, and distant buildings gradually go dark one by one as the night gets late.", true)
     }
 
     private fun buildDebrisControls() {
         val amtPct = (s.debrisAmount * 100).roundToInt()
-        h4("Falling leaves & outdoor debris", if (amtPct == 0) "Off" else "$amtPct%")
-        val presets = listOf(
-            Triple("Off", 0f to 1f, 1f),
-            Triple("Gentle", 0.5f to 0.7f, 0.7f),
-            Triple("Normal", 1.0f to 1.0f, 1.0f),
-            Triple("Breezy", 1.5f to 1.4f, 1.4f),
-            Triple("Heavy", 2.2f to 1.8f, 1.9f)
-        )
-        chips(presets.map { (name, af, freq) ->
-            val (amt, spd) = af
-            val on = kotlin.math.abs(s.debrisAmount - amt) < 0.08f && (amt == 0f || kotlin.math.abs(s.debrisSpeed - spd) < 0.15f)
-            Triple(name, on, {
-                post {
-                    s.setDebrisAmount(amt)
-                    s.setDebrisSpeed(spd)
-                    s.setDebrisFreq(freq)
-                }
+        h4("Falling leaves & outdoor debris", if (s.debrisMode == "off" || amtPct == 0) "Off" else "${s.debrisMode.replaceFirstChar { it.uppercase() }} · $amtPct%")
+        seg(listOf("weather" to "Weather-tied", "always" to "Always fall", "off" to "Off"), s.debrisMode) { m -> post { s.setDebrisMode(m) } }
+        if (s.debrisMode != "off") {
+            val presets = listOf(
+                Triple("Gentle", 0.5f to 0.7f, 0.7f),
+                Triple("Normal", 1.0f to 1.0f, 1.0f),
+                Triple("Breezy", 1.5f to 1.4f, 1.4f),
+                Triple("Heavy", 2.2f to 1.8f, 1.9f)
+            )
+            chips(presets.map { (name, af, freq) ->
+                val (amt, spd) = af
+                val on = kotlin.math.abs(s.debrisAmount - amt) < 0.08f && kotlin.math.abs(s.debrisSpeed - spd) < 0.15f
+                Triple(name, on, {
+                    post {
+                        s.setDebrisAmount(amt)
+                        s.setDebrisSpeed(spd)
+                        s.setDebrisFreq(freq)
+                    }
+                })
             })
-        })
-        slider("How much (amount)", 0, 250, 10, (s.debrisAmount * 100).roundToInt(), { if (it == 0) "Off" else "$it%" }) { v -> post { s.setDebrisAmount(v / 100f) } }
-        slider("How fast (fall & wind speed)", 20, 250, 10, (s.debrisSpeed * 100).roundToInt(), { "$it%" }) { v -> post { s.setDebrisSpeed(v / 100f) } }
-        slider("How often (gusts & spawn rate)", 20, 250, 10, (s.debrisFreq * 100).roundToInt(), { "$it%" }) { v -> post { s.setDebrisFreq(v / 100f) } }
-        note("Controls autumn leaves, spring blossoms, summer seeds & pollen, winter pine needles/frost, and desert dust blowing past the window.", true)
+            slider("How much (amount)", 0, 250, 10, (s.debrisAmount * 100).roundToInt(), { if (it == 0) "Off" else "$it%" }) { v -> post { s.setDebrisAmount(v / 100f) } }
+            slider("How fast (fall & wind speed)", 20, 250, 10, (s.debrisSpeed * 100).roundToInt(), { "$it%" }) { v -> post { s.setDebrisSpeed(v / 100f) } }
+            slider("How often (gusts & spawn rate)", 20, 250, 10, (s.debrisFreq * 100).roundToInt(), { "$it%" }) { v -> post { s.setDebrisFreq(v / 100f) } }
+        }
+        note("Weather-tied scales leaves, blossoms, and debris with the wind, rain, storm intensity, and whether the place outside has trees. All rain, window drops, and leaves blow in the same wind direction.", true)
     }
 
     private fun buildWeather() {
@@ -618,6 +623,19 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
     private fun buildSky() {
         h4("Outside the window")
         chips(Places.OUTSIDE_ENVS.map { (k, e) -> Triple("${e.icon} ${e.name}", app.sky.outsideEnv == k, { post { s.setOutside(k) } }) })
+        h4("Parked cars outside")
+        seg(listOf("random" to "Random & moving", "classic" to "Fixed classic", "none" to "No parked cars"), app.places.carsMode) { m -> post { s.setCarsMode(m) } }
+        if (app.places.carsMode == "random") {
+            slider("How many cars (density)", 25, 100, 5, (app.places.carsDensity * 100).roundToInt(), { "$it%" }) { v -> post { s.setCarsDensity(v / 100f) } }
+            val stayOpts = listOf(2 to "2 min", 5 to "5 min", 15 to "15 min", 20 to "20 min", 45 to "45 min", 120 to "2 hours", 0 to "Stay put")
+            val curStay = app.places.carsStayMinutes.roundToInt()
+            h4("Cars leave / arrive after", stayOpts.firstOrNull { it.first == curStay }?.second ?: "$curStay min")
+            chips(stayOpts.map { (m, label) -> Triple(label, curStay == m, { post { s.setCarsStayMinutes(m) } }) })
+            tiles(listOf(Triple("🚗 RESHUFFLE PARKED CARS NOW", false, { post { app.places.reshuffleCars(); app.sfx("ui"); app.toast("🚗 Reshuffled parked cars outside!") } })))
+        }
+        note("Parked cars in Suburbs, City Block, and Trailer Park randomize whenever you leave and come back, and drive off or pull in over time.", true)
+        h4("Nighttime window lights")
+        seg(listOf("gradual" to "Turn off late", "early" to "Turn off early", "never" to "Stay on all night"), env.lightsOut) { m -> post { s.setLightsOut(m) } }
         h4("Sky")
         chips(Settings.SKY_STYLES.map { (k, l) -> Triple(l, env.skyStyle == k, { post { s.setSkyStyle(k) } }) })
         h4("Moon", s.moonReadout())
@@ -740,8 +758,23 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
         note("Each one has its own model, controller, lights, boot-up and sound, and the start screen follows it.", true)
     }
     private fun buildJasper() {
-        h4("Jasper's coat")
         val dog = app.jasper
+        h4("Jasper · ${dog.moodLabel()}")
+        tiles(listOf(
+            Triple("🍖 FEED", false, { post { dog.feed(app.lastFrameT); s.changed() } }),
+            Triple("💧 WATER", false, { post { dog.giveWater(app.lastFrameT); s.changed() } }),
+            Triple("🎾 PLAY", false, { post { dog.playWith(app.lastFrameT); s.changed() } }),
+            Triple("🛏️ SLEEP", dog.pose == "sleep", { post { dog.sendToSleep(app.lastFrameT); s.changed() } })
+        ))
+        check("Optional pet-care stats (hunger, thirst, energy & playfulness tick over time)", dog.careEnabled) { c ->
+            post { dog.careEnabled = c; s.changed() }
+        }
+        if (dog.careEnabled) {
+            note("🍖 Full: ${dog.hunger.roundToInt()}%   ·   💧 Hydrated: ${dog.thirst.roundToInt()}%   ·   💤 Energy: ${dog.energy.roundToInt()}%   ·   🎾 Happy: ${dog.funLevel.roundToInt()}%\nTip: You can also tap his red & blue bowls by the foot of the bed, or use the Jasper home-screen widget!", true)
+        } else {
+            note("Tap Feed, Water, Play or Sleep anytime (or tap his bowls in the room) to interact with Jasper.", true)
+        }
+        h4("Jasper's coat")
         chips(Jasper.PRESETS.map { (k, p) -> Triple(p.name, dog.colorPreset == k, { post { dog.applyColors(p, k); app.sfx("ui"); s.changed() } }) })
         // Jasper's three colours right now, by name
         val names = DOG_COLOURS.toMap()

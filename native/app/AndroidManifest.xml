@@ -3,8 +3,8 @@
      current app; it takes over com.ps1bedroom.ambience once it matches 1-to-1. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.ps1bedroom.room"
-    android:versionCode="49"
-    android:versionName="0.45">
+    android:versionCode="50"
+    android:versionName="0.46">
 
     <uses-sdk android:minSdkVersion="24" android:targetSdkVersion="34" />
     <uses-permission android:name="android.permission.INTERNET" />
@@ -53,6 +53,25 @@
         <receiver android:name=".NowPlayingWidget" android:exported="false" android:label="PS1 Bedroom">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_info" />
+        </receiver>
+        <receiver android:name=".ClockWeatherWidget" android:exported="false" android:label="Retro Clock &amp; Weather">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_clock_weather_info" />
+        </receiver>
+        <receiver android:name=".QuickControlsWidget" android:exported="false" android:label="Room Quick Controls">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_quick_controls_info" />
+        </receiver>
+        <receiver android:name=".SleepAlarmWidget" android:exported="false" android:label="Sleep &amp; Sunrise Alarm">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_sleep_alarm_info" />
+        </receiver>
+        <receiver android:name=".JasperWidget" android:exported="false" android:label="Jasper Companion">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_jasper_info" />
+        </receiver>
+        <receiver android:name=".RoomWidgetReceiver" android:exported="false">
+            <intent-filter><action android:name="com.ps1bedroom.room.WIDGET_CMD" /></intent-filter>
         </receiver>
         <service android:name=".MediaService" android:exported="false" android:foregroundServiceType="mediaPlayback" />
     </application>

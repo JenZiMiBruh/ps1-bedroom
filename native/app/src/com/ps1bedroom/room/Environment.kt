@@ -72,6 +72,22 @@ class Environment(private val scene: Scene, private val room: Room, private val 
     var currentWeather = "clear"
     var W = WEATHER_KINDS.getValue("clear")
     var userVolumetricSetting = 1.0f
+    /** Lit windows going dark late at night: "gradual" (default), "early" (two hours sooner) or "never" (the old behaviour). */
+    var lightsOut = "gradual"
+    /** 0..1: how many of the lit windows are still on at this hour (each window has its own random cut-off, so they go out one by one). */
+    fun windowActivity(): Double {
+        val h = hour
+        if (lightsOut == "never") return if (h >= 1 && h < 5) 0.18 else if (h >= 5 && h < 7) 0.3 else if (h >= 22 || h < 1) 0.45 else 0.62
+        val hh = (((h + (if (lightsOut == "early") 2.0 else 0.0)) % 24) + 24) % 24
+        return when {
+            hh < 1.0 -> 0.35 - 0.15 * hh
+            hh < 3.5 -> 0.2 * (1 - (hh - 1) / 2.5)
+            hh < 5.0 -> 0.0
+            hh < 7.0 -> 0.3 * (hh - 5) / 2
+            hh < 22.0 -> 0.65
+            else -> 0.65 - 0.3 * (hh - 22) / 2
+        }
+    }
 
     // what lightning flashes fall back to
     var moonBaseIntensity = 3.6f; private set

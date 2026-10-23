@@ -33,7 +33,8 @@ class Exterior(private val group: Group, private val env: Environment, private v
     private val rnd = Random.Default
 
     // ---- Procedural lit building facade texture ----
-    private fun createBuildingTex(seedHue: Double): Texture = createCanvasTex(64, 128) { ctx, w, h ->
+    // keep < 1: only that share of the lit windows is still on (late at night the towers go dark one window at a time)
+    private fun createBuildingTex(seedHue: Double, keep: Double = 1.0): Texture = createCanvasTex(64, 128) { ctx, w, h ->
         ctx.fillStyle = "#0a0f1f"
         ctx.fillRect(0, 0, w, h)
         ctx.strokeStyle = "#17213a"
@@ -46,7 +47,9 @@ class Exterior(private val group: Group, private val env: Environment, private v
             while (xx < w - 4) {
                 val r = sin(xx * 12.9898 + y * 78.233 + seedHue) * 43758.5453
                 val frac = r - floor(r)
-                if (frac > 0.44) {
+                val r2 = sin(xx * 4.1414 + y * 9.7331 + seedHue * 3.3) * 24634.6345
+                val on = frac > 0.44 && (keep >= 1.0 || (r2 - floor(r2)) < keep)
+                if (on) {
                     ctx.fillStyle = if (frac > 0.72) "#fde047" else (if (frac > 0.58) "#7dd3fc" else "#fed7aa")
                     ctx.fillRect(xx, y, 5, 3)
                 } else {
@@ -107,7 +110,10 @@ class Exterior(private val group: Group, private val env: Environment, private v
     private val treeFoliageClusters = ArrayList<Foliage>()
 
     // ---- Facades, billboards, ticker, train ----
-    private class FacadeSet(val mat: Material, val night: Texture, val day: Texture)
+    private class FacadeSet(val mat: Material, val night: Texture, val day: Texture, val seed: Double) {
+        /** Night textures with fewer and fewer lit windows: [0] all dark ... [3] the full set. */
+        val stages = arrayOfNulls<Texture>(4).also { it[3] = night }
+    }
     private val facadeSets = ArrayList<FacadeSet>()
     private class Ad(val lines: Array<String>?, val a: String, val b: String, val bg: String, val `when`: (() -> Boolean)? = null, val dyn: (() -> Array<String>)? = null)
     private val AD_LIB: List<Ad>
@@ -254,12 +260,12 @@ class Exterior(private val group: Group, private val env: Environment, private v
             ctx.fillStyle = "rgba(0, 0, 0, 0.18)"
             var x = 0; while (x < w) { ctx.fillRect(x, 0, 1, h); x += 8 }
         }.tex
-        facadeSets += FacadeSet(bldgMat1, bldgTex1, createBuildingDayTex(1.1, "#8a8f99"))
-        facadeSets += FacadeSet(bldgMat2, bldgTex2, createBuildingDayTex(2.7, "#a08a76"))
-        facadeSets += FacadeSet(bldgMat3, bldgTex3, createBuildingDayTex(4.3, "#77808c"))
+        facadeSets += FacadeSet(bldgMat1, bldgTex1, createBuildingDayTex(1.1, "#8a8f99"), 1.1)
+        facadeSets += FacadeSet(bldgMat2, bldgTex2, createBuildingDayTex(2.7, "#a08a76"), 2.7)
+        facadeSets += FacadeSet(bldgMat3, bldgTex3, createBuildingDayTex(4.3, "#77808c"), 4.3)
         val backTex = createBuildingTex(6.9)
         val backMat = PS1.material(map = backTex, emissive = 0xffffff, emissiveMap = backTex, emissiveIntensity = 0.55f)
-        facadeSets += FacadeSet(backMat, backTex, createBuildingDayTex(6.9, "#9aa1ab"))
+        facadeSets += FacadeSet(backMat, backTex, createBuildingDayTex(6.9, "#9aa1ab"), 6.9)
         for (s in arrayOf(floatArrayOf(-6.4f, -13.2f, 2.2f, 9.5f), floatArrayOf(-1.4f, -13.8f, 1.8f, 10.5f), floatArrayOf(0.9f, -14.2f, 2.4f, 6.2f), floatArrayOf(5.1f, -13.0f, 2.0f, 9.0f), floatArrayOf(7.8f, -12.6f, 2.2f, 7.4f))) {
             val (x, z, wd, ht) = s
             val tower = Mesh(Geo.box(wd, ht, 1.8f, 2, 6, 2), backMat)
@@ -607,8 +613,11 @@ class Exterior(private val group: Group, private val env: Environment, private v
     // ---- Streetlights, facades and the train switch with the time (an env hook) ----
     private fun updateExteriorForTime() {
         val night = 1 - env.daylight
+        // Late at night the towers go dark one window at a time (stage 3 = all the lit windows, 0 = none)
+        val stage = Math.round((env.windowActivity() / 0.65).coerceIn(0.0, 1.0) * 3).toInt()
         for (f in facadeSets) {
-            val tex = if (env.daylight > 0.55) f.day else f.night
+            val nightTex = f.stages[stage] ?: createBuildingTex(f.seed, stage / 3.0).also { f.stages[stage] = it }
+            val tex = if (env.daylight > 0.55) f.day else nightTex
             if (f.mat.map !== tex) { f.mat.map = tex; f.mat.emissiveMap = tex }
             f.mat.emissiveIntensity = (if (env.daylight > 0.55) 0.12 else 0.25 + 0.45 * night).toFloat()
         }
@@ -624,7 +633,10 @@ class Exterior(private val group: Group, private val env: Environment, private v
     }
 
     /** Per frame (the HTML's updateExteriorFx plus the beacon pulse and tree sway from animate). */
+    private var lightsCheckT = 0f
     fun update(t: Float, dt: Float, outsideEnv: String) {
+        // The window lights follow the clock minute by minute (the env hooks only run when the weather or time of day changes)
+        if (t - lightsCheckT > 15f) { lightsCheckT = t; updateExteriorForTime() }
         if (outsideEnv == "city") {
             updateBillboards(t)
             updateTraffic(t, dt)

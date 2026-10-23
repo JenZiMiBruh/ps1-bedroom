@@ -372,6 +372,8 @@ class PlacesPaint(private val sky: Sky, private val env: Environment, private va
                 pines(ctx, 22, 208.0, 10.0, 20.0, 7.0, T(i3(8, 16, 14), i3(40, 70, 50), 0.2), null)
                 ctx.restore()
                 ctx.fillStyle = T(i3(14, 10, 10), i3(90, 60, 40)); ctx.fillRect(150, 199, 16, 9)
+                ctx.fillStyle = T(i3(24, 14, 14), i3(120, 62, 50)); ctx.fillRect(161, 191, 3, 6) // cabin chimney
+                ctx.fillStyle = T(i3(14, 10, 10), i3(90, 60, 40))
                 ctx.beginPath(); ctx.moveTo(147, 199); ctx.lineTo(158, 192); ctx.lineTo(169, 199); ctx.closePath(); ctx.fill()
                 litWindow(ctx, 154, 202, 4, 3, 0.05)
                 if (isNight()) { ctx.fillStyle = "rgba(255,200,120,0.35)"; ctx.fillRect(155, 210, 2, 18) }
@@ -399,6 +401,8 @@ class PlacesPaint(private val sky: Sky, private val env: Environment, private va
                 }
                 ridge(ctx, ridgePts(42, 168.0, 24.0, 20.0, 16.0), T(i3(14, 18, 30), i3(80, 96, 110), 0.35))
                 ctx.fillStyle = T(i3(12, 10, 12), i3(100, 70, 50)); ctx.fillRect(196, 186, 22, 10)
+                ctx.fillStyle = T(i3(24, 14, 14), i3(120, 62, 50)); ctx.fillRect(212, 177, 3, 7) // lodge chimney
+                ctx.fillStyle = T(i3(12, 10, 12), i3(100, 70, 50))
                 ctx.beginPath(); ctx.moveTo(192, 186); ctx.lineTo(207, 177); ctx.lineTo(222, 186); ctx.closePath(); ctx.fill()
                 if (isNight()) {
                     ctx.fillStyle = "rgba(255,210,130,0.95)"; for (x in intArrayOf(199, 205, 211)) ctx.fillRect(x, 189, 3, 2)
@@ -424,6 +428,7 @@ class PlacesPaint(private val sky: Sky, private val env: Environment, private va
                 ctx.fillStyle = T(i3(24, 26, 32), i3(170, 176, 180)); ctx.fillRect(148, 170, 12, 36)
                 ctx.beginPath(); ctx.ellipse(154, 170, 6, 5, 0, PI, 0); ctx.fill()
                 ctx.fillStyle = T(i3(22, 22, 26), i3(230, 224, 206)); ctx.fillRect(320, 192, 26, 14)
+                ctx.fillStyle = T(i3(28, 14, 14), i3(135, 64, 52)); ctx.fillRect(339, 181, 3, 8) // farmhouse chimney
                 ctx.fillStyle = T(i3(14, 12, 14), i3(80, 60, 56)); ctx.beginPath(); ctx.moveTo(316, 192); ctx.lineTo(333, 182); ctx.lineTo(350, 192); ctx.closePath(); ctx.fill()
                 litWindow(ctx, 325, 196, 5, 4, 0.1); litWindow(ctx, 337, 196, 5, 4, 0.3)
                 ctx.fillStyle = T(i3(14, 14, 18), i3(120, 120, 126)); ctx.beginPath(); ctx.moveTo(424, 206); ctx.lineTo(429, 166); ctx.lineTo(431, 166); ctx.lineTo(436, 206); ctx.closePath(); ctx.fill()
@@ -572,21 +577,25 @@ class PlacesPaint(private val sky: Sky, private val env: Environment, private va
                 ctx.stroke()
             }
         }
-        // Cozy chimney smoke curling into the sky in winter / fall / cold weather
-        val coldSmoke = env.currentSeason == "winter" || env.currentSeason == "fall" || env.isSnowingNow()
+        // Cozy chimney smoke curling into the sky in winter, snow, or chilly fall evenings/mornings (drifting -X with the wind)
+        val chillyFall = env.currentSeason == "fall" && (env.currentTime in setOf("night", "dusk", "dawn") || env.isPrecipNow())
+        val coldSmoke = (env.currentSeason == "winter" || env.isSnowingNow() || chillyFall) && env.windowActivity() > 0.15
         if (coldSmoke && places.outsideEnv in setOf("suburbs", "house", "countryside", "lake", "mountains")) {
             val chimneys = when (places.outsideEnv) {
                 "suburbs" -> arrayOf(118 to 198, 252 to 196, 396 to 198)
-                "countryside" -> arrayOf(166 to 192)
+                "countryside" -> arrayOf(340 to 181)
+                "lake" -> arrayOf(162 to 191)
+                "mountains" -> arrayOf(213 to 177)
                 else -> arrayOf(188 to 198, 344 to 196)
             }
-            ctx.fillStyle = if (night) "rgba(180, 195, 220, 0.24)" else "rgba(235, 240, 248, 0.32)"
+            ctx.fillStyle = if (night) "rgba(180, 195, 220, 0.24)" else "rgba(235, 240, 248, 0.30)"
             for ((cx, cy) in chimneys) {
                 for (p in 0 until 5) {
                     val age = (t * 0.65 + p * 0.2) % 1.0
-                    val sx = cx + age * (10.0 + W.wind * 26.0) + sin(t * 1.8 + p) * 2.5
-                    val sy = cy - age * 26.0
-                    val rad = 2.2 + age * 5.5
+                    // Drift left (-X) in the exact same wind direction as rain, snow, and falling leaves
+                    val sx = cx - age * (9.0 + W.wind * 24.0) + sin(t * 1.8 + p) * 2.0
+                    val sy = cy - age * 24.0
+                    val rad = 1.8 + age * 4.8
                     ctx.beginPath(); ctx.ellipse(sx, sy, rad, rad * 0.75, 0.0, 0.0, PI * 2); ctx.fill()
                 }
             }

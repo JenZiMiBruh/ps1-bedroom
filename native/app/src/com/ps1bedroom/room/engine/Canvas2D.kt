@@ -116,7 +116,7 @@ class Canvas2D(@JvmField val width: Int, @JvmField val height: Int) {
         }
         path.addPath(sub)
     }
-    fun fill() { prepFill(); canvas.drawPath(path, fill) }
+    fun fill() { prepFill(); fill.isAntiAlias = true; canvas.drawPath(path, fill); fill.isAntiAlias = false }
     fun stroke() { prepStroke(); canvas.drawPath(path, stroke) }
 
     fun save() { stack.add(State(fillArgb, strokeArgb, fillShader, strokeShader, lineWidth, globalAlpha, globalCompositeOperation, font, textAlign, textBaseline)); canvas.save() }

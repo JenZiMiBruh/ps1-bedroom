@@ -31,18 +31,22 @@ import java.io.FileOutputStream
  * even when the app is closed), and the weather, temperature and place. Each widget has its own options.
  */
 class WindowWidget : AppWidgetProvider() {
-    class Options(val time: Boolean, val date: Boolean, val weather: Boolean, val place: Boolean, val frame: Boolean, val blinds: Boolean)
+    class Options(val time: Boolean, val date: Boolean, val weather: Boolean, val place: Boolean, val frame: Boolean, val blinds: Boolean, val refreshBtn: Boolean = true, val refreshMin: Int = 5)
     companion object {
         private const val PREFS = "window_widget"
+        fun refreshIntervalSec(ctx: Context): Float =
+            (ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getInt("refreshMin", 5).coerceIn(1, 60) * 60).toFloat()
         fun options(ctx: Context, id: Int): Options {
             val p = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             return Options(p.getBoolean("time$id", true), p.getBoolean("date$id", true), p.getBoolean("weather$id", true),
-                p.getBoolean("place$id", true), p.getBoolean("frame$id", true), p.getBoolean("blinds$id", false))
+                p.getBoolean("place$id", true), p.getBoolean("frame$id", true), p.getBoolean("blinds$id", false),
+                p.getBoolean("refreshBtn$id", true), p.getInt("refreshMin", 5))
         }
         fun saveOptions(ctx: Context, id: Int, o: Options) {
             ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
                 .putBoolean("time$id", o.time).putBoolean("date$id", o.date).putBoolean("weather$id", o.weather)
-                .putBoolean("place$id", o.place).putBoolean("frame$id", o.frame).putBoolean("blinds$id", o.blinds).apply()
+                .putBoolean("place$id", o.place).putBoolean("frame$id", o.frame).putBoolean("blinds$id", o.blinds)
+                .putBoolean("refreshBtn$id", o.refreshBtn).putInt("refreshMin", o.refreshMin).apply()
         }
         private fun shotFile(ctx: Context, blinds: Boolean) = File(ctx.filesDir, if (blinds) "window_view_blinds.png" else "window_view.png")
         /** The text under the clock: "☀️ 82°F Clear · 🌆 Downtown". */
@@ -74,8 +78,12 @@ class WindowWidget : AppWidgetProvider() {
             v.setTextViewText(R.id.ww_weather, if (weather == null) "Open PS1 Bedroom to look outside" else line)
             v.setViewVisibility(R.id.ww_weather, if (weather == null || line.isNotEmpty()) View.VISIBLE else View.GONE)
             v.setViewVisibility(R.id.ww_info, if (o.time || o.date || line.isNotEmpty() || weather == null) View.VISIBLE else View.GONE)
+            v.setViewVisibility(R.id.ww_refresh, if (o.refreshBtn) View.VISIBLE else View.GONE)
             val open = PendingIntent.getActivity(ctx, 200, Intent(ctx, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP), PendingIntent.FLAG_IMMUTABLE)
+            val refreshPi = PendingIntent.getBroadcast(ctx, 201, Intent(ctx, RoomWidgetReceiver::class.java).setAction(RoomWidgetReceiver.ACTION_WIDGET_CMD).putExtra("cmd", "refresh_window"),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
             v.setOnClickPendingIntent(R.id.ww_root, open)
+            v.setOnClickPendingIntent(R.id.ww_refresh, refreshPi)
             return v
         }
         /** The PS1 window frame: a painted wooden frame with a cross bar, like the bedroom's own window. */
@@ -122,12 +130,43 @@ class WindowWidgetConfig : Activity() {
         val cPlace = check("Show where the room is", o.place)
         val cFrame = check("Draw the window frame", o.frame)
         val cBlinds = check("Show the blinds as they are in the room", o.blinds)
+        val cRefreshBtn = check("Show the manual refresh (↻) button", o.refreshBtn)
+        var pickedMin = o.refreshMin
         col.addView(TextView(this).apply {
-            text = "ADD WIDGET"; gravity = Gravity.CENTER; setTextColor(Color.WHITE); typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
+            text = "SNAPSHOT REFRESH INTERVAL"; setTextColor(pink); setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+            typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD); setPadding(0, dp(12f), 0, dp(6f))
+        })
+        val minRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        val minBtns = ArrayList<Pair<Int, TextView>>()
+        fun styleMinBtns() {
+            for ((m, b) in minBtns) {
+                val on = m == pickedMin
+                b.setTextColor(if (on) Color.WHITE else Color.rgb(0xb9, 0xb4, 0xe6))
+                b.background = GradientDrawable().apply {
+                    setColor(if (on) Color.rgb(0x3b, 0x1d, 0x4f) else Color.rgb(0x16, 0x14, 0x2c))
+                    cornerRadius = dp(8f).toFloat()
+                    setStroke(dp(if (on) 2f else 1f), if (on) pink else Color.rgb(0x32, 0x2d, 0x5a))
+                }
+            }
+        }
+        for (m in listOf(1, 5, 10, 15, 30, 60)) {
+            val b = TextView(this).apply {
+                text = if (m == 60) "1h" else "${m}m"
+                gravity = Gravity.CENTER; typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD); setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+                setPadding(dp(8f), dp(8f), dp(8f), dp(8f))
+                setOnClickListener { pickedMin = m; styleMinBtns() }
+            }
+            minBtns += m to b
+            minRow.addView(b, LinearLayout.LayoutParams(0, -2, 1f).apply { marginEnd = dp(4f) })
+        }
+        styleMinBtns()
+        col.addView(minRow)
+        col.addView(TextView(this).apply {
+            text = "SAVE WIDGET"; gravity = Gravity.CENTER; setTextColor(Color.WHITE); typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
             setPadding(0, dp(14f), 0, dp(14f))
             background = GradientDrawable().apply { setColor(Color.rgb(0x3b, 0x1d, 0x4f)); cornerRadius = dp(12f).toFloat(); setStroke(dp(2f), pink) }
             setOnClickListener {
-                WindowWidget.saveOptions(this@WindowWidgetConfig, id, WindowWidget.Options(cTime.isChecked, cDate.isChecked, cWeather.isChecked, cPlace.isChecked, cFrame.isChecked, cBlinds.isChecked))
+                WindowWidget.saveOptions(this@WindowWidgetConfig, id, WindowWidget.Options(cTime.isChecked, cDate.isChecked, cWeather.isChecked, cPlace.isChecked, cFrame.isChecked, cBlinds.isChecked, cRefreshBtn.isChecked, pickedMin))
                 WindowWidget.updateAll(this@WindowWidgetConfig)
                 setResult(RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id))
                 finish()

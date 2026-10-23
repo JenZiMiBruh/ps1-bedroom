@@ -327,7 +327,7 @@ void main() {
     // Windows light up in the evening, fewer in the small hours
     fun litWindow(ctx: Canvas2D, x: Number, y: Number, w2: Number, h2: Number, k: Double, col: String? = null) {
         val night = 1 - env.daylight
-        val act = if (env.hour >= 1 && env.hour < 5) 0.18 else (if (env.hour >= 23 || env.hour < 1) 0.4 else 0.65)
+        val act = env.windowActivity()
         if (night < 0.35 || k > act) { ctx.fillStyle = T(intArrayOf(20, 24, 36), intArrayOf(70, 90, 110)); ctx.fillRect(x, y, w2, h2); return }
         ctx.fillStyle = col ?: "rgba(255, 210, 130, ${jsNum(0.6 + 0.4 * night)})"; ctx.fillRect(x, y, w2, h2)
     }
@@ -534,8 +534,8 @@ void main() {
         val farCol = hazeMix(hazeMix(nightBldg, dayBldg, env.daylight), intArrayOf(140, 150, 170), 0.25 + W.fog * 0.3)
         ctx.fillStyle = "rgb(${farCol[0]},${farCol[1]},${farCol[2]})"
         for (b in skylineFar) { ctx.fillRect(b[0], b[1], b[2], h - b[1]); roofShape(ctx, b[0], b[1], b[2], b[3]) }
-        if (night > 0.4) {
-            ctx.fillStyle = "rgba(255, 214, 140, ${0.35 * night})"
+        if (night > 0.4 && env.windowActivity() > 0.02) {
+            ctx.fillStyle = "rgba(255, 214, 140, ${0.35 * night * min(1.0, env.windowActivity() / 0.65)})"
             for (i in skylineFar.indices) {
                 val (x, y, bw) = skylineFar[i]
                 for (k in 0 until 6) ctx.fillRect(x + 2 + ((i * 7 + k * 11) % max(1, bw - 4)), y + 4 + ((i * 13 + k * 17) % 60), 1, 1)
@@ -551,7 +551,7 @@ void main() {
         }
         // How busy the city is: lots of lights in the evening, few at 4 AM, reflective glass by day
         val hr = env.hour
-        val activity = if (night < 0.3) 0.1 else (if (hr >= 1 && hr < 5) 0.18 else (if (hr >= 5 && hr < 7) 0.3 else (if (hr >= 22 || hr < 1) 0.45 else 0.62)))
+        val activity = if (night < 0.3) 0.1 else env.windowActivity()
         for (wl in windowLights) {
             if (env.daylight > 0.7) {
                 if (wl.tone > 0.7) { ctx.fillStyle = "rgba(160, 200, 240, 0.35)"; ctx.fillRect(wl.x, wl.y, 3, 2) }

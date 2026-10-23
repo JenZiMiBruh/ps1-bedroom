@@ -4,11 +4,14 @@ import android.app.Activity
 import android.opengl.GLSurfaceView
 import android.os.Build
 import android.os.Bundle
+import android.view.InputDevice
+import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowInsets
 import android.view.WindowInsetsController
 import android.view.WindowManager
+import kotlin.math.abs
 import kotlin.math.hypot
 
 /** Full-screen GL view of the room. Touch: one finger orbits, two fingers pinch-zoom and pan. */
@@ -51,6 +54,10 @@ class MainActivity : Activity() {
         app.keepScreenOn = { on -> runOnUiThread { if (on) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) } }
         UiTheme.load(this)
         app.hud = Hud(this, root, app).also { it.attachMenu() }
+        app.cutout?.let { co ->
+            co.onSafeChanged = { rect -> app.hud?.applySafeInsets(rect) }
+            app.hud?.applySafeInsets(co.uiSafe)
+        }
         setContentView(root)
         pacer = FramePacer(this, view, app)
         app.pacer = pacer
@@ -216,5 +223,189 @@ class MainActivity : Activity() {
                 }
             }
         }
+    }
+
+    // ---- Full controller / gamepad support across the entire app ----
+    private var dpadUp = false; private var dpadDown = false; private var dpadLeft = false; private var dpadRight = false
+    private var stickLx = 0f; private var stickLy = 0f
+    private fun deadzone(v: Float, dz: Float = 0.14f): Float = if (abs(v) < dz) 0f else ((abs(v) - dz) / (1f - dz)) * kotlin.math.sign(v)
+    private fun syncLeftPad() {
+        val dx = (if (dpadRight) 1f else 0f) - (if (dpadLeft) 1f else 0f)
+        val dy = (if (dpadDown) 1f else 0f) - (if (dpadUp) 1f else 0f)
+        app.padLx = if (abs(stickLx) >= abs(dx)) stickLx else dx
+        app.padLy = if (abs(stickLy) >= abs(dy)) stickLy else dy
+    }
+    private fun isUiModalOpen(): Boolean {
+        val h = app.hud ?: return false
+        return h.menu.isOpen || h.yt.dialogOpen || h.pcDesktop.isOpen || h.isBoomboxOpen
+    }
+
+    override fun dispatchGenericMotionEvent(ev: MotionEvent): Boolean {
+        val src = ev.source
+        if ((src and InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK ||
+            (src and InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD) {
+            if (ev.action == MotionEvent.ACTION_MOVE) {
+                pacer.interacted()
+                app.hud?.setControllerActive(true)
+                val lx = deadzone(ev.getAxisValue(MotionEvent.AXIS_X))
+                val ly = deadzone(ev.getAxisValue(MotionEvent.AXIS_Y))
+                val hatX = deadzone(ev.getAxisValue(MotionEvent.AXIS_HAT_X), 0.2f)
+                val hatY = deadzone(ev.getAxisValue(MotionEvent.AXIS_HAT_Y), 0.2f)
+                // Right stick: standard Android gamepads use AXIS_Z / AXIS_RZ; some use AXIS_RX / AXIS_RY
+                val rxRaw = ev.getAxisValue(MotionEvent.AXIS_Z).let { if (abs(it) > 0.08f) it else ev.getAxisValue(MotionEvent.AXIS_RX) }
+                val ryRaw = ev.getAxisValue(MotionEvent.AXIS_RZ).let { if (abs(it) > 0.08f) it else ev.getAxisValue(MotionEvent.AXIS_RY) }
+                val rx = deadzone(rxRaw)
+                val ry = deadzone(ryRaw)
+                val lt = maxOf(ev.getAxisValue(MotionEvent.AXIS_LTRIGGER), ev.getAxisValue(MotionEvent.AXIS_BRAKE))
+                val rt = maxOf(ev.getAxisValue(MotionEvent.AXIS_RTRIGGER), ev.getAxisValue(MotionEvent.AXIS_GAS))
+
+                if (isUiModalOpen()) {
+                    stickLx = 0f; stickLy = 0f; syncLeftPad()
+                    app.padRx = 0f; app.padRy = 0f; app.padZoom = 0f
+                    return super.dispatchGenericMotionEvent(ev)
+                }
+                stickLx = if (abs(lx) >= abs(hatX)) lx else hatX
+                stickLy = if (abs(ly) >= abs(hatY)) ly else hatY
+                syncLeftPad()
+                app.padRx = rx
+                app.padRy = ry
+                app.padZoom = deadzone(rt - lt, 0.08f)
+                return true
+            }
+        }
+        return super.dispatchGenericMotionEvent(ev)
+    }
+
+    override fun dispatchKeyEvent(ev: KeyEvent): Boolean {
+        val code = ev.keyCode
+        val down = ev.action == KeyEvent.ACTION_DOWN
+        val up = ev.action == KeyEvent.ACTION_UP
+        val repeat = ev.repeatCount > 0
+        if (down || up) pacer.interacted()
+        val isPadKey = KeyEvent.isGamepadButton(code) ||
+            code == KeyEvent.KEYCODE_DPAD_UP || code == KeyEvent.KEYCODE_DPAD_DOWN ||
+            code == KeyEvent.KEYCODE_DPAD_LEFT || code == KeyEvent.KEYCODE_DPAD_RIGHT ||
+            code == KeyEvent.KEYCODE_DPAD_CENTER
+        if (isPadKey && down) app.hud?.setControllerActive(true)
+
+        val hud = app.hud
+        if (hud != null && hud.isSleeping && down && !repeat) {
+            hud.wakeFromSleep()
+            return true
+        }
+
+        // Start / Menu button toggles the main menu from anywhere
+        if ((code == KeyEvent.KEYCODE_BUTTON_START || code == KeyEvent.KEYCODE_MENU) && down && !repeat) {
+            hud?.let {
+                if (it.overlays.bootShowing || it.overlays.tutorialOpen || it.overlays.photoMode) {
+                    it.overlays.onControllerConfirm()
+                } else if (it.menu.isOpen) {
+                    it.menu.close()
+                } else {
+                    it.menu.open(null)
+                }
+            }
+            return true
+        }
+
+        // Select / Back button toggles Photo Mode when in the room
+        if (code == KeyEvent.KEYCODE_BUTTON_SELECT && down && !repeat) {
+            hud?.let {
+                if (it.overlays.photoMode) it.overlays.exitPhotoMode()
+                else if (!isUiModalOpen() && !it.overlays.bootShowing) it.overlays.enterPhotoMode()
+            }
+            return true
+        }
+
+        // Boot / tutorial / photo mode overlays
+        if (hud != null && (hud.overlays.bootShowing || hud.overlays.tutorialOpen || hud.overlays.photoMode)) {
+            if (down && !repeat) {
+                when (code) {
+                    KeyEvent.KEYCODE_BUTTON_A, KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
+                        hud.overlays.onControllerConfirm()
+                        return true
+                    }
+                    KeyEvent.KEYCODE_BUTTON_B, KeyEvent.KEYCODE_ESCAPE -> {
+                        hud.back()
+                        return true
+                    }
+                }
+            }
+            if (!hud.overlays.photoMode) return super.dispatchKeyEvent(ev)
+        }
+
+        // When a UI sheet/dialog is open: D-pad navigates focus, A clicks, B goes back, L1/R1 switches sub-tabs
+        if (isUiModalOpen()) {
+            dpadUp = false; dpadDown = false; dpadLeft = false; dpadRight = false; syncLeftPad()
+            if (down && !repeat) {
+                when (code) {
+                    KeyEvent.KEYCODE_BUTTON_B, KeyEvent.KEYCODE_ESCAPE -> { hud?.back(); return true }
+                    KeyEvent.KEYCODE_BUTTON_L1 -> if (hud?.menu?.isOpen == true) { hud.menu.cycleSubTab(-1); return true }
+                    KeyEvent.KEYCODE_BUTTON_R1 -> if (hud?.menu?.isOpen == true) { hud.menu.cycleSubTab(1); return true }
+                    KeyEvent.KEYCODE_BUTTON_A, KeyEvent.KEYCODE_DPAD_CENTER -> {
+                        val focused = currentFocus
+                        if (focused != null && focused.isShown) {
+                            focused.performClick()
+                            return true
+                        }
+                    }
+                }
+            }
+            return super.dispatchKeyEvent(ev)
+        }
+
+        // In the 3D room: D-pad / WASD drives movement (walk) or pan (orbit)
+        when (code) {
+            KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_W -> { dpadUp = down; syncLeftPad(); return true }
+            KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_S -> { dpadDown = down; syncLeftPad(); return true }
+            KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_A -> { dpadLeft = down; syncLeftPad(); return true }
+            KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_D -> { dpadRight = down; syncLeftPad(); return true }
+        }
+
+        if (down && !repeat) {
+            when (code) {
+                KeyEvent.KEYCODE_BUTTON_A, KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_SPACE -> {
+                    app.post { app.tapCenter() }
+                    return true
+                }
+                KeyEvent.KEYCODE_BUTTON_B -> {
+                    if (app.isBuilt && app.library.heldGame != null) {
+                        app.post { app.putBackHeld() }
+                        return true
+                    }
+                    if (hud?.back() == true) return true
+                    hud?.menu?.open(null)
+                    return true
+                }
+                KeyEvent.KEYCODE_BUTTON_X -> {
+                    app.post {
+                        if (app.player.mode == "chair") app.pullChair()
+                        else { app.toggleFanLight(); app.sfx("lightChain"); app.settings.changed() }
+                    }
+                    return true
+                }
+                KeyEvent.KEYCODE_BUTTON_Y -> {
+                    app.post { app.toggleAudio() }
+                    return true
+                }
+                KeyEvent.KEYCODE_BUTTON_L1 -> {
+                    hud?.cyclePosture(-1)
+                    return true
+                }
+                KeyEvent.KEYCODE_BUTTON_R1 -> {
+                    hud?.cyclePosture(1)
+                    return true
+                }
+                KeyEvent.KEYCODE_BUTTON_THUMBL -> {
+                    app.post { app.setPlayerMode(if (app.player.mode == "walk") "orbit" else "walk") }
+                    return true
+                }
+                KeyEvent.KEYCODE_BUTTON_THUMBR -> {
+                    app.post { app.setPlayerMode(if (app.player.mode == "chair") "bed" else "chair") }
+                    return true
+                }
+            }
+        }
+        return super.dispatchKeyEvent(ev)
     }
 }

@@ -192,12 +192,12 @@ class Desk(private val room: Room, private val tex: Textures, private val librar
         stickyNoteMesh.position.set(0.02f, 0.11f, 0.495f); stickyNoteMesh.rotation.z = -0.04f; stickyNoteMesh.castShadow = true
         pcTowerGroup.add(stickyNoteMesh); room.registerInteractable(stickyNoteMesh, "pc")
         pcLedMat = PS1.material(color = 0x22ff55, emissive = 0x22ff55, emissiveIntensity = 1.0f)
-        val pcLed = Mesh(Geo.box(0.026f, 0.026f, 0.02f), pcLedMat)
-        pcLed.position.set(0.17f, -0.09f, 0.487f); pcTowerGroup.add(pcLed) // native fix: clear of the floppy slot
-        // Amber drive-activity LED beside it (flickers while the PC is on)
-        hddLedMat = PS1.material(color = 0xffb020, emissive = 0xffa000, emissiveIntensity = 0.9f)
+        val pcLed = Mesh(Geo.box(0.028f, 0.028f, 0.022f), pcLedMat)
+        pcLed.position.set(0.17f, -0.09f, 0.487f); pcTowerGroup.add(pcLed); room.registerInteractable(pcLed, "pc") // native fix: clear of the floppy slot
+        // Yellow drive-activity LED beside it (blinks while the PC is on)
+        hddLedMat = PS1.material(color = 0x2a1c05, emissive = 0xfacc15, emissiveIntensity = 1.0f)
         val hddLed = Mesh(Geo.box(0.026f, 0.026f, 0.02f), hddLedMat)
-        hddLed.position.set(0.17f, -0.125f, 0.487f); pcTowerGroup.add(hddLed)
+        hddLed.position.set(0.17f, -0.125f, 0.487f); pcTowerGroup.add(hddLed); room.registerInteractable(hddLed, "pc")
 
         // ---- 4. 900MHz cordless phone & charging cradle ----
         val phoneGroup = Group()
@@ -373,7 +373,9 @@ class Desk(private val room: Room, private val tex: Textures, private val librar
     /** Lava blobs rise and fall inside the tapered glass (from the HTML's animate loop). */
     private var lastT = -1f
     fun update(t: Float) {
-        hddLedMat.emissiveIntensity = if (pcLedMat.emissiveIntensity > 0.5f && sin(t * 23f) * sin(t * 7.3f) > 0.1f) 1.1f else 0.08f
+        val hddBlink = pcLedMat.emissiveIntensity > 0.5f && (sin(t * 23f) * sin(t * 7.3f) > 0.08f || sin(t * 15.1f) > 0.65f)
+        hddLedMat.emissiveIntensity = if (hddBlink) 1.15f else 0f
+        hddLedMat.color.setHex(if (hddBlink) 0xfde047 else 0x2a1c05)
         val dt = if (lastT < 0) 0f else min(0.1f, t - lastT); lastT = t
         // warming up takes about 6 s, cooling down about 3 s
         lavaWarmth = if (lavaOn) min(1f, lavaWarmth + dt / 6f) else max(0f, lavaWarmth - dt / 3f)

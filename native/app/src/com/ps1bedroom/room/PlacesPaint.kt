@@ -558,6 +558,39 @@ class PlacesPaint(private val sky: Sky, private val env: Environment, private va
                 ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(394, 217, 46, 9) // the OPEN sign buzzes
             }
         }
+        // Raindrop ripples on water surfaces when raining
+        if (env.isRainingNow() && places.outsideEnv in setOf("beach", "island", "lake")) {
+            ctx.strokeStyle = "rgba(210, 235, 255, 0.45)"
+            ctx.lineWidth = 1f
+            val nRipples = (6 + W.rain * 12).toInt()
+            for (i in 0 until nRipples) {
+                val ph = (t * 2.1 + i * 0.73) % 1.0
+                val rx = ((i * 83 + (t * 2f).toInt() * 19) % 480) + 16
+                val ry = 212 + ((i * 29) % 36)
+                ctx.beginPath()
+                ctx.ellipse(rx.toDouble(), ry.toDouble(), 2.0 + ph * 9.0, 0.7 + ph * 2.6, 0.0, 0.0, PI * 2)
+                ctx.stroke()
+            }
+        }
+        // Cozy chimney smoke curling into the sky in winter / fall / cold weather
+        val coldSmoke = env.currentSeason == "winter" || env.currentSeason == "fall" || env.isSnowingNow()
+        if (coldSmoke && places.outsideEnv in setOf("suburbs", "house", "countryside", "lake", "mountains")) {
+            val chimneys = when (places.outsideEnv) {
+                "suburbs" -> arrayOf(118 to 198, 252 to 196, 396 to 198)
+                "countryside" -> arrayOf(166 to 192)
+                else -> arrayOf(188 to 198, 344 to 196)
+            }
+            ctx.fillStyle = if (night) "rgba(180, 195, 220, 0.24)" else "rgba(235, 240, 248, 0.32)"
+            for ((cx, cy) in chimneys) {
+                for (p in 0 until 5) {
+                    val age = (t * 0.65 + p * 0.2) % 1.0
+                    val sx = cx + age * (10.0 + W.wind * 26.0) + sin(t * 1.8 + p) * 2.5
+                    val sy = cy - age * 26.0
+                    val rad = 2.2 + age * 5.5
+                    ctx.beginPath(); ctx.ellipse(sx, sy, rad, rad * 0.75, 0.0, 0.0, PI * 2); ctx.fill()
+                }
+            }
+        }
     }
 
     /** Ground under the window for each place (sand, gravel, desert, wet asphalt...); false = the seasonal default. */

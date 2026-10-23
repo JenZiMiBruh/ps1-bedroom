@@ -67,15 +67,31 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
     private val snowMesh: InstancedMesh
     private val snowFlakes: List<Drop>
 
-    // Falling autumn leaves / spring blossoms (per-instance colour)
-    private class Leaf(var x: Float, var y: Float, val z: Float, val vy: Float, val vx: Float, val ph: Float, val rs: Float)
+    // Falling autumn leaves / spring blossoms / seasonal & windy outdoor debris (per-instance colour)
+    private class Leaf(var x: Float, var y: Float, var z: Float, val vy: Float, val vx: Float, val ph: Float, val rs: Float, var wait: Float = 0f)
     private val foliage3DGroup = Group()
-    private val LEAF_COUNT = 56
+    private val LEAF_COUNT = 160
     private val leafMesh: InstancedMesh
     private val leaves: List<Leaf>
     private val FALL_LEAF_COLS = intArrayOf(0xea580c, 0xdc2626, 0xeab308, 0xd97706, 0x92400e)
-    private val SPRING_PETAL_COLS = intArrayOf(0xfbcfe8, 0xf9a8d4, 0xffffff, 0xf472b6)
+    private val SPRING_PETAL_COLS = intArrayOf(0xfbcfe8, 0xf9a8d4, 0xffffff, 0xf472b6, 0x86efac)
+    private val SUMMER_DEBRIS_COLS = intArrayOf(0xfef9c3, 0xecfccb, 0x4ade80, 0x22c55e, 0xfde047)
+    private val WINTER_DEBRIS_COLS = intArrayOf(0xe2e8f0, 0xcbd5e1, 0x94a3b8, 0x78350f, 0x14532d)
+    private val DESERT_DEBRIS_COLS = intArrayOf(0xfde68a, 0xf59e0b, 0xd97706, 0xb45309, 0xa16207)
     private var leafPalette: IntArray? = null
+    // User-configurable debris / leaf multipliers (amount, speed, frequency)
+    var debrisAmount = 1.0f; private set
+    var debrisSpeed = 1.0f; private set
+    var debrisFreq = 1.0f; private set
+    fun setDebrisParams(amount: Float, speed: Float, freq: Float) {
+        debrisAmount = amount.coerceIn(0f, 2.5f)
+        debrisSpeed = speed.coerceIn(0.2f, 2.5f)
+        debrisFreq = freq.coerceIn(0.2f, 2.5f)
+        updateSettings()
+    }
+    // Exterior window ledge weather accumulation (snow bank & fallen autumn leaves)
+    private val ledgeSnowGroup = Group()
+    private val ledgeLeavesGroup = Group()
 
     // Fireflies blinking around the trees on clear summer nights
     private class Firefly(val x: Float, val y: Float, val z: Float, val ph: Float, val sp: Float)
@@ -85,10 +101,10 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
     private val fireflies: List<Firefly>
 
     // Window pane, ground, glow
-    private class GlassDrop(var x: Float, var y: Float, var r: Float, var v: Float)
+    private class GlassDrop(var x: Float, var y: Float, var r: Float, var v: Float, var age: Float = 0f)
     private val glassCanvasObj: CanvasTex
     private val glassDrops = ArrayList<GlassDrop>()
-    private var glassLastDraw = 0f
+    private var glassAccum = 0f
     private var glassKey = ""
     private val groundCanvasObj: CanvasTex
     private val windowGlowMat: Material
@@ -147,6 +163,27 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
         val windowGlow = Mesh(Geo.plane(4.2f, 3.4f), windowGlowMat)
         windowGlow.position.set(0.8f, 2.75f, -3.45f)
         scene.add(windowGlow)
+
+        // Exterior window ledge accumulation: puffy snow drift in winter/snow & scattered leaves in fall
+        weather3DGroup.add(ledgeSnowGroup)
+        val snowDriftMat = PS1.basic(color = 0xf1f5f9)
+        for ((dx, dw, dh) in arrayOf(Triple(-0.15f, 0.95f, 0.055f), Triple(0.78f, 1.15f, 0.068f), Triple(1.68f, 0.88f, 0.052f))) {
+            val bank = Mesh(Geo.box(dw, dh, 0.14f, 3, 1, 1), snowDriftMat)
+            bank.position.set(dx, OUT.ledgeY - 0.02f + dh * 0.5f, -3.20f)
+            ledgeSnowGroup.add(bank)
+        }
+        ledgeSnowGroup.visible = false
+
+        weather3DGroup.add(ledgeLeavesGroup)
+        for (i in 0 until 14) {
+            val col = FALL_LEAF_COLS[i % FALL_LEAF_COLS.size]
+            val leaf = Mesh(Geo.plane(0.085f, 0.065f), PS1.basic(color = col, side = DOUBLE_SIDE))
+            leaf.rotation.x = (-PI / 2).toFloat() + (rand() - 0.5f) * 0.25f
+            leaf.rotation.z = rand() * 6.28f
+            leaf.position.set(-0.45f + (i / 13f) * 2.5f + (rand() - 0.5f) * 0.12f, OUT.ledgeY - 0.012f + (i % 3) * 0.003f, -3.19f - (i % 2) * 0.03f)
+            ledgeLeavesGroup.add(leaf)
+        }
+        ledgeLeavesGroup.visible = false
     }
 
     /** Everything here moves every frame: none of it takes part in static batching. */
@@ -161,8 +198,9 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
 
     private fun drawWindowGlass(dt: Float) {
         val raining = env.isRainingNow()
+        val snowing = env.isSnowingNow()
         val winter = env.currentSeason == "winter"
-        val key = "${env.currentWeather}|$raining|$winter|${env.currentSeason}"
+        val key = "${env.currentWeather}|${env.weatherKind}|$raining|$snowing|$winter|${env.currentSeason}"
         // Nothing on the glass changes between draws unless drops are moving or the weather changed
         if (glassDrops.isEmpty() && !raining && key == glassKey) return
         glassKey = key
@@ -171,55 +209,90 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
         ctx.clearRect(0, 0, w, h)
         ctx.fillStyle = "rgba(170, 190, 225, 0.05)"
         ctx.fillRect(0, 0, w, h)
-        // Condensation in fog / rain
-        if (env.currentWeather == "foggy" || raining) {
-            ctx.fillStyle = if (env.currentWeather == "foggy") "rgba(210, 220, 235, 0.22)" else "rgba(200, 210, 230, 0.08)"
+        // Condensation in fog / rain / cold snow
+        if (env.currentWeather == "foggy" || raining || snowing) {
+            ctx.fillStyle = if (env.currentWeather == "foggy") "rgba(210, 220, 235, 0.22)" else if (snowing) "rgba(220, 232, 250, 0.10)" else "rgba(200, 210, 230, 0.08)"
             ctx.fillRect(0, 0, w, h)
         }
-        // Frost creeping in from the edges in winter
-        if (winter) {
+        // Heatwave warm sun-shimmer haze along the window edges
+        if (env.W.base == "heat") {
+            val heat = ctx.createRadialGradient(w / 2, h / 2, min(w, h) * 0.2, w / 2, h / 2, max(w, h) * 0.72)
+            heat.addColorStop(0, "rgba(255, 200, 110, 0)")
+            heat.addColorStop(1, "rgba(255, 190, 95, 0.22)")
+            ctx.fillStyle = heat; ctx.fillRect(0, 0, w, h)
+        }
+        // Frost creeping in from the edges in winter or snow
+        if (winter || snowing) {
             val frost = ctx.createRadialGradient(w / 2, h / 2, min(w, h) * 0.25, w / 2, h / 2, max(w, h) * 0.7)
             frost.addColorStop(0, "rgba(230, 240, 255, 0)")
-            frost.addColorStop(1, "rgba(230, 240, 255, 0.55)")
+            frost.addColorStop(1, if (env.weatherKind == "blizzard") "rgba(235, 245, 255, 0.72)" else "rgba(230, 240, 255, 0.55)")
             ctx.fillStyle = frost
             ctx.fillRect(0, 0, w, h)
-            ctx.fillStyle = "rgba(255, 255, 255, 0.35)"
-            for (i in 0 until 120) {
+            ctx.fillStyle = "rgba(255, 255, 255, 0.42)"
+            for (i in 0 until 140) {
                 val a = (i * 2.399) % 6.283
-                val r = 0.42 + ((i * 37) % 23) / 60.0
+                val r = 0.40 + ((i * 37) % 23) / 60.0
                 ctx.fillRect((w / 2 + cos(a) * r * w * 0.7).toInt(), (h / 2 + sin(a) * r * h * 0.7).toInt(), 1, 1)
             }
+            if (snowing) {
+                // Snow build-up along the bottom window sill and corners
+                ctx.fillStyle = "rgba(241, 245, 249, 0.78)"
+                for (x in 0 until w) {
+                    val corner = min(1.0, kotlin.math.abs(x - w / 2.0) / (w * 0.48))
+                    val sh = (2.5 + corner * 5.5 + sin(x * 0.22) * 1.4).toInt()
+                    ctx.fillRect(x, h - sh, 1, sh)
+                }
+            }
         }
-        // Raindrops beading on the glass; heavy ones slide down leaving a trail
+        // Raindrops beading on the glass; every drop grows in the rain and eventually streaks down so they never stall
         if (raining) {
+            val maxDrops = (45 + env.W.rain * 55).roundToInt()
             val spawn = (1 + env.W.rain * 5).roundToInt()
-            for (i in 0 until spawn) if (glassDrops.size < 90) glassDrops += GlassDrop(rand() * w, rand() * h, 0.6f + rand() * 1.6f, 0f)
+            for (i in 0 until spawn) if (glassDrops.size < maxDrops) {
+                glassDrops += GlassDrop(rand() * w, rand() * (h - 6), 0.75f + rand() * 1.35f, 0f, 0f)
+            }
         }
+        val windSlant = -env.W.wind * 0.32f
         var i = glassDrops.size - 1
         while (i >= 0) {
             val d = glassDrops[i]
-            if (d.r > 1.6f && rand() < 0.05f) d.v = 8 + rand() * 18
-            if (d.v > 0) {
-                ctx.strokeStyle = "rgba(220, 235, 255, 0.18)"
-                ctx.beginPath(); ctx.moveTo(d.x, d.y); ctx.lineTo(d.x, d.y - 6); ctx.stroke()
-                d.y += d.v * dt
-                d.x += (rand() - 0.5f) * 0.4f
+            d.age += dt
+            if (raining && d.v == 0f) {
+                // Static beads collect more water and grow until gravity pulls them down
+                d.r += dt * (0.24f + env.W.rain * 0.38f) * (0.5f + rand())
+                if (d.r > 1.5f || (d.age > 3.2f && rand() < 0.25f)) {
+                    d.v = 11f + rand() * 20f + env.W.rain * 14f
+                }
+            } else if (!raining && d.v > 0f) {
+                d.v *= max(0f, 1f - dt * 0.8f)
             }
-            if (!raining && rand() < 0.02f) d.r -= 0.3f // dries up when the rain stops
-            if (d.y > h + 3 || d.r <= 0.2f) { glassDrops.removeAt(i); i--; continue }
+            if (d.v > 0f) {
+                val streakLen = min(10f, 3.5f + d.v * 0.25f)
+                ctx.strokeStyle = "rgba(220, 235, 255, 0.22)"
+                ctx.beginPath(); ctx.moveTo(d.x, d.y); ctx.lineTo(d.x - windSlant * streakLen, d.y - streakLen); ctx.stroke()
+                d.y += d.v * dt
+                d.x += (windSlant * d.v * 0.16f + (rand() - 0.5f) * 3.0f) * dt
+            }
+            if (!raining && rand() < 0.08f) d.r -= 0.25f // dries up when the rain stops
+            if (d.y > h + 3 || d.x < -3 || d.x > w + 3 || d.r <= 0.2f) { glassDrops.removeAt(i); i--; continue }
             ctx.fillStyle = "rgba(15, 23, 42, 0.25)"
             ctx.beginPath(); ctx.arc(d.x, d.y + 0.4f, d.r, 0, PI * 2); ctx.fill()
-            ctx.fillStyle = "rgba(225, 238, 255, 0.55)"
+            ctx.fillStyle = "rgba(225, 238, 255, 0.58)"
             ctx.beginPath(); ctx.arc(d.x, d.y, d.r * 0.8f, 0, PI * 2); ctx.fill()
             ctx.fillStyle = "rgba(255, 255, 255, 0.9)"
             ctx.fillRect((d.x - d.r * 0.3f).toInt(), (d.y - d.r * 0.4f).toInt(), 1, 1)
             i--
         }
-        // A few wet leaves stuck to the glass in a fall rain
-        if (env.currentSeason == "fall" && raining) {
-            for ((lx, ly, c) in listOf(Triple(18, 80, "#c2410c"), Triple(96, 22, "#b45309"), Triple(70, 88, "#a16207"))) {
+        // Wet leaves or spring petals stuck to the glass in rain or windy weather
+        if (env.currentSeason == "fall" && (raining || env.W.wind >= 0.6f)) {
+            for ((lx, ly, c) in listOf(Triple(18, 80, "#c2410c"), Triple(96, 22, "#b45309"), Triple(70, 88, "#a16207"), Triple(112, 76, "#dc2626"))) {
                 ctx.fillStyle = c
                 ctx.beginPath(); ctx.ellipse(lx, ly, 4, 2.6, 0.6, 0, PI * 2); ctx.fill()
+            }
+        } else if (env.currentSeason == "spring" && raining) {
+            for ((lx, ly, c) in listOf(Triple(24, 74, "#f9a8d4"), Triple(88, 30, "#fbcfe8"), Triple(62, 86, "#f472b6"))) {
+                ctx.fillStyle = c
+                ctx.beginPath(); ctx.ellipse(lx, ly, 3, 2.0, -0.5, 0, PI * 2); ctx.fill()
             }
         }
         glassCanvasObj.tex.needsUpdate()
@@ -258,15 +331,26 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
     /** Called from applyEnvironmentSettings when the season / weather / time changes. */
     fun updateSettings() {
         val precip = env.isPrecipNow()
+        val snowing = env.isSnowingNow()
         rainMesh.visible = env.isRainingNow()
         splashMesh.visible = env.isRainingNow()
-        snowMesh.visible = env.isSnowingNow()
-        // Falling leaves / blossoms only where there are leafy trees outside
-        foliage3DGroup.visible = (env.currentSeason == "fall" || env.currentSeason == "spring") &&
-            sky.outsideEnv in setOf("city", "suburbs", "house", "neighborhood", "countryside", "forest", "lake", "trailer")
-        if (env.currentSeason == "fall") recolorLeaves(FALL_LEAF_COLS)
-        if (env.currentSeason == "spring") recolorLeaves(SPRING_PETAL_COLS)
-        fireflyGroup.visible = env.currentSeason == "summer" && (env.currentTime == "night" || env.currentTime == "dusk") && env.currentWeather == "clear"
+        snowMesh.visible = snowing
+        ledgeSnowGroup.visible = env.currentSeason == "winter" || snowing
+        ledgeLeavesGroup.visible = env.currentSeason == "fall" && !snowing && sky.outsideEnv !in setOf("space", "ocean", "underwater")
+        // Falling leaves, blossoms & outdoor debris across seasons and windy weather (unless in space / underwater)
+        val noDebrisPlace = sky.outsideEnv in setOf("space", "underwater", "ocean")
+        val desertPlace = sky.outsideEnv in setOf("desert", "canyon", "pyramid", "redrock", "oasis", "beach")
+        val seasonalDebris = env.currentSeason == "fall" || env.currentSeason == "spring" || env.W.wind >= 0.25f || debrisAmount > 1.01f
+        foliage3DGroup.visible = !noDebrisPlace && debrisAmount > 0.01f && seasonalDebris
+        val palette = when {
+            desertPlace -> DESERT_DEBRIS_COLS
+            env.currentSeason == "fall" -> FALL_LEAF_COLS
+            env.currentSeason == "spring" -> SPRING_PETAL_COLS
+            env.currentSeason == "winter" -> WINTER_DEBRIS_COLS
+            else -> SUMMER_DEBRIS_COLS
+        }
+        recolorLeaves(palette)
+        fireflyGroup.visible = (env.currentSeason == "summer" || env.currentSeason == "spring") && (env.currentTime == "night" || env.currentTime == "dusk") && !precip && env.W.wind < 0.6f
         windowGlowMat.color.copy(room.moonLight.color)
         // Dust motes catch whatever is shining in: warm sunlight, orange at sunset, cool moonlight (native: the HTML keeps them blue)
         // v0.41: each speck sits somewhere between the light shining in and the sky's horizon colour
@@ -370,15 +454,50 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
             snowMesh.needsUpdate()
         }
         if (foliage3DGroup.visible) {
-            val gust = 1 + W.wind * 1.8f
-            val scale = if (env.currentSeason == "spring") 0.65f else 1f
+            val baseFrac = when (env.currentSeason) {
+                "fall" -> 0.55f
+                "spring" -> 0.48f
+                else -> 0.26f
+            } + W.wind * 0.42f
+            val activeCount = (LEAF_COUNT * (baseFrac * (debrisAmount / 1.5f)).coerceIn(0f, 1f)).roundToInt()
+            val gust = (0.75f + W.wind * 1.65f) * debrisSpeed
+            val freqBoost = max(0.2f, debrisFreq)
+            val scale = when {
+                sky.outsideEnv in setOf("desert", "canyon", "pyramid", "redrock", "oasis", "beach") -> 0.48f
+                env.currentSeason == "spring" -> 0.68f
+                env.currentSeason == "summer" -> 0.58f
+                env.currentSeason == "winter" -> 0.55f
+                else -> 1.0f
+            }
             for (i in 0 until LEAF_COUNT) {
                 val l = leaves[i]
+                if (i >= activeCount) {
+                    leafMesh.setInstance(i, 0f, -50f, 0f, 0f, 0f, 0f, 0f)
+                    continue
+                }
+                if (l.wait > 0f) {
+                    l.wait -= dt * freqBoost
+                    leafMesh.setInstance(i, 0f, -50f, 0f, 0f, 0f, 0f, 0f)
+                    if (l.wait <= 0f) {
+                        l.y = OUT.y1 + rand() * 0.35f
+                        l.x = randIn(OUT.x0 - 0.6f, OUT.x1)
+                        l.z = randIn(OUT.z0, OUT.z1)
+                    }
+                    continue
+                }
                 l.y -= l.vy * gust * dt
-                l.x += (sin(t * 2.1f + l.ph) * 0.45f + l.vx * gust) * dt
-                if (l.y < OUT.y0 + 0.1f) { l.y = OUT.y1; l.x = randIn(OUT.x0, OUT.x1) }
-                if (l.x > OUT.x1 + 0.4f) l.x = OUT.x0
-                leafMesh.setInstance(i, l.x, l.y, l.z, t * l.rs, t * l.rs * 0.8f, sin(t + l.ph), scale)
+                val swirl = sin(t * (1.8f + debrisSpeed * 0.6f) + l.ph) * 0.48f
+                l.x += (swirl + l.vx * gust) * dt
+                if (l.y < OUT.y0 + 0.1f || l.x > OUT.x1 + 0.5f || l.x < OUT.x0 - 0.8f) {
+                    if (debrisFreq >= 1.8f) {
+                        l.y = OUT.y1 + rand() * 0.35f
+                        l.x = randIn(OUT.x0 - 0.5f, OUT.x1)
+                        l.z = randIn(OUT.z0, OUT.z1)
+                    } else {
+                        l.wait = randIn(0.08f, 1.5f) / freqBoost
+                    }
+                }
+                leafMesh.setInstance(i, l.x, l.y, l.z, t * l.rs * debrisSpeed, t * l.rs * 0.8f * debrisSpeed, sin(t * debrisSpeed + l.ph), scale)
             }
             leafMesh.needsUpdate()
         }
@@ -391,9 +510,10 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
             }
             fireflyMesh.needsUpdate()
         }
-        if (t - glassLastDraw > 0.1f) {
-            drawWindowGlass(t - glassLastDraw)
-            glassLastDraw = t
+        glassAccum += dt
+        if (glassAccum >= 0.08f) {
+            drawWindowGlass(glassAccum.coerceAtMost(0.25f))
+            glassAccum = 0f
         }
     }
 

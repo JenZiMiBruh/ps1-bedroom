@@ -215,6 +215,12 @@ class App : GLSurfaceView.Renderer {
     private var gta3d: Gta3d? = null
     /** The 3D-era GTA games render a chase-cam drive into a texture that the TV shows (only while one is playing). */
     private fun updateGtaTvFeed(t: Float) {
+        if (ytActive && !tv.bedroomTvOn) {
+            ytActive = false
+            tv.useFeed(null)
+            hud?.runUi { hud?.yt?.stop(true) }
+            return
+        }
         val game = library.currentGame()
         val active = tv.bedroomTvOn && tv.bedroomTvChannel == Tv.PS1_TV_CHANNEL && game.template == "gta3d" && ps1.phase(t) == "game"
         if (active) {
@@ -225,7 +231,7 @@ class App : GLSurfaceView.Renderer {
         } else {
             // YouTube plays on the TV's own screen (the player draws into the feed's texture), unless it's full screen
             val f = ytFeed
-            if (ytActive && f != null && hud?.yt?.isFull != true) { f.update(); tv.useFeed(f.rt.texture) } else tv.useFeed(null)
+            if (ytActive && tv.bedroomTvOn && f != null && hud?.yt?.isFull != true) { f.update(); tv.useFeed(f.rt.texture) } else tv.useFeed(null)
         }
     }
     /** YouTube's texture on the TV (made on the GL thread the first time a video plays). */
@@ -331,6 +337,9 @@ class App : GLSurfaceView.Renderer {
             myMusic.onChanged = { hud?.refreshMenu(); hud?.refreshBoombox(); publishMedia() }
             scene.add(alarm.light)
             tv.tempText = { settings.formatTemp(settings.currentTempC()) }
+            exterior.tempReadout = { settings.formatTemp(settings.currentTempC()) }
+            exterior.cityReadout = { if (settings.weatherMode == "live") settings.cityName else "" }
+            exterior.nowPlayingReadout = { if (ps1.ps1On) library.currentGame().title.uppercase() else "PS1 BEDROOM" }
             surprises = Surprises(this, alarm.context); surprises.build()
             consoles = Consoles(room, ps1); consoles.build(); ps1.consoles = consoles; consoles.toast = { toast(it) }
             jasper.onPet = { achievements.petted() }
@@ -338,6 +347,7 @@ class App : GLSurfaceView.Renderer {
             myMusic.load()
             furniture.photoFor = { posterPhotoFor(it) }; extras.photoFor = { posterPhotoFor(it) }   // (before restore: a saved photo poster needs it)
             settings.restore()   // the HTML's applySavedSettings, once everything exists
+            exterior.markWeatherDirty()
             ps1.sfx = { sound.sfx(it) }; ps1.stopBootSound = { sound.stopPs1BootSound() }; library.sfx = { sound.sfx(it) }
             env.envHooks += { sound.updateLayered() }
             weatherFx.onThunder = { sound.thunderclap() }
@@ -368,6 +378,7 @@ class App : GLSurfaceView.Renderer {
         if (built) settings.heartbeat()
         if (built) { sound.updateListener(); sound.periodic(lastT.coerceAtLeast(0f)); sound.tick() }
         applyInput()
+        applyController(dt)
         handleTaps()
         env.tick(System.currentTimeMillis())
         if (debugPresetStep) { debugPresetStep = false; debugPreset = (debugPreset + 1) % env.TIME_PRESETS.size; env.setTimePreset(env.TIME_PRESETS[debugPreset].first) }
@@ -442,12 +453,11 @@ class App : GLSurfaceView.Renderer {
     private var perfLevel = 0
     var aoBase = 0.8f
     var marchSteps = 14
-    private fun effectiveRes() = maxOf(120, (resShort * floatArrayOf(1f, 1f, 0.8f, 0.65f)[perfLevel]).toInt())
+    private fun effectiveRes() = maxOf(120, (resShort * floatArrayOf(1f, 1f, 0.85f, 0.7f)[perfLevel]).toInt())
     fun onThermal(status: Int) {
         wantedPerfLevel = when {
-            status >= android.os.PowerManager.THERMAL_STATUS_SEVERE -> 3
-            status >= android.os.PowerManager.THERMAL_STATUS_MODERATE -> 2
-            status >= android.os.PowerManager.THERMAL_STATUS_LIGHT -> 1
+            status >= android.os.PowerManager.THERMAL_STATUS_CRITICAL -> 2
+            status >= android.os.PowerManager.THERMAL_STATUS_SEVERE -> 1
             else -> 0
         }
     }
@@ -465,6 +475,7 @@ class App : GLSurfaceView.Renderer {
     private val taps = ArrayList<FloatArray>()
     var fanLightOn = false; private set
     fun onTap(x: Float, y: Float, w: Float, h: Float) = synchronized(lock) { taps += floatArrayOf(x / w * 2 - 1, -(y / h) * 2 + 1) }
+    fun tapCenter() = onTap(surfaceW * 0.5f, surfaceH * 0.5f, surfaceW.toFloat(), surfaceH.toFloat())
     private fun handleTaps() {
         val list = synchronized(lock) { if (taps.isEmpty()) return; ArrayList(taps).also { taps.clear() } }
         for (p in list) {
@@ -492,7 +503,7 @@ class App : GLSurfaceView.Renderer {
             "string" -> decor.cycleStringLights()
             "dog" -> jasper.petDog(lastT)
             "tv" -> if (ytActive) hud?.yt?.let { yt -> hud?.runUi { yt.togglePlay() } } else tv.cycleBedroomTvChannel(lastT)
-            "tvPower" -> tv.toggleBedroomTv(lastT)
+            "tvPower" -> tvPower()
             "ps1Power" -> ps1.powerToggle(lastT)
             "ps1Reset" -> ps1.resetPress(lastT)
             "ps1Open" -> ps1.lidToggle(lastT, true)
@@ -547,7 +558,14 @@ class App : GLSurfaceView.Renderer {
     fun pullChair() = player.moveChair(1) { setPlayerMode("orbit") }
     fun putBackHeld() = library.putBackHeld()
     fun tvNextChannel() = tv.cycleBedroomTvChannel(lastT)
-    fun tvPower() = tv.toggleBedroomTv(lastT)
+    fun tvPower() {
+        tv.toggleBedroomTv(lastT)
+        if (!tv.bedroomTvOn && ytActive) {
+            ytActive = false
+            tv.useFeed(null)
+            hud?.runUi { hud?.yt?.stop(true) }
+        }
+    }
     fun monitorNextChannel() = toast(monitor.cycleChannel())
     /** Tap the monitor: sit down at the desk and use the PC (PcDesktop). */
     fun openPc() {
@@ -589,6 +607,47 @@ class App : GLSurfaceView.Renderer {
     fun debugNextPlace() { debugPlaceStep = true }
     private var debugPreset = -1
     fun debugNextTimePreset() { debugPresetStep = true }
+
+    // ---- Controller / Gamepad state (from MainActivity) ----
+    @Volatile var padLx = 0f
+    @Volatile var padLy = 0f
+    @Volatile var padRx = 0f
+    @Volatile var padRy = 0f
+    @Volatile var padZoom = 0f
+    private var padWasMoving = false
+    private fun applyController(dt: Float) {
+        if (dt <= 0f) return
+        when (player.mode) {
+            "walk" -> {
+                if (padLx != 0f || padLy != 0f) {
+                    player.stickX = padLx
+                    player.stickY = -padLy
+                    padWasMoving = true
+                    hud?.updateStickVisual(padLx, -padLy)
+                } else if (padWasMoving) {
+                    player.stickX = 0f
+                    player.stickY = 0f
+                    padWasMoving = false
+                    hud?.updateStickVisual(0f, 0f)
+                }
+                if (padRx != 0f || padRy != 0f) player.look(padRx * dt * 420f, padRy * dt * 310f)
+                if (padZoom != 0f) player.pinchZoom(1f + padZoom * dt * 1.4f)
+            }
+            "chair", "bed" -> {
+                if (padWasMoving) { padWasMoving = false; hud?.updateStickVisual(0f, 0f) }
+                val lx = (padLx + padRx).coerceIn(-1f, 1f)
+                val ly = (padLy + padRy).coerceIn(-1f, 1f)
+                if (lx != 0f || ly != 0f) player.look(lx * dt * 400f, ly * dt * 300f)
+                if (padZoom != 0f) player.pinchZoom(1f + padZoom * dt * 1.4f)
+            }
+            else -> {
+                if (padWasMoving) { padWasMoving = false; hud?.updateStickVisual(0f, 0f) }
+                if (padLx != 0f || padLy != 0f) controls.panBy(-padLx * dt * 380f * density, -padLy * dt * 380f * density, viewHeight)
+                if (padRx != 0f || padRy != 0f) controls.rotateBy(padRx * dt * 460f * density, padRy * dt * 340f * density, viewHeight)
+                if (padZoom != 0f) controls.dollyBy(1f + padZoom * dt * 1.4f)
+            }
+        }
+    }
 
     // ---- input from the UI thread ----
     private val lock = Any()

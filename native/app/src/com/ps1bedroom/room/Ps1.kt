@@ -35,6 +35,7 @@ class Ps1(private val room: Room, private val tv: Tv) {
     lateinit var discHome: com.ps1bedroom.room.engine.Vec3
     lateinit var library: GameLibrary
     private lateinit var ps1LedMat: Material
+    lateinit var matCable: Material; private set
     private class Button(val mesh: Mesh, val baseY: Float) { var press = 0f }
     private val buttons = HashMap<String, Button>()
     var ps1On = false; private set
@@ -150,24 +151,45 @@ class Ps1(private val room: Room, private val tv: Tv) {
         val dpadH = Mesh(Geo.box(0.048f, 0.012f, 0.016f), matDarkPlastic); dpadH.position.set(-0.085f, 0.022f, -0.005f); padGroup.add(dpadH)
         val dpadV = Mesh(Geo.box(0.016f, 0.012f, 0.048f), matDarkPlastic); dpadV.position.set(-0.085f, 0.022f, -0.005f); padGroup.add(dpadV)
         // Triangle green, circle red, cross blue, square pink
-        for ((bx, bz, bcol) in arrayOf(Triple(0.085f, -0.024f, 0x22c55e), Triple(0.106f, -0.004f, 0xef4444), Triple(0.085f, 0.016f, 0x3b82f6), Triple(0.064f, -0.004f, 0xec4899))) {
+        for ((bx, bz, bcol) in arrayOf(Triple(0.085f, -0.024f, 0x22c55e), Triple(0.106f, -0.004f, 0xef4444), Triple(0.085f, -0.016f * -1f, 0x3b82f6), Triple(0.064f, -0.004f, 0xec4899))) {
             val btn = Mesh(Geo.cylinder(0.008f, 0.008f, 0.012f, 6), PS1.material(color = bcol))
             btn.position.set(bx, 0.022f, bz); padGroup.add(btn)
         }
+        // Strain-relief collar on the back center of the DualShock where the cord enters
+        val padCollar = Mesh(Geo.cylinder(0.011f, 0.009f, 0.022f, 8), matDarkPlastic)
+        padCollar.rotation.x = (PI / 2).toFloat(); padCollar.position.set(0f, 0.002f, -0.064f); padGroup.add(padCollar)
         // The case for the disc that's in the console, lying face-up beside it
         val ps1Case = Games.buildPs1JewelCase(Games.BANDICOOT_RUSH, matJewelPlastic)
         ps1Case.rotation.set((-PI / 2).toFloat(), 0f, 0.28f)
         ps1Case.position.set(-0.44f, 0.011f, 0.14f)
         ps1Group.add(ps1Case); ps1CaseRef = ps1Case
         library.registerFloorCase(ps1Case)
-        val padCable = Mesh(GeoCurves.tube(CatmullRomCurve3(listOf(doubleArrayOf(-0.12, 0.047, 0.222), doubleArrayOf(0.04, 0.012, 0.35),
-            doubleArrayOf(0.26, 0.012, 0.31), doubleArrayOf(0.39, 0.039, 0.20))), 12, 0.009f, 5), matDarkPlastic)
+        // Front controller cable: from Port 1 plug (-0.12, 0.047, 0.205) across the rug right into the DualShock's back collar (0.443, 0.042, 0.181)
+        val padCable = Mesh(GeoCurves.tube(CatmullRomCurve3(listOf(
+            doubleArrayOf(-0.12, 0.047, 0.215),
+            doubleArrayOf(-0.10, 0.012, 0.28),
+            doubleArrayOf(0.06, 0.009, 0.34),
+            doubleArrayOf(0.28, 0.009, 0.30),
+            doubleArrayOf(0.415, 0.024, 0.225),
+            doubleArrayOf(0.443, 0.042, 0.181)
+        )), 18, 0.0085f, 6), matDarkPlastic)
         padCable.castShadow = true; ps1Group.add(padCable)
         // Every console / controller part shades the same way
         ps1Group.traverse { if (it is Mesh) it.receiveShadow = true }
 
         for (c in ps1Group.children) if (c !== ps1CaseRef && c !== ps1Disc) modelParts += c
         buildHookups()
+        // PS1 rear power & A/V leads from the rear plugs down to the floor hookup point
+        for (x in doubleArrayOf(-0.13, 0.19)) {
+            val lead = Mesh(GeoCurves.tube(CatmullRomCurve3(listOf(
+                doubleArrayOf(x, 0.055, -0.208),
+                doubleArrayOf(x, 0.032, -0.265),
+                doubleArrayOf(x, 0.007, -0.34),
+                doubleArrayOf(x, 0.007, -0.38)
+            )), 14, 0.009f, 6), matCable)
+            lead.castShadow = true; lead.receiveShadow = true
+            ps1Group.add(lead); modelParts += lead
+        }
     }
     private data class B(val name: String, val x: Float, val z: Float, val r: Float, val tag: String)
 
@@ -187,6 +209,7 @@ class Ps1(private val room: Room, private val tv: Tv) {
         fun floorAt(x: Double, z: Double, r: Double) = restOnFloor(doubleArrayOf(x, 0.0, z), r)
         PS1.syncGrime(222)
         val matCable = PS1.material(color = 0x15171c)
+        this.matCable = matCable
         fun addCable(points: List<DoubleArray>, radius: Float = 0.011f, mat: Material = matCable): Mesh {
             val mesh = Mesh(GeoCurves.tube(CatmullRomCurve3(points), max(24, points.size * 12), radius, 6), mat)
             mesh.castShadow = true; scene.add(mesh); return mesh
@@ -209,12 +232,12 @@ class Ps1(private val room: Room, private val tv: Tv) {
         // TV power cord: out of the back of the set, down behind the cart, along the floor to the strip
         addCable(listOf(tvLocal(0.12, 1.2, -0.39), tvLocal(0.12, 1.0, -0.44), tvLocal(0.12, 0.35, -0.42),
             restOnFloor(tvLocal(0.12, 0.0, -0.5), 0.01), floorAt(-3.15, 0.5, 0.01), floorAt(-3.36, 0.55, 0.01), doubleArrayOf(-3.385, 0.072, 0.55), stripPlug(0.55)), 0.01f)
-        // PS1 power cord: from AC IN at the back, around the cart's end, to the strip
-        addCable(listOf(ps1Local(0.19, 0.055, -0.215), restOnFloor(ps1Local(0.19, 0.0, -0.32), 0.009),
+        // Console power cord: from behind the console (-0.35 in console space), around the cart's end, to the strip
+        addCable(listOf(restOnFloor(ps1Local(0.19, 0.0, -0.35), 0.009), restOnFloor(ps1Local(0.19, 0.0, -0.38), 0.009),
             floorAt(-1.95, 0.08, 0.009), floorAt(-2.7, 0.02, 0.009), floorAt(-3.2, 0.2, 0.009), floorAt(-3.36, 0.37, 0.009), doubleArrayOf(-3.385, 0.072, 0.37), stripPlug(0.37)), 0.009f)
-        // A/V cable: AV MULTI OUT across the rug, up the front of the cart, splitting into yellow / white / red plugs
+        // A/V cable: from behind the console (-0.35 in console space) across the rug, up the front of the cart, splitting into yellow / white / red plugs
         val avSplit = tvLocal(0.135, 0.885, 0.385)
-        addCable(listOf(ps1Local(-0.13, 0.055, -0.215), restOnFloor(ps1Local(-0.13, 0.0, -0.33), 0.009),
+        addCable(listOf(restOnFloor(ps1Local(-0.13, 0.0, -0.35), 0.009), restOnFloor(ps1Local(-0.13, 0.0, -0.38), 0.009),
             floorAt(-1.86, 0.5, 0.009), restOnFloor(tvLocal(0.135, 0.0, 0.43), 0.009),
             tvLocal(0.135, 0.3, 0.41), tvLocal(0.135, 0.7, 0.395), avSplit), 0.009f)
         for ((jx, col) in listOf(0.10 to 0xfacc15, 0.135 to 0xf8fafc, 0.17 to 0xdc2626)) {

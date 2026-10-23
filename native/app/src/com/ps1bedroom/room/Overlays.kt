@@ -182,7 +182,7 @@ class Overlays(private val act: Activity, private val root: FrameLayout, private
         tutNext.setOnClickListener { if (tutStep < TUTORIAL.size - 1) { tutStep++; renderTutorial() } else endTutorial() }
         actions.addView(tutNext)
         box.addView(actions)
-        tutOverlay.addView(box, FrameLayout.LayoutParams(minOf(dpi(420f), (act.resources.displayMetrics.widthPixels - dpi(28f))), FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.CENTER))
+        tutOverlay.addView(box, FrameLayout.LayoutParams(minOf(dpi(420f), (act.resources.displayMetrics.widthPixels - dpi(28f))), FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply { bottomMargin = dpi(28f) })
         root.addView(tutOverlay, MATCH)
         T.listeners += { restyle() }
     }
@@ -316,6 +316,13 @@ class Overlays(private val act: Activity, private val root: FrameLayout, private
     fun back(): Boolean {
         if (tutorialOpen) { endTutorial(); return true }
         if (photoMode) { exitPhotoMode(); return true }
+        return false
+    }
+    /** Controller A / Start button: advances the PS1 boot screen, tutorial, or takes a photo in photo mode. */
+    fun onControllerConfirm(): Boolean {
+        if (bootShowing) { startFromBoot(); return true }
+        if (tutorialOpen) { tutNext.performClick(); return true }
+        if (photoMode) { takePhoto(); return true }
         return false
     }
 }

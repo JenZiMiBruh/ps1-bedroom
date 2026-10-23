@@ -16,10 +16,10 @@ import android.view.Choreographer
  */
 class FramePacer(context: Context, private val view: GLSurfaceView, private val app: App) : Choreographer.FrameCallback {
     @Volatile var baseCap = 60
-    @Volatile var ecoIdle = true
+    @Volatile var ecoIdle = false
     @Volatile var saver = false
     @Volatile var lastInteractMs = SystemClock.uptimeMillis()
-    private var lastFrameMs = 0L
+    private var lastFrameNs = 0L
     private var running = false
     private val power = context.getSystemService(Context.POWER_SERVICE) as PowerManager
     @Volatile private var thermal = 0
@@ -53,24 +53,23 @@ class FramePacer(context: Context, private val view: GLSurfaceView, private val 
 
     fun currentCap(now: Long): Int {
         var cap = baseCap
-        if (osSaver) cap = minOf(cap, 30)
+        if (osSaver && saver) cap = minOf(cap, 30)
         if (ecoIdle) {
             val idle = now - lastInteractMs
-            if (idle > 120_000) cap = minOf(cap, if (saver) 15 else 20)
-            else if (idle > 12_000) cap = minOf(cap, if (saver) 20 else 30)
+            if (idle > 600_000) cap = minOf(cap, if (saver) 20 else 24)
+            else if (idle > 180_000) cap = minOf(cap, if (saver) 24 else 30)
         }
-        // Warm phone: back off before Android has to throttle us
+        // Only back off on genuinely hot devices (SEVERE / CRITICAL), not normal warm operation (LIGHT / MODERATE)
         if (Build.VERSION.SDK_INT >= 29) {
             when {
-                thermal >= PowerManager.THERMAL_STATUS_SEVERE -> cap = minOf(cap, 15)
-                thermal >= PowerManager.THERMAL_STATUS_MODERATE -> cap = minOf(cap, 24)
-                thermal >= PowerManager.THERMAL_STATUS_LIGHT -> cap = minOf(cap, 30)
+                thermal >= PowerManager.THERMAL_STATUS_CRITICAL -> cap = minOf(cap, 24)
+                thermal >= PowerManager.THERMAL_STATUS_SEVERE -> cap = minOf(cap, 30)
             }
         }
         return cap
     }
 
-    fun start() { hintedCap = -1; if (!running) { running = true; Choreographer.getInstance().postFrameCallback(this) } }
+    fun start() { hintedCap = -1; lastFrameNs = 0L; if (!running) { running = true; Choreographer.getInstance().postFrameCallback(this) } }
     fun stop() { running = false; Choreographer.getInstance().removeFrameCallback(this) }
 
     override fun doFrame(frameTimeNanos: Long) {
@@ -78,9 +77,10 @@ class FramePacer(context: Context, private val view: GLSurfaceView, private val 
         val now = SystemClock.uptimeMillis()
         val cap = currentCap(now)
         hintFrameRate(cap)
-        // same test as the HTML: draw when at least one frame interval (minus 2 ms of slack) has passed
-        if (now - lastFrameMs >= 1000 / cap - 2) {
-            lastFrameMs = now
+        val intervalNs = 1_000_000_000L / maxOf(1, cap)
+        // Use hardware vsync frameTimeNanos with 5 ms slack so 60 fps never skips every other vsync from UI jitter
+        if (frameTimeNanos - lastFrameNs >= intervalNs - 5_000_000L) {
+            lastFrameNs = frameTimeNanos
             view.requestRender()
         }
         Choreographer.getInstance().postFrameCallback(this)

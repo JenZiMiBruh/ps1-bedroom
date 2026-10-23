@@ -75,9 +75,13 @@ class Consoles(private val room: Room, private val ps1: Ps1) {
      * grips' undersides at y = 0.002), plus each generation's own parts: shoulder buttons, START / SELECT or SHARE /
      * OPTIONS, the PS button, the DualShock 4's touchpad and light bar, the DualSense's two-tone body and lights.
      */
-    private fun pad(g: Group, kind: String, x: Float, z: Float, rotY: Float, body: Material, grips: Material, dark: Material, light: Material? = null): Group {
+    private fun pad(g: Group, kind: String, x: Float, z: Float, rotY: Float, body: Material, grips: Material, dark: Material, light: Material? = null,
+                    portX: Float = -0.19f, portY: Float = 0.015f, portZ: Float = 0.16f): Group {
         val p = Group(); p.position.set(x, 0.04f, z); p.rotation.y = rotY; g.add(p)
         val bridge = Mesh(Geo.box(0.24f, 0.038f, 0.115f), body); bridge.castShadow = true; p.add(bridge); room.registerInteractable(bridge, "ps1Pad")
+        // Strain-relief / USB plug collar on the center-back of the controller
+        val collar = Mesh(Geo.cylinder(0.010f, 0.008f, 0.022f, 8), dark)
+        collar.rotation.x = (PI / 2).toFloat(); collar.position.set(0f, 0.002f, -0.064f); collar.castShadow = true; p.add(collar)
         for (cx in floatArrayOf(-0.085f, 0.085f)) {
             val c = Mesh(Geo.cylinder(0.062f, 0.058f, 0.04f, 12), body); c.position.set(cx, 0.002f, 0f); c.castShadow = true; p.add(c); room.registerInteractable(c, "ps1Pad")
             val grip = Mesh(Geo.cylinder(0.034f, 0.022f, 0.135f, 8), grips); grip.rotation.x = (PI / 2).toFloat(); grip.rotation.z = if (cx < 0) 0.24f else -0.24f
@@ -118,11 +122,36 @@ class Consoles(private val room: Room, private val ps1: Ps1) {
                 box(p, 0.006f, 0.005f, 0.012f, grips, -0.05f, 0.0225f, -0.03f); box(p, 0.006f, 0.005f, 0.012f, grips, 0.05f, 0.0225f, -0.03f)
             }
         }
+        // Front controller / USB cord from the console's front port right into the controller's back collar
+        val backDx = -sin(rotY.toDouble()); val backDz = -cos(rotY.toDouble())
+        val endX = x + backDx * 0.064; val endZ = z + backDz * 0.064
+        val approachX = x + backDx * 0.125; val approachZ = z + backDz * 0.125
+        cable(g, ps1.matCable,
+            doubleArrayOf(portX.toDouble(), portY.toDouble(), portZ.toDouble()),
+            doubleArrayOf(portX.toDouble() + 0.02, 0.009, portZ.toDouble() + 0.085),
+            doubleArrayOf((portX + approachX) * 0.5, 0.008, max(portZ.toDouble() + 0.11, endZ + 0.06)),
+            doubleArrayOf(approachX, 0.018, approachZ),
+            doubleArrayOf(endX, 0.042, endZ)
+        )
         return p
     }
-    /** Plugs on the back for the room's A/V and power cables (they come in at the PS1's rear ports). */
+    /** Plugs on the back for the room's A/V and power cables, with smooth leads down to the floor hookup points. */
     private fun rearPlugs(g: Group, rearZ: Float, dark: Material, y: Float = 0.055f) {
-        for (x in floatArrayOf(-0.13f, 0.19f)) box(g, 0.06f, 0.022f, 0.03f, dark, x, y, rearZ - 0.0145f)
+        for (x in floatArrayOf(-0.13f, 0.19f)) {
+            box(g, 0.056f, 0.020f, 0.028f, dark, x, y, rearZ - 0.013f)
+            val xd = x.toDouble()
+            val startZ = rearZ.toDouble() - 0.022
+            val midZ = (startZ + -0.34) * 0.5
+            val midY = (y.toDouble() + 0.007) * 0.45
+            val lead = Mesh(GeoCurves.tube(CatmullRomCurve3(listOf(
+                doubleArrayOf(xd, y.toDouble(), startZ),
+                doubleArrayOf(xd, midY, midZ),
+                doubleArrayOf(xd, 0.007, -0.34),
+                doubleArrayOf(xd, 0.007, -0.38)
+            )), 14, 0.009f, 6), ps1.matCable)
+            lead.castShadow = true; lead.receiveShadow = true
+            g.add(lead)
+        }
     }
     private fun feet(g: Group, hw: Float, hd: Float, mat: Material) {
         for (sx in intArrayOf(-1, 1)) for (sz in intArrayOf(-1, 1)) box(g, 0.04f, 0.006f, 0.04f, mat, sx * (hw - 0.04f), 0.003f, sz * (hd - 0.04f))
@@ -166,16 +195,12 @@ class Consoles(private val room: Room, private val ps1: Ps1) {
             for (i in 0 until 5) box(g, 0.09f, 0.002f, 0.003f, recess, 0.17f, 0.007f + i * 0.004f, 0.1495f)
             // side vents and the rear; the room's A/V and power cables come down into the ports on the back
             for (i in 0 until 4) box(g, 0.003f, 0.003f, 0.1f, recess, 0.2265f, 0.008f + i * 0.004f, -0.04f)
-            for (x in floatArrayOf(-0.13f, 0.19f)) {
-                box(g, 0.05f, 0.014f, 0.02f, dark, x, 0.014f, -0.157f)
-                cable(g, dark, doubleArrayOf(x.toDouble(), 0.055, -0.2), doubleArrayOf(x.toDouble(), 0.03, -0.182), doubleArrayOf(x.toDouble(), 0.016, -0.166))
-            }
+            rearPlugs(g, -0.148f, dark, 0.014f)
             // DualShock 2 plugged into port 1
             ps2PadLed = PS1.material(color = 0x3f1010, emissive = 0xef4444, emissiveIntensity = 0f)
             val padBody = PS1.material(color = 0x1d1f24)
-            pad(g, "ps2", 0.3f, 0.3f, -0.38f, padBody, padBody, dark, ps2PadLed)
-            box(g, 0.036f, 0.01f, 0.02f, dark, -0.19f, 0.009f, 0.16f)
-            cable(g, dark, doubleArrayOf(-0.19, 0.009, 0.17), doubleArrayOf(-0.14, 0.009, 0.28), doubleArrayOf(0.08, 0.009, 0.33), doubleArrayOf(0.25, 0.03, 0.25))
+            box(g, 0.038f, 0.010f, 0.024f, dark, -0.19f, 0.009f, 0.160f)
+            pad(g, "ps2", 0.3f, 0.3f, -0.38f, padBody, padBody, dark, ps2PadLed, portX = -0.19f, portY = 0.009f, portZ = 0.168f)
         }
 
         // ================= PS3 (original, CECHA): 325 x 98 x 274 mm -> 0.650 x 0.164 x 0.548 =================
@@ -221,12 +246,14 @@ class Consoles(private val room: Room, private val ps1: Ps1) {
                 c.fillStyle = "#c0c5cd"; c.font = "10px serif"; c.textAlign = "center"; c.fillText("PLAYSTATION 3", 0, 0); c.restore() }
             val lx = 0.1f
             part(g, Geo.box(0.02f, 0.002f, 0.3f), word, lx, 0.004f + Ps3Shell.topY(lx, 0f) + 0.0025f, 0f).rotation.z = kotlin.math.atan(Ps3Shell.slopeX(lx, 0f))
-            // fine vents down the right side toward the back, and the room's plugs
+            // fine vents down the right side toward the back, front USB plug, and the room's rear plugs
             for (i in 0 until 17) box(g, 0.003f, 0.05f, 0.004f, black, 0.3255f, 0.05f, -0.23f + i * 0.011f)
-            rearPlugs(g, -0.274f, dark)
+            for (ux in floatArrayOf(-0.22f, -0.18f)) box(g, 0.018f, 0.006f, 0.004f, black, ux, 0.020f, f + 0.001f)
+            box(g, 0.022f, 0.009f, 0.022f, dark, -0.18f, 0.020f, f + 0.010f)
+            rearPlugs(g, -0.274f, dark, 0.042f)
             ps3PadLeds = PS1.material(color = 0x3f1010, emissive = 0xef4444, emissiveIntensity = 0f)
             val padBody = PS1.material(color = 0x101114)
-            pad(g, "ps3", 0.33f, 0.46f, -0.3f, padBody, padBody, dark, ps3PadLeds)
+            pad(g, "ps3", 0.33f, 0.46f, -0.3f, padBody, padBody, dark, ps3PadLeds, portX = -0.18f, portY = 0.020f, portZ = f + 0.018f)
         }
 
         // ================= PS4 Slim (CUH-2000): 265 x 39 x 288 mm -> 0.530 x 0.065 x 0.576 =================
@@ -253,11 +280,12 @@ class Consoles(private val room: Room, private val ps1: Ps1) {
             box(g, 0.012f, 0.004f, 0.005f, PS1.material(color = 0x2a2c33), -0.235f, 0.028f, 0.2715f, "ps1Power")
             box(g, 0.012f, 0.004f, 0.005f, PS1.material(color = 0x2a2c33), 0.2f, 0.028f, 0.2715f, "ps1Open")
             for (ux in floatArrayOf(-0.21f, -0.185f)) box(g, 0.018f, 0.004f, 0.004f, PS1.material(color = 0x000000), ux, 0.028f, 0.271f)
+            box(g, 0.020f, 0.008f, 0.022f, dark, -0.185f, 0.028f, 0.281f)
             for (i in 0 until 8) box(g, 0.04f, 0.014f, 0.003f, recess, -0.2f + i * 0.057f, 0.047f, -0.2895f)
-            rearPlugs(g, -0.288f, dark, 0.047f)
+            rearPlugs(g, -0.288f, dark, 0.016f)
             ps4PadBar = PS1.material(color = 0x0b0b10, emissive = 0x3b82f6, emissiveIntensity = 0f)
             val padBody = PS1.material(color = 0x17181d)
-            pad(g, "ps4", 0.28f, 0.45f, -0.3f, padBody, padBody, dark, ps4PadBar)
+            pad(g, "ps4", 0.28f, 0.45f, -0.3f, padBody, padBody, dark, ps4PadBar, portX = -0.185f, portY = 0.028f, portZ = 0.290f)
         }
 
         // ================= PS5 Slim (lying down): 358 x 80 x 216 mm -> 0.716 x 0.134 x 0.432 =================
@@ -279,13 +307,14 @@ class Consoles(private val room: Room, private val ps1: Ps1) {
             box(g, 0.24f, 0.005f, 0.004f, PS1.material(color = 0x000000), 0.18f, 0.04f, 0.2175f)
             box(g, 0.02f, 0.005f, 0.005f, PS1.material(color = 0xc3c7cf), 0.04f, 0.04f, 0.218f, "ps1Open")
             for (ux in floatArrayOf(-0.3f, -0.28f)) box(g, 0.012f, 0.005f, 0.004f, PS1.material(color = 0x000000), ux, 0.081f, 0.2015f)
+            box(g, 0.016f, 0.008f, 0.020f, dark, -0.28f, 0.081f, 0.210f)
             box(g, 0.022f, 0.006f, 0.005f, PS1.material(color = 0x2a2c33), -0.25f, 0.081f, 0.202f, "ps1Power")
             ps5Light = PS1.material(color = 0x0b1220, emissive = 0x60a5fa, emissiveIntensity = 0f)
             box(g, 0.64f, 0.003f, 0.004f, ps5Light, 0f, 0.098f, 0.2015f); box(g, 0.64f, 0.003f, 0.004f, ps5Light, 0f, 0.063f, 0.2015f)
             for (i in 0 until 10) box(g, 0.004f, 0.036f, 0.008f, recess, -0.27f + i * 0.06f, 0.081f, -0.202f)
-            rearPlugs(g, -0.2f, dark)
+            rearPlugs(g, -0.216f, dark, 0.032f)
             ps5PadLight = PS1.material(color = 0x0b1220, emissive = 0x60a5fa, emissiveIntensity = 0f)
-            pad(g, "ps5", 0.33f, 0.4f, -0.3f, PS1.material(color = 0x15161a), glossW, PS1.material(color = 0x1d1e23), ps5PadLight)
+            pad(g, "ps5", 0.33f, 0.4f, -0.3f, PS1.material(color = 0x15161a), glossW, PS1.material(color = 0x1d1e23), ps5PadLight, portX = -0.28f, portY = 0.081f, portZ = 0.218f)
         }
         for (g in groups.values) g.traverse { if (it is Mesh) it.receiveShadow = true }
     }

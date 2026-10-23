@@ -107,6 +107,7 @@ class YouTubeTv(private val act: Activity, private val root: FrameLayout, privat
         fun btn(t: String, red: Boolean, fn: () -> Unit) = TextView(act).apply {
             text = t; typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD); setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
             setPadding(dpi(10f), dpi(6f), dpi(10f), dpi(6f))
+            isFocusable = true
             setOnClickListener { fn() }
             barBtns += this to red
         }
@@ -118,10 +119,14 @@ class YouTubeTv(private val act: Activity, private val root: FrameLayout, privat
                 when (e.actionMasked) {
                     MotionEvent.ACTION_DOWN -> { sx = e.rawX; sy = e.rawY; tx = bar.translationX; ty = bar.translationY }
                     MotionEvent.ACTION_MOVE -> {
-                        val maxL = -(root.width - bar.width - dpi(20f)).toFloat(); val maxD = (root.height - bar.height - dpi(80f)).toFloat()
-                        bar.translationX = (tx + e.rawX - sx).coerceIn(maxL, 0f); bar.translationY = (ty + e.rawY - sy).coerceIn(-dpi(50f).toFloat(), maxD)
+                        bar.translationX = tx + e.rawX - sx
+                        bar.translationY = ty + e.rawY - sy
+                        clampBar()
                     }
-                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> prefs.edit().putFloat("ytBarX", bar.translationX).putFloat("ytBarY", bar.translationY).apply()
+                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                        clampBar()
+                        prefs.edit().putFloat("ytBarX", bar.translationX).putFloat("ytBarY", bar.translationY).apply()
+                    }
                 }
                 return true
             }
@@ -133,7 +138,7 @@ class YouTubeTv(private val act: Activity, private val root: FrameLayout, privat
         main.addView(btn("📺 YouTube", false) { openDialog() }, LinearLayout.LayoutParams(-2, -2).apply { marginStart = dpi(4f) })
         fullBtn = btn("⛶ Full", false) { setFull(!isFull) }
         main.addView(fullBtn, LinearLayout.LayoutParams(-2, -2).apply { marginStart = dpi(4f) })
-        main.addView(btn("✕", true) { stop() }, LinearLayout.LayoutParams(-2, -2).apply { marginStart = dpi(4f) })
+        main.addView(btn("✕ Stop", true) { stop() }, LinearLayout.LayoutParams(-2, -2).apply { marginStart = dpi(4f) })
         bar.addView(main, LinearLayout.LayoutParams(-2, -2).apply { marginStart = dpi(4f) })
         lateinit var tuck: TextView
         tuck = btn("–", false) {
@@ -141,15 +146,33 @@ class YouTubeTv(private val act: Activity, private val root: FrameLayout, privat
             main.visibility = if (hide) View.GONE else View.VISIBLE
             tuck.text = if (hide) "📺" else "–"
             prefs.edit().putBoolean("ytBarTucked", hide).apply()
+            bar.post { clampBar() }
         }
         bar.addView(tuck, LinearLayout.LayoutParams(-2, -2).apply { marginStart = dpi(4f) })
         if (prefs.getBoolean("ytBarTucked", false)) { main.visibility = View.GONE; tuck.text = "📺" }
         bar.translationX = prefs.getFloat("ytBarX", 0f); bar.translationY = prefs.getFloat("ytBarY", 0f)
-        root.addView(bar, FrameLayout.LayoutParams(-2, -2, Gravity.TOP or Gravity.END).apply { topMargin = dpi(58f); marginEnd = dpi(10f) })
+        bar.elevation = dp(18f)
+        // Bottom-right thumb-friendly placement above the main dock, with automatic screen-bounds clamping
+        root.addView(bar, FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM or Gravity.END).apply { bottomMargin = dpi(114f); marginEnd = dpi(12f) })
+        root.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> bar.post { clampBar() } }
         buildDialog()
         root.addView(dialog, FrameLayout.LayoutParams(-1, -1))
         T.listeners += { restyle() }
         restyle()
+    }
+
+    /** Ensures the floating YouTube control bar can never drift or rotate off-screen. */
+    fun clampBar() {
+        val rw = root.width.takeIf { it > 0 } ?: act.resources.displayMetrics.widthPixels
+        val rh = root.height.takeIf { it > 0 } ?: act.resources.displayMetrics.heightPixels
+        val bw = bar.width.takeIf { it > 0 } ?: dpi(240f)
+        val bh = bar.height.takeIf { it > 0 } ?: dpi(42f)
+        val minTx = -(rw - bw - dpi(24f)).coerceAtLeast(0).toFloat()
+        val maxTx = 0f
+        val minTy = -(rh - bh - dpi(130f)).coerceAtLeast(0).toFloat()
+        val maxTy = dpi(48f).toFloat()
+        bar.translationX = bar.translationX.coerceIn(minTx, maxTx)
+        bar.translationY = bar.translationY.coerceIn(minTy, maxTy)
     }
 
     private fun buildDialog() {
@@ -190,7 +213,7 @@ class YouTubeTv(private val act: Activity, private val root: FrameLayout, privat
         dialogNote = tv("Plays through YouTube's own player and needs the internet. Some videos don't allow playing inside other apps; YouTube will say so. Searching opens YouTube: find a video, tap Share, and pick PS1 Bedroom (or copy the link and paste it here).", 11f, T.muted)
         dialogBox.addView(dialogNote, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dpi(8f) })
         val scroll = ScrollView(act).apply { addView(dialogBox) }
-        dialog.addView(scroll, FrameLayout.LayoutParams(minOf(dpi(520f), act.resources.displayMetrics.widthPixels - dpi(32f)), -2, Gravity.CENTER))
+        dialog.addView(scroll, FrameLayout.LayoutParams(minOf(dpi(520f), act.resources.displayMetrics.widthPixels - dpi(28f)), -2, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply { bottomMargin = dpi(24f) })
         dialog.setOnClickListener { closeDialog() }
     }
 
@@ -279,10 +302,13 @@ class YouTubeTv(private val act: Activity, private val root: FrameLayout, privat
         layer.visibility = View.VISIBLE; screen.visibility = View.VISIBLE
         screen.scaleX = 1f; screen.scaleY = 1f; screen.rotation = 0f; screen.translationX = 0f; screen.translationY = 0f
         playing = true
+        playBtn.text = "⏸"
         app.ensureYtFeed { s -> act.runOnUiThread { feedSurface = s; screen.removeCallbacks(pump); screen.postOnAnimation(pump) } }
         bar.visibility = View.VISIBLE
+        bar.bringToFront()
+        bar.post { clampBar() }
         closeDialog()
-        app.post { app.sound.updateLayered(); app.sfx("tvChannel") }   // the TV's own channel sound steps aside
+        app.post { app.sound.updateLayered(); app.sfx("tvChannel"); app.settings.changed() }   // the TV's own channel sound steps aside
         val rec = loadRecent().filter { !(it.optString("id") == (v.id ?: "") && it.optString("list") == (v.list ?: "")) }.toMutableList()
         rec.add(0, JSONObject().put("id", v.id ?: "").put("list", v.list ?: "").put("title", label ?: (if (v.id != null) "youtu.be/${v.id}" else "Playlist")))
         saveRecent(rec)
@@ -299,11 +325,21 @@ class YouTubeTv(private val act: Activity, private val root: FrameLayout, privat
     }
     fun playLink(text: String?) = play(parse(text))
     fun stop(quiet: Boolean = false) {
-        web?.let { screen.removeView(it); it.destroy() }; web = null
+        web?.let {
+            try { it.loadUrl("about:blank"); it.onPause() } catch (_: Exception) { }
+            screen.removeView(it)
+            it.destroy()
+        }
+        web = null
         app.ytActive = false
         setFull(false)
         layer.visibility = View.GONE; bar.visibility = View.GONE
-        app.post { app.sound.updateLayered(); if (!quiet) app.toast("📺 Back to ${Tv.TV_CHANNEL_NAMES[app.tv.bedroomTvChannel]}") }
+        app.post {
+            app.tv.useFeed(null)
+            app.sound.updateLayered()
+            app.settings.changed()
+            if (!quiet && app.tv.bedroomTvOn) app.toast("📺 Back to ${Tv.TV_CHANNEL_NAMES[app.tv.bedroomTvChannel]}")
+        }
     }
     /** Play / pause through the YouTube player's own API (the TV can't be touched like a screen). */
     var playing = true; private set

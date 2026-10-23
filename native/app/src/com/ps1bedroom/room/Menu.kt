@@ -62,9 +62,13 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
     private fun text(t: String, color: Int = TEXT, size: Float = 12f, bold: Boolean = true) = TextView(act).apply {
         text = t; setTextColor(color); typeface = if (bold) MONO else MONO_N; setTextSize(TypedValue.COMPLEX_UNIT_SP, size)
     }
-    private fun pill(t: String, color: Int) = text(t, color).apply { setPadding(dpi(11f), dpi(7f), dpi(14f), dpi(10f)); background = box(PANEL, LINE, 6f, 3f) }
+    private fun pill(t: String, color: Int) = text(t, color).apply {
+        setPadding(dpi(11f), dpi(7f), dpi(14f), dpi(10f))
+        background = box(PANEL, LINE, 6f, 3f)
+        isFocusable = true
+    }
 
-    // ================= Top bar =================
+    // ================= Bottom status bar (thumb-reachable above the dock; no top-of-screen UI) =================
     private val topbar = LinearLayout(act).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
     private val menuBtn = pill("☰ MENU", PINK)
     private val statusChip = LinearLayout(act).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
@@ -77,16 +81,18 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
     // ================= Sheet =================
     private val scrim = View(act).apply { setBackgroundColor(T.scrim); visibility = View.GONE }
     private val sheet = LinearLayout(act).apply { orientation = LinearLayout.VERTICAL; visibility = View.GONE; isClickable = true }
-    private val backBtn = pill("‹", TEXT)
-    private val closeBtn = pill("✕", TEXT)
+    private val backBtn = pill("‹ HOME", TEXT)
+    private val closeBtn = pill("✕ CLOSE", TEXT)
     private val diamond = View(act)
     private val titleView = text("PS1 BEDROOM ", PINK, 14f).apply { letterSpacing = 0.14f }
     private val versionSmall = text("", MUTED, 11f, false)
     private val subRow = LinearLayout(act).apply { orientation = LinearLayout.HORIZONTAL }
     private val subScroll = HorizontalScrollView(act).apply { isHorizontalScrollBarEnabled = false }
+    private val topDivider = View(act)
     private val divider = View(act)
     private val body = LinearLayout(act).apply { orientation = LinearLayout.VERTICAL }
     private val bodyScroll = ScrollView(act)
+    private var safeInsets = android.graphics.Rect()
 
     /** A category: its icon, its name and its sub-tabs (key to label). */
     private class Page(val icon: String, val title: String, val subs: List<Pair<String, String>>)
@@ -106,15 +112,18 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
     private var cityDraft = ""
 
     init {
-        // ---- Top bar: MENU, status chip, sleep / focus chips ----
-        menuBtn.setOnClickListener { open(null) }
+        // ---- Bottom status bar: quick-step status chip + active timer chips right above the bottom dock ----
+        menuBtn.setOnClickListener { if (isOpen) close() else open(null); app.hud?.refreshDockStates() }
+        menuBtn.visibility = View.GONE // Menu button is now right in the main bottom dock
         topbar.addView(menuBtn)
-        statusChip.setPadding(dpi(9f), dpi(6f), dpi(12f), dpi(9f))
+        statusChip.setPadding(dpi(10f), dpi(5f), dpi(12f), dpi(8f))
         fun sep() = text("·", SEP, 11f).apply { setPadding(dpi(5f), 0, dpi(5f), 0); sbSeps += this }
         for ((i, k) in listOf("time", "temp", "season", "weather", "place").withIndex()) {
             if (i > 0) statusChip.addView(sep())
-            val v = text("--", if (k == "time") CYAN else MUTED, 11f)
-            v.setPadding(dpi(3f), dpi(2f), dpi(3f), dpi(2f))
+            val v = text("--", if (k == "time") CYAN else MUTED, 11f).apply {
+                setPadding(dpi(4f), dpi(2f), dpi(4f), dpi(2f))
+                isFocusable = true
+            }
             // Tap: next option · hold: the World menu
             var held = false
             val holdRun = Runnable { held = true; open("world") }
@@ -126,38 +135,50 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
                 }
                 true
             }
+            v.setOnClickListener { post { s.stepStatus(k) } }
             sbViews[k] = v
             statusChip.addView(v)
         }
         statusChip.addView(sep().also { it.tag = "psep" })
         statusChip.addView(postureView)
         val chipScroll = HorizontalScrollView(act).apply { isHorizontalScrollBarEnabled = false; addView(statusChip) }
-        topbar.addView(chipScroll, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginStart = dpi(8f); weight = 0f })
-        topbar.addView(timerChip, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginStart = dpi(8f) })
-        topbar.addView(focusChip, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginStart = dpi(8f) })
-        root.addView(topbar, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.TOP).apply { setMargins(dpi(10f), dpi(10f), dpi(10f), 0) })
+        topbar.addView(chipScroll, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+        timerChip.setOnClickListener { open("timer") }
+        focusChip.setOnClickListener { go("timer", "focus"); if (!isOpen) open("timer") }
+        topbar.addView(timerChip, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginStart = dpi(6f) })
+        topbar.addView(focusChip, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginStart = dpi(6f) })
+        root.addView(topbar, FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply {
+            setMargins(dpi(8f), 0, dpi(8f), dpi(74f))
+        })
 
-        // ---- Menu sheet: header (back · title · close), sub-tabs, the page ----
-        scrim.setOnClickListener { close() }
+        // ---- Menu sheet: compact title at top, scrollable body in middle, thumb-friendly sub-tabs + Back/Close bar at the bottom ----
+        scrim.setOnClickListener { close(); app.hud?.refreshDockStates() }
         root.addView(scrim, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
-        val head = LinearLayout(act).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        backBtn.setOnClickListener { go("home") }
-        backBtn.contentDescription = "Back"
-        head.addView(backBtn, LinearLayout.LayoutParams(-2, -2).apply { marginEnd = dpi(10f) })
+        val titleBar = LinearLayout(act).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
         diamond.background = GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(Color.rgb(0xef, 0x44, 0x44), Color.rgb(0xfa, 0xcc, 0x15), Color.rgb(0x3b, 0x82, 0xf6), Color.rgb(0x22, 0xc5, 0x5e))).apply { setStroke(dpi(2f), Color.BLACK) }
         diamond.rotation = 45f
-        head.addView(diamond, LinearLayout.LayoutParams(dpi(16f), dpi(16f)).apply { marginEnd = dpi(10f); marginStart = dpi(2f) })
-        head.addView(titleView)
-        head.addView(versionSmall, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-        closeBtn.setOnClickListener { close() }
-        head.addView(closeBtn)
-        sheet.addView(head, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dpi(8f) })
-        subScroll.addView(subRow)
-        sheet.addView(subScroll)
-        sheet.addView(divider, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dpi(2f)).apply { topMargin = dpi(6f) })
-        body.setPadding(dpi(2f), dpi(8f), dpi(2f), dpi(16f))
+        titleBar.addView(diamond, LinearLayout.LayoutParams(dpi(14f), dpi(14f)).apply { marginEnd = dpi(8f); marginStart = dpi(2f) })
+        titleBar.addView(titleView)
+        titleBar.addView(versionSmall, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = dpi(6f) })
+        sheet.addView(titleBar, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dpi(4f) })
+        sheet.addView(topDivider, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dpi(2f)))
+
+        body.setPadding(dpi(2f), dpi(8f), dpi(2f), dpi(12f))
         bodyScroll.addView(body)
         sheet.addView(bodyScroll, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
+
+        // Bottom thumb navigation bar inside the sheet: divider, sub-tabs, and ‹ HOME / ✕ CLOSE
+        sheet.addView(divider, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dpi(2f)).apply { bottomMargin = dpi(6f) })
+        subScroll.addView(subRow)
+        sheet.addView(subScroll, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dpi(6f) })
+        val bottomNav = LinearLayout(act).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+        backBtn.setOnClickListener { go("home") }
+        backBtn.contentDescription = "Back to Menu Home"
+        bottomNav.addView(backBtn, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginEnd = dpi(8f) })
+        bottomNav.addView(View(act), LinearLayout.LayoutParams(0, 1, 1f))
+        closeBtn.setOnClickListener { close(); app.hud?.refreshDockStates() }
+        bottomNav.addView(closeBtn)
+        sheet.addView(bottomNav, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
         root.addView(sheet)
         restyle()
         root.addOnLayoutChangeListener { _, l, t, r, b, ol, ot, or_, ob -> if (r - l != or_ - ol || b - t != ob - ot) layoutSheet() }
@@ -167,33 +188,60 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
     /** The theme changed: repaint everything that stays on screen, then the open page. */
     private fun restyle() {
         menuBtn.setTextColor(PINK); menuBtn.background = box(PANEL, LINE, 6f, 3f)
-        statusChip.background = box(PANEL, LINE, 6f, 3f)
+        statusChip.background = box(PANEL, LINE, 8f, 3f)
         for ((k, v) in sbViews) v.setTextColor(if (k == "time") CYAN else MUTED)
         for (v in sbSeps) v.setTextColor(SEP)
         postureView.setTextColor(MUTED)
         timerChip.setTextColor(GOLD); timerChip.background = box(PANEL, LINE, 6f, 3f)
         focusChip.setTextColor(T.good); focusChip.background = box(PANEL, LINE, 6f, 3f)
         scrim.setBackgroundColor(T.scrim)
-        for (b in listOf(backBtn, closeBtn)) { b.setTextColor(TEXT); b.background = box(PANEL, LINE, 6f, 3f) }
+        for (b in listOf(backBtn, closeBtn)) { b.setTextColor(TEXT); b.background = box(PANEL2, LINE, 8f, 2f) }
         titleView.setTextColor(PINK); versionSmall.setTextColor(MUTED)
+        topDivider.setBackgroundColor(LINE)
         divider.setBackgroundColor(LINE)
         layoutSheet()
         refreshHeader()
         build()
     }
 
-    /** Landscape: a panel down the left side · portrait (max-aspect-ratio 4/5): a bottom sheet, 78% high. */
+    fun applySafeInsets(insets: android.graphics.Rect) {
+        safeInsets.set(insets)
+        layoutSheet()
+    }
+
+    /** Bottom-anchored sheet in both portrait and landscape so controls are never out of reach at the top. */
     private fun layoutSheet() {
         val w = root.width.takeIf { it > 0 } ?: act.resources.displayMetrics.widthPixels
         val h = root.height.takeIf { it > 0 } ?: act.resources.displayMetrics.heightPixels
-        val portrait = w.toFloat() / h <= 0.8f
-        val lp = if (portrait) FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, (h * 0.78f).toInt(), Gravity.BOTTOM)
-                 else FrameLayout.LayoutParams(minOf(dpi(420f), (w * 0.92f).toInt()), FrameLayout.LayoutParams.MATCH_PARENT, Gravity.START)
+        val d = act.resources.displayMetrics.density
+        val short = h / d <= 460f
+        val portrait = w.toFloat() / h <= 0.85f
+        val lp = if (portrait) {
+            FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, minOf(dpi(540f), (h * 0.68f).toInt()), Gravity.BOTTOM)
+        } else {
+            FrameLayout.LayoutParams(minOf(dpi(440f), (w * 0.92f).toInt()), minOf(dpi(460f), (h * 0.88f).toInt()), Gravity.BOTTOM or Gravity.START).apply {
+                leftMargin = safeInsets.left
+            }
+        }
         sheet.layoutParams = lp
-        sheet.setPadding(dpi(12f), dpi(10f), dpi(12f), dpi(10f))
-        sheet.background = if (portrait) GradientDrawable().apply { setColor(PANEL); cornerRadii = floatArrayOf(dp(16f), dp(16f), dp(16f), dp(16f), 0f, 0f, 0f, 0f); setStroke(dpi(2f), LINE) }
-                           else GradientDrawable().apply { setColor(PANEL); setStroke(dpi(2f), LINE) }
+        sheet.setPadding(
+            dpi(12f) + if (portrait) safeInsets.left else 0,
+            dpi(10f),
+            dpi(12f) + if (portrait) safeInsets.right else 0,
+            dpi(10f) + safeInsets.bottom
+        )
+        sheet.background = GradientDrawable().apply {
+            setColor(PANEL)
+            cornerRadii = floatArrayOf(dp(16f), dp(16f), dp(16f), dp(16f), 0f, 0f, 0f, 0f)
+            setStroke(dpi(2f), LINE)
+        }
         sheetPortrait = portrait
+
+        val tlp = topbar.layoutParams as FrameLayout.LayoutParams
+        tlp.bottomMargin = dpi(if (short) 52f else 74f) + safeInsets.bottom
+        tlp.leftMargin = dpi(8f) + safeInsets.left
+        tlp.rightMargin = dpi(8f) + safeInsets.right
+        topbar.layoutParams = tlp
     }
     private var sheetPortrait = true
 
@@ -203,21 +251,31 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
         isOpen = true
         scrim.visibility = View.VISIBLE
         sheet.visibility = View.VISIBLE
-        val from = if (sheetPortrait) sheet.height.takeIf { it > 0 }?.toFloat() ?: dp(600f) else -(sheet.width.takeIf { it > 0 }?.toFloat() ?: dp(400f))
-        if (sheetPortrait) { sheet.translationX = 0f; sheet.translationY = from } else { sheet.translationY = 0f; sheet.translationX = from }
+        val from = sheet.height.takeIf { it > 0 }?.toFloat() ?: dp(520f)
+        sheet.translationX = 0f; sheet.translationY = from
         sheet.animate().translationX(0f).translationY(0f).setDuration(220).setInterpolator(android.view.animation.DecelerateInterpolator()).start()
         go(page)
+        app.hud?.refreshDockStates()
     }
     fun close() {
         if (!isOpen || !app.isBuilt) return
         isOpen = false
         scrim.visibility = View.GONE
-        val anim = sheet.animate().setDuration(200)
-        if (sheetPortrait) anim.translationY(sheet.height.toFloat()) else anim.translationX(-sheet.width.toFloat())
+        val anim = sheet.animate().setDuration(200).translationY(sheet.height.toFloat().coerceAtLeast(dp(400f)))
         anim.withEndAction { if (!isOpen) sheet.visibility = View.GONE }.start()
+        app.hud?.refreshDockStates()
     }
     /** Android back: a category goes back to the home page, the home page closes the menu. */
     fun back() { if (page != "home") go("home") else close() }
+
+    /** Controller L1 / R1 switches sub-tabs on the open category page. */
+    fun cycleSubTab(dir: Int) {
+        val p = PAGES[page] ?: return
+        if (p.subs.size < 2) return
+        val curIdx = p.subs.indexOfFirst { it.first == sub }.coerceAtLeast(0)
+        val nextIdx = (curIdx + dir + p.subs.size) % p.subs.size
+        go(page, p.subs[nextIdx].first)
+    }
 
     private fun go(p: String, subKey: String? = null) {
         page = p
@@ -238,8 +296,9 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
         if (p != null) for ((k, label) in p.subs) {
             val on = k == sub
             subRow.addView(text(label, if (on) ON_TEXT else MUTED, 12f).apply {
-                setPadding(dpi(11f), dpi(7f), dpi(11f), dpi(7f))
-                background = if (on) box(ACTIVE_BG, PINK, 999f) else box(0, LINE, 999f, strokeW = 1f)
+                setPadding(dpi(12f), dpi(8f), dpi(12f), dpi(8f))
+                background = if (on) box(ACTIVE_BG, PINK, 999f) else box(PANEL2, LINE, 999f, strokeW = 1f)
+                isFocusable = true
                 setOnClickListener { go(page, k) }
             }, LinearLayout.LayoutParams(-2, -2).apply { marginEnd = dpi(6f) })
         }
@@ -264,6 +323,7 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
             val b = text(label, if (on) ON_TEXT else MUTED, 11f).apply {
                 gravity = Gravity.CENTER; setPadding(dpi(4f), dpi(8f), dpi(4f), dpi(8f))
                 if (on) setBackgroundColor(ACTIVE_BG)
+                isFocusable = true
                 setOnClickListener { onPick(v) }
             }
             row.addView(b, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
@@ -279,6 +339,7 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
             flow.addView(text(label, if (on) ON_TEXT else TEXT, 11f).apply {
                 setPadding(dpi(10f), dpi(6f), dpi(10f), dpi(6f))
                 background = box(if (on) ACTIVE_BG else PANEL2, if (on) PINK else LINE, 999f)
+                isFocusable = true
                 setOnClickListener { fn() }
             })
         }
@@ -300,6 +361,7 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
                     LinearLayout.LayoutParams(dpi(32f), dpi(32f)))
                 addView(text(name, if (on) ON_TEXT else MUTED, 9f, on).apply { gravity = Gravity.CENTER; maxLines = 2 }, LinearLayout.LayoutParams(dpi(60f), -2).apply { topMargin = dpi(3f) })
                 contentDescription = name
+                isFocusable = true
                 setOnClickListener { onPick(hex) }
             }, ViewGroup.LayoutParams(dpi(66f), ViewGroup.LayoutParams.WRAP_CONTENT))
         }
@@ -315,6 +377,7 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
             row!!.addView(text(label, if (on) ON_TEXT else TEXT, 11f).apply {
                 gravity = Gravity.CENTER; minHeight = dpi(44f); setPadding(dpi(6f), dpi(10f), dpi(8f), dpi(12f))
                 background = box(if (on) ACTIVE_BG else PANEL2, if (on) PINK else LINE, 10f, 2f)
+                isFocusable = true
                 setOnClickListener { fn() }
             }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply { marginEnd = dpi(6f) })
         }
@@ -325,6 +388,7 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
         body.addView(text(label, if (on) (if (T.isLight) T.good else Color.rgb(0xb9, 0xff, 0xcf)) else TEXT, 14f).apply {
             gravity = Gravity.CENTER; letterSpacing = 0.07f; setPadding(dpi(14f), dpi(14f), dpi(17f), dpi(17f))
             background = box(if (on) T.goodBg else PANEL2, if (on) T.good else LINE, 12f, 3f)
+            isFocusable = true
             setOnClickListener { fn() }
         }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
     }
@@ -351,6 +415,7 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
         val cb = CheckBox(act).apply {
             text = label; isChecked = on; setTextColor(TEXT); typeface = MONO_N; setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
             buttonTintList = ColorStateList.valueOf(PINK)
+            isFocusable = true
             setOnCheckedChangeListener { _, c -> onChange(c) }
         }
         body.addView(cb, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = dpi(6f) })
@@ -361,6 +426,7 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
         val open = summary in openDetails
         val head = text((if (open) "▾ " else "▸ ") + summary, CYAN, 12f).apply {
             setPadding(dpi(10f), dpi(8f), dpi(10f), dpi(8f))
+            isFocusable = true
             setOnClickListener { if (!openDetails.remove(summary)) openDetails += summary; build() }
         }
         val frame = LinearLayout(act).apply { orientation = LinearLayout.VERTICAL; background = box(0, LINE, 10f); setPadding(0, 0, dpi(10f), dpi(if (open) 8f else 0f)) }
@@ -385,6 +451,7 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
                 addView(text(q.icon, TEXT, 20f, false).apply { gravity = Gravity.CENTER })
                 addView(text(q.label, if (q.on) ON_TEXT else MUTED, 9f).apply { gravity = Gravity.CENTER; letterSpacing = 0.06f; maxLines = 1 }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dpi(3f) })
                 contentDescription = q.label
+                isFocusable = true
                 setOnClickListener { it.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY); q.fn() }
             }, LinearLayout.LayoutParams(0, -2, 1f).apply { if (i < items.size - 1) marginEnd = dpi(6f) })
         }
@@ -425,6 +492,12 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
             Quick("📷", "PHOTO", false) { close(); app.hud?.overlays?.enterPhotoMode() },
             Quick(if (T.isLight) "☀️" else "🌙", if (T.isLight) "LIGHT UI" else "DARK UI", false) { T.set(act, mode = if (T.isLight) "dark" else "light") }
         ))
+        if (app.ytActive) {
+            tiles(listOf(
+                Triple("⏹ STOP YOUTUBE ON TV", true, { app.hud?.yt?.stop(); build() }),
+                Triple("▶ CHANGE YOUTUBE VIDEO", false, { close(); app.hud?.yt?.openDialog() })
+            ))
+        }
         val cols = if (sheetW / act.resources.displayMetrics.density >= 520f) 3 else 2
         var row: LinearLayout? = null
         PAGES.entries.forEachIndexed { i, (key, p) ->
@@ -432,6 +505,7 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
             row!!.addView(LinearLayout(act).apply {
                 orientation = LinearLayout.VERTICAL; setPadding(dpi(12f), dpi(10f), dpi(14f), dpi(13f))
                 background = box(PANEL2, LINE, 12f, 3f)
+                isFocusable = true
                 val top = LinearLayout(act).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
                 top.addView(text(p.icon, TEXT, 19f, false))
                 top.addView(text(p.title.uppercase(), PINK, 12f).apply { letterSpacing = 0.1f }, LinearLayout.LayoutParams(0, -2, 1f).apply { marginStart = dpi(8f) })
@@ -443,7 +517,7 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
         }
         val last = row
         if (last != null) while (last.childCount < cols) last.addView(View(act), LinearLayout.LayoutParams(0, 1, 1f))
-        note("Long-press the time, weather or place up top to jump to World. Almost everything in the room can be tapped directly too.", true)
+        note("Tap the time, weather or place on the bottom status bar to cycle it (or hold to jump to World). Almost everything in the room can be tapped directly too.", true)
     }
     /** What each card says under its name: the state that matters most right now. */
     private fun cardLine(key: String): String = try {
@@ -478,8 +552,36 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
             Triple(l + (if (v == "live" && env.seasonMode == "live") " · ${env.currentSeason}" else ""), if (v == "live") env.seasonMode == "live" else env.seasonMode != "live" && env.currentSeason == v, { post { s.setSeasonChoice(v) } })
         })
     }
+
+    private fun buildDebrisControls() {
+        val amtPct = (s.debrisAmount * 100).roundToInt()
+        h4("Falling leaves & outdoor debris", if (amtPct == 0) "Off" else "$amtPct%")
+        val presets = listOf(
+            Triple("Off", 0f to 1f, 1f),
+            Triple("Gentle", 0.5f to 0.7f, 0.7f),
+            Triple("Normal", 1.0f to 1.0f, 1.0f),
+            Triple("Breezy", 1.5f to 1.4f, 1.4f),
+            Triple("Heavy", 2.2f to 1.8f, 1.9f)
+        )
+        chips(presets.map { (name, af, freq) ->
+            val (amt, spd) = af
+            val on = kotlin.math.abs(s.debrisAmount - amt) < 0.08f && (amt == 0f || kotlin.math.abs(s.debrisSpeed - spd) < 0.15f)
+            Triple(name, on, {
+                post {
+                    s.setDebrisAmount(amt)
+                    s.setDebrisSpeed(spd)
+                    s.setDebrisFreq(freq)
+                }
+            })
+        })
+        slider("How much (amount)", 0, 250, 10, (s.debrisAmount * 100).roundToInt(), { if (it == 0) "Off" else "$it%" }) { v -> post { s.setDebrisAmount(v / 100f) } }
+        slider("How fast (fall & wind speed)", 20, 250, 10, (s.debrisSpeed * 100).roundToInt(), { "$it%" }) { v -> post { s.setDebrisSpeed(v / 100f) } }
+        slider("How often (gusts & spawn rate)", 20, 250, 10, (s.debrisFreq * 100).roundToInt(), { "$it%" }) { v -> post { s.setDebrisFreq(v / 100f) } }
+        note("Controls autumn leaves, spring blossoms, summer seeds & pollen, winter pine needles/frost, and desert dust blowing past the window.", true)
+    }
+
     private fun buildWeather() {
-        h4("Weather", env.W.label + (if (s.weatherMode == "live") s.liveTempC?.let { " · ${it.roundToInt()}°C" } ?: "" else ""))
+        h4("Weather", env.W.label + (if (s.weatherMode == "live") s.liveTempC?.let { " · ${s.formatTemp(it)}" } ?: "" else ""))
         seg(listOf("manual" to "Pick", "auto" to "Auto-change", "live" to "Live (your city)"), s.weatherMode) { m -> post { s.setWeatherMode(m) } }
         when (s.weatherMode) {
             "manual" -> {
@@ -492,7 +594,7 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
             "live" -> {
                 val row = LinearLayout(act).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
                 val input = EditText(act).apply {
-                    hint = "Your city, e.g. Chicago"; setHintTextColor(MUTED); setTextColor(TEXT); typeface = MONO_N; setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+                    hint = "Your city (or leave blank for auto)"; setHintTextColor(MUTED); setTextColor(TEXT); typeface = MONO_N; setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
                     setText(cityDraft.ifEmpty { s.cityName }); inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_WORDS; imeOptions = EditorInfo.IME_ACTION_GO; isSingleLine = true
                     background = box(T.field, LINE, 8f); setPadding(dpi(8f), dpi(8f), dpi(8f), dpi(8f))
                     addTextChangedListener(object : android.text.TextWatcher {
@@ -507,10 +609,11 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
                 row.addView(pill("Use", TEXT).apply { setOnClickListener { go() } }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginStart = dpi(6f) })
                 body.addView(row, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = dpi(8f) })
                 note(s.liveStatus)
-                note("Live weather comes from Open-Meteo, a free weather service. Only the city name you type is sent to it. Refreshes every 20 minutes.", true)
+                note("Live weather comes from Open-Meteo (with automatic city detection if left blank) and updates the Downtown LED building ticker & billboard in real time.", true)
             }
             "auto" -> note("The weather drifts naturally on its own every 10-20 minutes, fitting the season.")
         }
+        buildDebrisControls()
     }
     private fun buildSky() {
         h4("Outside the window")
@@ -520,6 +623,7 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
         h4("Moon", s.moonReadout())
         seg(listOf("cinematic" to "Cinematic path", "real" to "Real astronomy"), if (env.realisticMoon) "real" else "cinematic") { v -> post { s.setRealisticMoon(v == "real") } }
         note("Cinematic keeps the moon gliding low across your window all night. Real astronomy puts it exactly where it is in the sky (some nights it won't be up). Either way the phase matches tonight's real moon.")
+        buildDebrisControls()
     }
 
     // ---- Sound ----
@@ -529,13 +633,16 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
         slider("Master volume", 0, 100, 1, (snd.masterVolume * 100).roundToInt(), { "$it%" }) { v -> post { snd.setMasterVolume(v / 100.0); s.changed() } }
         h4("Play on")
         val tv = app.tv
-        tiles(listOf(
-            Triple(if (tv.bedroomTvOn) "TV: ${Tv.TV_CHANNEL_NAMES[tv.bedroomTvChannel].substringBefore(':')}" else "TV CHANNEL", tv.bedroomTvOn, { post { app.tvNextChannel(); app.sfx("tvChannel"); s.changed() } }),
-            Triple(if (app.extras.radioStation > 0) "RADIO: ${app.extras.RADIO_STATIONS[app.extras.radioStation].substringBefore(':')}" else "RADIO: OFF", app.extras.radioStation > 0, { post { app.extras.cycleRadio(app.furniture.radioDisplayMat); app.sfx("radioTune"); s.changed() } }),
-            Triple("▶ YOUTUBE ON TV", app.ytActive, { close(); app.hud?.yt?.openDialog() }),
-            Triple("PC SCREEN", app.monitor.pcPoweredOn, { post { val on = app.monitor.pcPoweredOn; app.monitorNextChannel(); app.sfx(if (on) "monitorChannel" else "pcOn"); s.changed() } }),
-            Triple("📻 BOOMBOX", false, { close(); app.hud?.openBoombox() })
-        ))
+        val playItems = ArrayList<Triple<String, Boolean, () -> Unit>>()
+        playItems += Triple(if (tv.bedroomTvOn) "TV: ${Tv.TV_CHANNEL_NAMES[tv.bedroomTvChannel].substringBefore(':')}" else "TV CHANNEL", tv.bedroomTvOn, { post { app.tvNextChannel(); app.sfx("tvChannel"); s.changed() } })
+        playItems += Triple(if (app.extras.radioStation > 0) "RADIO: ${app.extras.RADIO_STATIONS[app.extras.radioStation].substringBefore(':')}" else "RADIO: OFF", app.extras.radioStation > 0, { post { app.extras.cycleRadio(app.furniture.radioDisplayMat); app.sfx("radioTune"); s.changed() } })
+        playItems += Triple(if (app.ytActive) "▶ YOUTUBE: PLAYING" else "▶ YOUTUBE ON TV", app.ytActive, { close(); app.hud?.yt?.openDialog() })
+        if (app.ytActive) {
+            playItems += Triple("⏹ STOP YOUTUBE", true, { app.hud?.yt?.stop(); build() })
+        }
+        playItems += Triple("PC SCREEN", app.monitor.pcPoweredOn, { post { val on = app.monitor.pcPoweredOn; app.monitorNextChannel(); app.sfx(if (on) "monitorChannel" else "pcOn"); s.changed() } })
+        playItems += Triple("📻 BOOMBOX", false, { close(); app.hud?.openBoombox() })
+        tiles(playItems)
         note("The room's own sounds (fan, rain, the PC, the living room TV) each have a volume in Mixer.", true)
     }
     private fun buildMixer() {
@@ -597,14 +704,17 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
     }
     private fun buildAppliances() {
         h4("Appliances")
-        tiles(listOf(
-            Triple("CEILING FAN: ${if (app.fan.fanSpinning) "ON" else "OFF"}", app.fan.fanSpinning, { post { app.fan.toggleCeilingFanSpin(); s.changed() } }),
-            Triple("AC UNIT: ${if (app.room.acUnitOn) "ON" else "OFF"}", app.room.acUnitOn, { post { app.room.toggleAcUnit(); s.changed() } }),
-            Triple("SPACE HEATER: ${app.extras.heaterMode.uppercase()}", app.extras.heaterMode != "off", { post { app.extras.cycleHeater(); s.changed() } }),
-            Triple("BEDROOM TV: ${if (app.tv.bedroomTvOn) "ON" else "OFF"}", app.tv.bedroomTvOn, { post { app.tvPower(); s.changed() } }),
-            Triple("LIVING RM TV: ${if (app.sound.livingRoomTvOn) "ON" else "OFF"}", app.sound.livingRoomTvOn, { post { app.sound.livingRoomTvOn = !app.sound.livingRoomTvOn; app.sfx("ui"); app.sound.updateLayered(); s.changed() } }),
-            Triple("🖥 USE THE PC", false, { close(); post { app.openPc() } })
-        ))
+        val appItems = ArrayList<Triple<String, Boolean, () -> Unit>>()
+        appItems += Triple("CEILING FAN: ${if (app.fan.fanSpinning) "ON" else "OFF"}", app.fan.fanSpinning, { post { app.fan.toggleCeilingFanSpin(); s.changed() } })
+        appItems += Triple("AC UNIT: ${if (app.room.acUnitOn) "ON" else "OFF"}", app.room.acUnitOn, { post { app.room.toggleAcUnit(); s.changed() } })
+        appItems += Triple("SPACE HEATER: ${app.extras.heaterMode.uppercase()}", app.extras.heaterMode != "off", { post { app.extras.cycleHeater(); s.changed() } })
+        appItems += Triple("BEDROOM TV: ${if (app.tv.bedroomTvOn) "ON" else "OFF"}", app.tv.bedroomTvOn, { post { app.tvPower(); s.changed() } })
+        if (app.ytActive) {
+            appItems += Triple("⏹ STOP YOUTUBE", true, { app.hud?.yt?.stop(); build() })
+        }
+        appItems += Triple("LIVING RM TV: ${if (app.sound.livingRoomTvOn) "ON" else "OFF"}", app.sound.livingRoomTvOn, { post { app.sound.livingRoomTvOn = !app.sound.livingRoomTvOn; app.sfx("ui"); app.sound.updateLayered(); s.changed() } })
+        appItems += Triple("🖥 USE THE PC", false, { close(); post { app.openPc() } })
+        tiles(appItems)
         h4("Tidy up")
         tiles(listOf(
             Triple("📚 GAMES BACK IN ORDER", false, { post { app.library.sortGameShelves(); s.changed() } }),
@@ -723,6 +833,7 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
             flow.addView(LinearLayout(act).apply {
                 orientation = LinearLayout.VERTICAL; setPadding(dpi(8f), dpi(8f), dpi(8f), dpi(9f))
                 background = box(pv[0], if (on) pv[2] else pv[1], 10f, 2f, if (on) 3f else 2f)
+                isFocusable = true
                 val stripes = LinearLayout(act).apply { orientation = LinearLayout.HORIZONTAL }
                 for ((i, c) in listOf(pv[2], pv[3], pv[1]).withIndex())
                     stripes.addView(View(act).apply { background = GradientDrawable().apply { setColor(c); cornerRadius = dp(4f) } }, LinearLayout.LayoutParams(0, dpi(14f), 1f).apply { if (i < 2) marginEnd = dpi(4f) })
@@ -733,7 +844,7 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
             }, ViewGroup.LayoutParams(cardW - dpi(8f), ViewGroup.LayoutParams.WRAP_CONTENT))
         }
         body.addView(flow, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dpi(4f) })
-        note("Themes colour the menu, the top bar, the dock, the boombox and the pop-ups. The room itself never changes.", true)
+        note("Themes colour the menu, the status bar, the dock, the boombox and the pop-ups. The room itself never changes.", true)
     }
     private fun buildPerf() {
         h4("Quality", "${app.renderer.internalW}×${app.renderer.internalH}")
@@ -741,14 +852,14 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
         note(Settings.QUALITY.getValue(s.qualityMode).note)
         h4("Frame rate")
         seg(listOf("auto" to "Auto", "30" to "30", "60" to "60", "120" to "120 Hz"), s.fpsChoice) { v -> post { s.setFps(v) } }
-        check("Eco idle: drop to 30 fps when you haven't touched anything for a bit, then 20 fps after 2 minutes", s.ecoIdle) { c -> post { s.ecoIdle = c; s.applyFps(); s.changed() } }
+        check("Eco idle: gently step down to 30 fps after 3 min untouched (24 fps after 10 min)", s.ecoIdle) { c -> post { s.ecoIdle = c; s.applyFps(); s.changed() } }
     }
     private fun buildScreen() {
         app.cutout?.let { co ->
             h4("Screen cutout (notch / hole-punch)")
             note(co.info, true)
             seg(Cutout.MODES.map { (k, l) -> k to l }, co.mode) { v -> co.apply(v); build() }
-            note("Full screen runs the room (and the PC screen) right under the camera. Clear when sideways adds a black bar only with the phone turned, where a side camera would cover the PC. Always clear keeps a black bar there all the time.", true)
+            note("Full screen runs the room right under the camera while keeping all UI buttons clear of the notch. Clear when sideways adds a clean margin only in landscape. Always clear keeps the margin in all orientations.", true)
         }
         h4("When you leave")
         check("Picture-in-picture: keep the room in a small window when you leave the app", app.pipEnabled) { c -> app.pipEnabled = c; act.getSharedPreferences("ps1bedroom", android.content.Context.MODE_PRIVATE).edit().putBoolean("pip", c).apply() }
@@ -773,8 +884,31 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
     private fun buildAchievements() {
         val ach = app.achievements
         h4("🏆 Achievements", "${ach.count} / ${Achievements.LIST.size}")
-        chips(Achievements.LIST.map { (id, a) -> val got = ach.has(id); Triple("${if (got) a[0] else "🔒"} ${a[1]}", got, { app.toast("${if (got) a[0] + " " else "🔒 "}${a[1]}: ${a[2]}") }) })
-        note("Tap one to see how to get it.", true)
+        note("Tap any achievement card for a reminder toast, or read how to unlock it right below.", true)
+        for ((id, a) in Achievements.LIST) {
+            val got = ach.has(id)
+            val card = LinearLayout(act).apply {
+                orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
+                setPadding(dpi(12f), dpi(10f), dpi(12f), dpi(11f))
+                background = box(if (got) ACTIVE_BG else PANEL2, if (got) GOLD else LINE, 10f, 2f)
+                isFocusable = true
+                isClickable = true
+                addView(text(if (got) a[0] else "🔒", TEXT, 20f, false).apply { gravity = Gravity.CENTER }, LinearLayout.LayoutParams(dpi(36f), -2).apply { marginEnd = dpi(10f) })
+                val col = LinearLayout(act).apply { orientation = LinearLayout.VERTICAL }
+                val topRow = LinearLayout(act).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+                topRow.addView(text(a[1], if (got) GOLD else TEXT, 12f), LinearLayout.LayoutParams(0, -2, 1f))
+                topRow.addView(text(if (got) "✓ UNLOCKED" else "HOW TO GET", if (got) T.good else CYAN, 9f))
+                col.addView(topRow, LinearLayout.LayoutParams(-1, -2))
+                col.addView(text(a[2], if (got) ON_TEXT else MUTED, 11f, false).apply { setLineSpacing(0f, 1.2f) }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dpi(3f) })
+                addView(col, LinearLayout.LayoutParams(0, -2, 1f))
+                setOnClickListener {
+                    it.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
+                    post { app.sfx("ui") }
+                    app.toast("${if (got) "✅ ${a[0]}" else "🔒 HOW TO GET:"} ${a[1]} — ${a[2]}")
+                }
+            }
+            body.addView(card, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = dpi(7f) })
+        }
     }
 
     private fun hideKeyboard(v: View) {

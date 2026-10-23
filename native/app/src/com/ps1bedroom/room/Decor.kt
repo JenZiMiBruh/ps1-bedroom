@@ -101,9 +101,9 @@ class Decor(private val room: Room, private val res: Resources) {
         }
 
         // ---- 2000s gadgets (lookalikes with parody names) ----
-        // Portable CD player with earbuds, lying on the bed
+        // Portable CD player with earbuds, lying near the pillow/wall side of the bed out of Jasper's nap spot
         val discman = Group()
-        discman.position.set(2.75f, 0.93f, -0.6f); discman.rotation.y = 0.5f
+        discman.position.set(3.55f, 0.89f, -1.28f); discman.rotation.y = 0.35f
         scene.add(discman)
         propPart(discman, Geo.cylinder(0.14f, 0.14f, 0.035f, 20), PS1.material(color = 0xb8bec8), 0f, 0.0175f, 0f, "discman")
         propPart(discman, Geo.cylinder(0.105f, 0.105f, 0.004f, 20), PS1.material(color = 0x8a93a3), 0f, 0.037f, 0f, "discman")

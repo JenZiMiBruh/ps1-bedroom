@@ -24,6 +24,16 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.45", "Thumb-friendly UI, full controller support, weather & room fixes", listOf(
+            "Big-screen & thumb-friendly UI: moved the status bar, menu button, sub-tabs, Back/Close bar, YouTube bar, achievement pop-ups and toasts to the bottom so nothing is out of reach at the top",
+            "Full controller support across the whole app: walk with the left stick or D-pad, look/orbit with the right stick, press A to interact at the center crosshair, L1/R1 to cycle postures or sub-tabs, and navigate all menus",
+            "Falling leaves & outdoor debris sliders in World → Weather / Sky: control how much, how fast, and how often leaves, blossoms, pine needles and dust fall, with presets from Off to Heavy",
+            "Richer seasonal & weather reactions outside: window ledge snowbanks and fallen leaves, wind-swaying 3D trees and flapping laundry, water rain ripples, chimney smoke in cold weather, and continuous window raindrops that grow and streak down the glass",
+            "Downtown LED ticker and billboard now update in real time with live temperature, weather, forecast and auto-detected city",
+            "Jasper now blinks naturally while awake, keeps his eyes closed while sleeping or on the bed, and no longer clips the Discman on the bed",
+            "PC tower power LED stays solid green while the amber HDD LED blinks; cat frame sides use solid wood; all 5 PlayStation consoles have properly connected rear power/AV cords and controller strain-relief collars",
+            "Turning off the TV now stops YouTube immediately, the YouTube bar stays clamped on screen, frame rate pacing stays smooth, and tapping any achievement shows how to unlock it"
+        )),
         Entry("0.44", "A tidier menu, light mode and themes", listOf(
             "The menu opens on a home page: quick toggles up top (sound, light, sleep, photo, light / dark UI) and one card per category showing what's on right now",
             "Each category splits into short sub-tabs instead of one long scroll, and Android back steps back to the home page before closing",

@@ -98,6 +98,8 @@ class Places(
     private val barkMat: Material
     private val palmLeafMat: Material
     private val swayers = ArrayList<Group>()
+    private val windTrees = ArrayList<Group>()
+    private val laundryItems = ArrayList<Mesh>()
     private val snowCaps = ArrayList<Mesh>()
     private val nightGlowMats = ArrayList<Material>() // lamps, porch lights, string lights: on after dark
     private val neonMats = ArrayList<Material>()
@@ -154,6 +156,7 @@ class Places(
             add(p, Geo.cone(r, hh, 7), pineMat, 0f, y, 0f)
             snowCaps += add(p, Geo.cone(r * 0.55f, hh * 0.45f, 7), pineSnowMat, 0f, y + hh * 0.28f, 0f)
         }
+        windTrees += p
         return p
     }
     private fun palm3D(group: Group, x: Float, z: Float, s: Float, lean: Float, tall: Boolean = false): Group {
@@ -275,6 +278,7 @@ class Places(
         add(t, Geo.cylinder(0.07f, 0.12f, 1.2f, 6), kitMat("bark", "#5b3d26", 1f, 2f), 0f, 0.6f, 0f)
         for (c in listOf(floatArrayOf(0f, 1.55f, 0f, 0.62f), floatArrayOf(0.35f, 1.35f, 0.15f, 0.45f), floatArrayOf(-0.3f, 1.4f, -0.1f, 0.48f), floatArrayOf(0.05f, 1.9f, 0.1f, 0.42f)))
             crowns += add(t, GeoCurves.icosahedron(c[3], 0), leafMats.getValue("green"), c[0], c[1], c[2])
+        windTrees += t
         return t
     }
     private fun bush3D(group: Group, x: Float, z: Float, s: Float, col: String = "#3b6b33"): Mesh { val b = add(group, GeoCurves.icosahedron(0.3f * s, 0), kitMat("leaves", col), x, 0.32f + 0.2f * s, z); b.scale.y = 0.7f; return b }
@@ -522,7 +526,7 @@ class Places(
             // Clothesline with laundry
             for (x in floatArrayOf(1.2f, 3.4f)) cyl(g, 0.02f, 0.02f, 1.6f, 0x6b7280, x, 1.1f, -7.0f, 4)
             box(g, 2.2f, 0.01f, 0.01f, 0x111111, 2.3f, 1.85f, -7.0f)
-            for ((x, col) in listOf(1.6f to 0xf87171, 2.1f to 0x60a5fa, 2.6f to 0xfacc15, 3.0f to 0xf1f5f9)) box(g, 0.3f, 0.38f, 0.02f, col, x, 1.65f, -7.0f)
+            for ((x, col) in listOf(1.6f to 0xf87171, 2.1f to 0x60a5fa, 2.6f to 0xfacc15, 3.0f to 0xf1f5f9)) laundryItems += box(g, 0.3f, 0.38f, 0.02f, col, x, 1.65f, -7.0f)
             // String lights between the trailers
             for (i in 0 until 12) {
                 val m = PS1.material(color = 0xfff3c4, emissive = intArrayOf(0xffd27d, 0xff7aa8, 0x7ad7ff)[i % 3], emissiveIntensity = 0f); nightGlowMats += m
@@ -981,12 +985,13 @@ class Places(
     // Seasons, time of day and weather on the props
     private fun updateOutsideEnvLook() {
         val winter = env.currentSeason == "winter"
+        val snowing = env.isSnowingNow()
         val night = 1 - env.daylight
-        pineMat.color.setHex(if (winter) 0x2a4a3a else (if (env.currentSeason == "fall") 0x26432c else 0x1f4a2c))
-        for (c in snowCaps) c.visible = winter
+        pineMat.color.setHex(if (winter || snowing) 0x2a4a3a else (if (env.currentSeason == "fall") 0x26432c else 0x1f4a2c))
+        for (c in snowCaps) c.visible = (winter || snowing) && !envDef().noSnow
         palmLeafMat.color.setHex(if (env.currentSeason == "fall" && !envDef().noSnow) 0x5f7a2a else 0x2f7a3a)
-        val lit = night > 0.4
-        suburbWindowMat.emissiveIntensity = if (lit && (env.hour < 0.5 || env.hour > 17)) 1.0f else 0f
+        val lit = night > 0.4 || env.isPrecipNow() && night > 0.2
+        suburbWindowMat.emissiveIntensity = if (lit && (env.hour < 0.5 || env.hour > 17 || env.isPrecipNow())) 1.0f else 0f
         for (m in nightGlowMats) m.emissiveIntensity = if (lit) 1.0f else 0f
         litWinMat.emissiveIntensity = if (lit) 0.95f else 0f
         // Tree crowns follow the season (bare in winter, except where it never snows)
@@ -994,7 +999,7 @@ class Places(
         val leafMat = leafMats.getValue(if (env.currentSeason == "fall") "fall" else (if (env.currentSeason == "spring") "spring" else "green"))
         for (c in crowns) { c.visible = !bare; c.material = leafMat }
         for (o in summerOnly) o.visible = env.currentSeason == "summer" || env.currentSeason == "spring"
-        for (m in puddleMats) m.opacity = if (lit) (if (env.isPrecipNow()) 0.5f else 0.22f) else (if (env.isPrecipNow()) 0.12f else 0f)
+        for (m in puddleMats) m.opacity = if (lit) (if (env.isPrecipNow()) 0.58f else 0.22f) else (if (env.isPrecipNow()) 0.24f else 0f)
         for (m in neonMats) m.emissiveIntensity = if (lit) 1.2f else 0.35f
         for ((wtr, day) in listOf(beachSea to intArrayOf(40, 110, 160), lakeWater to intArrayOf(44, 84, 100), islandSea to intArrayOf(60, 190, 196))) {
             val c = sky.toneC(intArrayOf(8, 14, 28), day, 0.2)
@@ -1003,28 +1008,41 @@ class Places(
         }
         for (f in facades) f.material.emissiveIntensity = if (env.daylight > 0.55) 0.15f else (0.5 + 0.4 * night).toFloat()
     }
-    // Per-frame motion: waves, foam, swaying palms and swings, tiki torches, tumbleweeds, the rooftop billboard
+    // Per-frame motion: waves, foam, swaying palms and trees, swings, laundry, tiki torches, tumbleweeds, the rooftop billboard
     fun update(t: Float, dt: Float) {
         val e = outsideEnv
         if (e == "city") return
         val W = env.W
         val sway = 0.04f + W.wind * 0.14f
         if (e == "beach" || e == "island" || e == "arizona") swayers.forEachIndexed { i, top -> if (top.parent?.parent?.visible == true) top.rotation.x = sin(t * (1.1f + W.wind) + i) * sway }
+        val treeSway = 0.012f + W.wind * 0.065f
+        val treeSpeed = 1.3f + W.wind * 2.1f
+        windTrees.forEachIndexed { i, tr ->
+            if (tr.parent?.visible == true) {
+                tr.rotation.z = sin(t * treeSpeed + i * 1.4f) * treeSway
+                tr.rotation.x = cos(t * (treeSpeed * 0.8f) + i) * (treeSway * 0.5f)
+            }
+        }
         when (e) {
             "beach" -> {
-                beachSea.tex.offsetY = (t * 0.03f) % 1
-                val surge = sin(t * (0.8f + W.wind * 0.6f))
-                foam.position.z = -9.0f + surge * 0.35f
+                beachSea.tex.offsetY = (t * (0.03f + W.wind * 0.03f)) % 1
+                val surge = sin(t * (0.8f + W.wind * 0.7f))
+                foam.position.z = -9.0f + surge * (0.35f + W.wind * 0.2f)
                 foam.material.opacity = 0.35f + 0.25f * max(0f, surge)
             }
             "island" -> {
-                islandSea.tex.offsetY = (t * 0.02f) % 1
-                tikiFlames.forEachIndexed { i, f -> f.material.emissiveIntensity = if (sky.isNight()) 1.1f + sin(t * 13 + i * 2) * 0.25f else 0f; f.scale.y = 1 + sin(t * 11 + i) * 0.15f }
+                islandSea.tex.offsetY = (t * (0.02f + W.wind * 0.02f)) % 1
+                tikiFlames.forEachIndexed { i, f -> f.material.emissiveIntensity = if (sky.isNight() && !env.isRainingNow()) 1.1f + sin(t * 13 + i * 2) * 0.25f else 0f; f.scale.y = 1 + sin(t * 11 + i) * 0.15f }
             }
-            "lake" -> lakeWater.tex.offsetX = (t * 0.004f) % 1
+            "lake" -> lakeWater.tex.offsetX = (t * (0.004f + W.wind * 0.008f)) % 1
             "house" -> {
                 swings.forEachIndexed { i, s -> s.rotation.x = sin(t * 1.6f + i * 1.3f) * (0.05f + W.wind * 0.25f) }
                 chimeRods.forEachIndexed { i, r -> r.rotation.x = sin(t * 2.3f + i) * (0.05f + W.wind * 0.35f); r.rotation.z = cos(t * 1.9f + i * 2) * (0.04f + W.wind * 0.3f) }
+            }
+            "trailer" -> {
+                laundryItems.forEachIndexed { i, l ->
+                    l.rotation.x = sin(t * (2.2f + W.wind * 3.5f) + i * 1.1f) * (0.06f + W.wind * 0.42f)
+                }
             }
             "desert" -> {
                 tumbleweed.position.x += dt * (0.4f + W.wind * 1.6f)

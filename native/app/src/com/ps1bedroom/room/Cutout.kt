@@ -29,12 +29,21 @@ class Cutout(private val act: Activity, private val root: FrameLayout, @Suppress
     var mode = prefs.getString("cutoutMode", "full")!!.let { if (MODES.containsKey(it)) it else "full" }; private set
     /** e.g. "Hole-punch camera at the top centre · curved side edges". */
     var info = "Checking your screen..."; private set
-    private val safe = Rect()
+    val safe = Rect()
+    /** Safe insets that HUD / Menu views should respect when root itself is unpadded (e.g. in "full" mode). */
+    val uiSafe = Rect()
+    var onSafeChanged: ((Rect) -> Unit)? = null
 
     init {
         apply(mode, false)
         root.setOnApplyWindowInsetsListener { _, ins -> readInsets(ins); ins }
-        root.addOnLayoutChangeListener { _, l, t, r, b, ol, ot, or, ob -> if (r - l != or - ol || b - t != ob - ot) root.post { layoutForMode() } }
+        root.addOnLayoutChangeListener { _, l, t, r, b, ol, ot, or, ob ->
+            if (r - l != or - ol || b - t != ob - ot) {
+                root.post {
+                    root.rootWindowInsets?.let { readInsets(it) } ?: layoutForMode()
+                }
+            }
+        }
     }
 
     fun apply(m: String, save: Boolean = true) {
@@ -48,32 +57,39 @@ class Cutout(private val act: Activity, private val root: FrameLayout, @Suppress
         }
         if (Build.VERSION.SDK_INT >= 30) act.window.setDecorFitsSystemWindows(false)
         root.requestApplyInsets()
-        layoutForMode()
+        root.rootWindowInsets?.let { readInsets(it) } ?: layoutForMode()
     }
 
     private fun readInsets(ins: WindowInsets) {
         safe.setEmpty()
         val parts = ArrayList<String>()
+        val dm = act.resources.displayMetrics
+        val w = root.width.takeIf { it > 0 } ?: dm.widthPixels
+        val h = root.height.takeIf { it > 0 } ?: dm.heightPixels
         if (Build.VERSION.SDK_INT >= 28) {
             val c = ins.displayCutout
             if (c != null) {
                 safe.set(c.safeInsetLeft, c.safeInsetTop, c.safeInsetRight, c.safeInsetBottom)
-                val w = root.width.takeIf { it > 0 } ?: act.resources.displayMetrics.widthPixels
                 for (r in c.boundingRects) {
                     val kind = when {
                         r.width() > w * 0.25f -> "Notch"
                         r.width() > w * 0.12f -> "Small notch"
                         else -> "Hole-punch camera"
                     }
-                    val cx = r.centerX().toFloat() / w
-                    val where = if (r.top <= 2) (if (cx < 0.3f) "top left" else if (cx > 0.7f) "top right" else "top centre") else if (r.bottom >= root.height - 2) "bottom" else if (r.left <= 2) "left edge" else "right edge"
+                    val cx = r.centerX().toFloat() / maxOf(1, w)
+                    val where = when {
+                        r.top <= 4 -> if (cx < 0.3f) "top left" else if (cx > 0.7f) "top right" else "top centre"
+                        r.bottom >= h - 4 -> "bottom"
+                        r.left <= 4 -> "left edge"
+                        else -> "right edge"
+                    }
                     parts += "$kind at the $where"
                 }
             }
         }
         if (Build.VERSION.SDK_INT >= 29) {
             val wf = ins.displayCutout?.waterfallInsets
-            if (wf != null && (wf.left > 0 || wf.right > 0 || wf.top > 0)) {
+            if (wf != null && (wf.left > 0 || wf.right > 0 || wf.top > 0 || wf.bottom > 0)) {
                 parts += "curved screen edges"
                 safe.left = maxOf(safe.left, wf.left); safe.right = maxOf(safe.right, wf.right); safe.top = maxOf(safe.top, wf.top); safe.bottom = maxOf(safe.bottom, wf.bottom)
             }
@@ -82,13 +98,25 @@ class Cutout(private val act: Activity, private val root: FrameLayout, @Suppress
         layoutForMode()
     }
 
-    /** Keep clear: the whole view (the room, the PC, everything) moves off the cutout and leaves a black bar. */
+    /** Keep clear: the whole view moves off the cutout and leaves a black bar; in Full mode, only UI overlays stay clear of the cutout. */
     private fun layoutForMode() {
         val dm = act.resources.displayMetrics
-        val sideways = (root.width.takeIf { it > 0 } ?: dm.widthPixels) > (root.height.takeIf { it > 0 } ?: dm.heightPixels)
+        val w = root.width.takeIf { it > 0 } ?: dm.widthPixels
+        val h = root.height.takeIf { it > 0 } ?: dm.heightPixels
+        val sideways = w > h
         val clear = mode == "clear" || (mode == "landscape" && sideways)
-        if (clear) { if (root.paddingLeft != safe.left || root.paddingTop != safe.top || root.paddingRight != safe.right || root.paddingBottom != safe.bottom) root.setPadding(safe.left, safe.top, safe.right, safe.bottom) }
-        else if (root.paddingLeft or root.paddingTop or root.paddingRight or root.paddingBottom != 0) root.setPadding(0, 0, 0, 0)
+        if (clear) {
+            if (root.paddingLeft != safe.left || root.paddingTop != safe.top || root.paddingRight != safe.right || root.paddingBottom != safe.bottom) {
+                root.setPadding(safe.left, safe.top, safe.right, safe.bottom)
+            }
+            uiSafe.set(0, 0, 0, 0)
+        } else {
+            if (root.paddingLeft or root.paddingTop or root.paddingRight or root.paddingBottom != 0) {
+                root.setPadding(0, 0, 0, 0)
+            }
+            uiSafe.set(safe)
+        }
         root.setBackgroundColor(android.graphics.Color.BLACK)
+        onSafeChanged?.invoke(uiSafe)
     }
 }

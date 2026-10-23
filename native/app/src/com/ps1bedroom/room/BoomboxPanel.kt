@@ -43,8 +43,8 @@ class BoomboxPanel(private val act: Activity, private val root: FrameLayout, pri
             isClickable = true
             addView(ScrollView(act).apply { addView(body) })
         }
-        val w = minOf(dpi(440f), act.resources.displayMetrics.widthPixels - dpi(24f))
-        scrim.addView(card, FrameLayout.LayoutParams(w, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.CENTER).apply { topMargin = dpi(40f); bottomMargin = dpi(40f) })
+        val w = minOf(dpi(460f), act.resources.displayMetrics.widthPixels - dpi(20f))
+        scrim.addView(card, FrameLayout.LayoutParams(w, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply { topMargin = dpi(60f); bottomMargin = dpi(20f) })
         root.addView(scrim, FrameLayout.LayoutParams(-1, -1))
         T.listeners += { restyle() }
         restyle()
@@ -66,6 +66,7 @@ class BoomboxPanel(private val act: Activity, private val root: FrameLayout, pri
     }
     private fun pill(t: String, on: Boolean, size: Float = 12f, fn: () -> Unit) = text(t, if (on) ON_TEXT else TEXT, size, true).apply {
         gravity = Gravity.CENTER; setPadding(dpi(10f), dpi(8f), dpi(10f), dpi(8f))
+        isFocusable = true
         background = GradientDrawable().apply { setColor(if (on) ACTIVE_BG else PANEL); cornerRadius = dp(999f); setStroke(dpi(if (on) 2f else 1f), if (on) PINK else LINE) }
         setOnClickListener { fn() }
     }

@@ -249,14 +249,15 @@ class Monitor(private val mon: CanvasTex, private val screenMat: Material, priva
         pcPoweredOn = on
         screenMat.emissiveIntensity = if (on) 0.95f else 0.05f
         room.monitorLight.intensity = if (on) 1.55f else 0f
-        pcLedMat.emissiveIntensity = if (on) 1f else 0f
+        pcLedMat.emissiveIntensity = if (on) 1.0f else 0f
+        pcLedMat.color.setHex(if (on) 0x22ff55 else 0x0a2e16)
         if (on) room.monitorLight.color.setHex(CHANNEL_LIGHT_COLORS[currentChannel])
         update(0f) // the frame loop skips redraws while it's off, so blank it once here
     }
-    /** animate(): the monitor flickers like the HTML's (light and LED). */
+    /** animate(): the monitor flickers like the HTML's (green power LED stays solid while on). */
     fun tick(t: Float) {
         if (!pcPoweredOn) return
         room.monitorLight.intensity = 1.50f + sin(t * 19.0f) * 0.04f
-        pcLedMat.emissiveIntensity = if (sin(t * 27.0f) > 0.4f) 1.0f else 0.25f
+        pcLedMat.emissiveIntensity = 1.0f
     }
 }

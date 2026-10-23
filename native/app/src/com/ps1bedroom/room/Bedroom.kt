@@ -313,7 +313,9 @@ class Bedroom(private val room: Room) {
         wallShelf.position.set(3.25f, 3.1f, -2.78f); wallShelf.castShadow = true; wallShelf.receiveShadow = true; scene.add(wallShelf)
         catCanvasObj = createCanvasTex(32, 32) { _, _, _ -> }
         drawCatPhoto()
-        val catFrame = Mesh(Geo.box(0.42f, 0.48f, 0.05f, 2, 2, 1), PS1.material(map = catCanvasObj.tex))
+        val catWood = PS1.material(color = 0x3a2312)
+        val catFront = PS1.material(map = catCanvasObj.tex)
+        val catFrame = Mesh(Geo.box(0.42f, 0.48f, 0.05f, 2, 2, 1), listOf(catWood, catWood, catWood, catWood, catFront, catWood))
         catFrame.position.set(2.55f, 3.38f, -2.82f); catFrame.rotation.x = -0.1f; catFrame.castShadow = true; catFrame.receiveShadow = true
         scene.add(catFrame); room.registerInteractable(catFrame, "cat")
         val plantPot = Mesh(Geo.cylinder(0.13f, 0.1f, 0.28f, 6), PS1.material(color = 0x7c3f2c))

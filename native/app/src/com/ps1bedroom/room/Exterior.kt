@@ -123,6 +123,12 @@ class Exterior(private val group: Group, private val env: Environment, private v
     /** Called when the train passes the window (the pass sound comes with the audio phase). */
     var onTrainPass: () -> Unit = {}
     var tempUnit = if (Locale.getDefault().let { it.language == "en" && it.country == "US" }) "F" else "C"
+    /** Real-time temperature, city name, and now-playing readouts wired by App. */
+    var tempReadout: () -> String = { formatTemp(currentTempC()) }
+    var cityReadout: () -> String = { "" }
+    var nowPlayingReadout: () -> String = { "PS1 BEDROOM" }
+    private var weatherDirty = true
+    fun markWeatherDirty() { weatherDirty = true }
 
     init {
         // ---- Towers with HVAC, winter snow caps and roof beacons ----
@@ -264,10 +270,15 @@ class Exterior(private val group: Group, private val env: Environment, private v
         }
 
         // ---- 1.2 Billboards: tri-vision signs that flip between ads picked for the time, weather and season ----
+        val weatherAd = Ad(null, "#38bdf8", "#fde047", "#071324", dyn = {
+            val city = cityReadout().trim().ifEmpty { "DOWNTOWN" }.uppercase()
+            val shortCity = if (city.length > 9) city.take(9) else city
+            arrayOf("$shortCity ${tempReadout()}", "${env.W.label.uppercase()} · ${env.formatHour(env.hour)}")
+        })
         AD_LIB = listOf(
+            weatherAd,
             Ad(arrayOf("NEO COLA", "ICE COLD · 24 HRS"), "#ff3fa4", "#7ff3ff", "#0b0614"),
             Ad(arrayOf("104.3 FM", "THE NIGHT SHIFT"), "#ffd23f", "#ff7a3f", "#120a02", { env.hour >= 19 || env.hour < 5 }),
-            // (reads the PlayStation's game once the console is ported)
             Ad(null, "#6ad6ff", "#ffffff", "#06101c", dyn = { arrayOf("NOW PLAYING", nowPlaying()) }),
             Ad(arrayOf("CLUCK SHACK", "2 PC + FRIES \$1.99"), "#ffb703", "#ffffff", "#7f1d1d"),
             Ad(arrayOf("MEGABYTE PIZZA", "HOT IN 30 MIN OR FREE"), "#ff5a36", "#fff3b0", "#1a1206"),
@@ -283,14 +294,17 @@ class Exterior(private val group: Group, private val env: Environment, private v
             Ad(arrayOf("SNOW DAY?", "SLEDS · BOOTS · MITTENS"), "#e0f2fe", "#7dd3fc", "#0b1a2e", { env.isSnowingNow() })
         )
         makeBillboard(1.65f, 4.75f, -8.35f, 1.3f, 0.48f, 0)
-        makeBillboard(-4.2f, 5.95f, -8.85f, 1.4f, 0.52f, 1)
-        makeBillboard(5.5f, 5.15f, -7.95f, 1.1f, 0.42f, 3) // (the PS1 ad reads game state, so it only appears in rotation later)
-        // LED ticker on the tall tower's face
+        makeBillboard(-4.2f, 5.95f, -8.85f, 1.4f, 0.52f, 2)
+        makeBillboard(5.5f, 5.15f, -7.95f, 1.1f, 0.42f, 4)
+        // LED weather & time tickers on the center-right tower (unobstructed from the window) and the tall right tower
         tickerObj = createCanvasTex(256, 24) { _, _, _ -> }
         tickerMat = PS1.material(map = tickerObj.tex, emissive = 0xffffff, emissiveMap = tickerObj.tex, emissiveIntensity = 1f)
-        val ticker = Mesh(Geo.plane(1.75f, 0.17f), tickerMat)
-        ticker.position.set(3.45f, 3.3f, -9.43f)
-        group.add(ticker)
+        val tickerMain = Mesh(Geo.plane(1.56f, 0.22f), tickerMat)
+        tickerMain.position.set(1.65f, 3.72f, -8.38f)
+        group.add(tickerMain)
+        val tickerSide = Mesh(Geo.plane(1.85f, 0.22f), tickerMat)
+        tickerSide.position.set(3.45f, 3.85f, -9.43f)
+        group.add(tickerSide)
 
         // ---- Elevated commuter train on a viaduct between the highway and the towers ----
         val viaduct = Mesh(Geo.box(24.2f, 0.14f, 0.7f), PS1.material(color = 0x3b4252))
@@ -315,10 +329,10 @@ class Exterior(private val group: Group, private val env: Environment, private v
         trainGroup.position.set(-30f, 1.87f, -7.7f)
         group.add(trainGroup)
 
-        env.envHooks += { updateExteriorForTime() }
+        env.envHooks += { markWeatherDirty(); updateExteriorForTime() }
     }
 
-    private fun nowPlaying() = "PS1 BEDROOM"
+    private fun nowPlaying() = nowPlayingReadout()
 
     private fun buildVehicle(type: VehicleType, dir: Int): Vehicle {
         val g = Group()
@@ -498,15 +512,36 @@ class Exterior(private val group: Group, private val env: Environment, private v
     }
     fun formatTemp(c: Double) = if (tempUnit == "F") "${Math.round(c * 9 / 5 + 32)}°F" else "${Math.round(c)}°C"
 
+    private var lastWeatherAdMinute = -1
     private fun updateBillboards(t: Float) {
         val now = SystemClock.uptimeMillis()
         val night = 1 - env.daylight
-        for (bb in billboards) {
+        val curMinute = (env.hour * 60).roundToInt()
+        if (weatherDirty || curMinute != lastWeatherAdMinute) {
+            weatherDirty = false
+            lastWeatherAdMinute = curMinute
+            // Keep the front center-right tower billboard synced whenever it is showing the live weather ad
+            if (billboards.isNotEmpty()) {
+                val mainBb = billboards[0]
+                if (mainBb.cur === AD_LIB[0] && mainBb.flipT < 0) {
+                    drawAd(mainBb.obj.ctx, mainBb.cur, 128, 48)
+                    mainBb.obj.tex.needsUpdate()
+                } else if (mainBb.cur !== AD_LIB[0] && mainBb.flipT < 0) {
+                    // Flip back to the live weather & time display whenever weather changes
+                    mainBb.next = AD_LIB[0]
+                    drawAd(mainBb.a, mainBb.cur, 128, 48)
+                    drawAd(mainBb.b, mainBb.next!!, 128, 48)
+                    mainBb.flipT = 0.0
+                }
+            }
+        }
+        for ((idx, bb) in billboards.withIndex()) {
             val flick = if (sin(t * 13 + bb.phase) > 0.97 || sin(t * 0.7 + bb.phase) > 0.995) 0.25 else 1.0
-            bb.mat.emissiveIntensity = ((0.3 + 0.7 * night) * flick).toFloat()
+            bb.mat.emissiveIntensity = ((0.35 + 0.65 * night) * flick).toFloat()
             if (bb.flipT < 0 && now > bb.nextAt) {
                 val ex = ArrayList<Ad>(); for (o in billboards) { ex += o.cur; o.next?.let { ex += it } }
-                bb.next = pickAd(ex)
+                // The center-right tower (idx 0) favors the live weather readout every other flip
+                bb.next = if (idx == 0 && bb.cur !== AD_LIB[0] && rnd.nextDouble() < 0.75) AD_LIB[0] else pickAd(ex)
                 drawAd(bb.a, bb.cur, 128, 48)
                 drawAd(bb.b, bb.next!!, 128, 48)
                 bb.flipT = 0.0
@@ -534,25 +569,38 @@ class Exterior(private val group: Group, private val env: Environment, private v
                 }
             }
         }
-        // Ticker: refresh ~10x a second
+        // Ticker: refresh ~10x a second with real-time clock, live/current temperature, and weather condition
         if (t - tickerLast > 0.1f) {
             tickerLast = t
             val ctx = tickerObj.ctx
-            ctx.fillStyle = "#0a0602"; ctx.fillRect(0, 0, 256, 24)
-            val temp = formatTemp(currentTempC())
+            ctx.fillStyle = "#0c0702"; ctx.fillRect(0, 0, 256, 24)
+            ctx.strokeStyle = "#451a03"; ctx.lineWidth = 1f; ctx.strokeRect(0.5, 0.5, 255.0, 23.0)
+            val temp = tempReadout()
+            val city = cityReadout().trim()
+            val cityPrefix = if (city.isNotEmpty()) "LIVE · ${city.uppercase()}  ·  " else ""
             val W = env.W
-            val advisory = if (env.isSnowingNow()) "SNOW ADVISORY · DRIVE SLOW" else (if (env.isRainingNow()) "WET ROADS · DRIVE SAFE" else (if (W.fog > 0.4f) "FOG · LOW VISIBILITY" else "HAVE A GOOD NIGHT"))
-            val msg = "   ${env.formatHour(env.hour)}  ·  $temp  ·  ${W.label.uppercase()}  ·  $advisory   "
+            val advisory = when {
+                env.weatherKind == "blizzard" -> "BLIZZARD WARNING · STAY INDOORS"
+                env.isSnowingNow() -> "SNOW ADVISORY · DRIVE SLOW"
+                env.W.base == "storm" -> "THUNDERSTORM · SEEK SHELTER"
+                env.isRainingNow() -> "WET ROADS · DRIVE SAFE"
+                W.fog > 0.4f -> "FOG · LOW VISIBILITY"
+                W.base == "heat" -> "HEAT ADVISORY · STAY HYDRATED"
+                W.wind >= 0.7f -> "HIGH WIND ADVISORY"
+                env.daylight > 0.5 -> "CLEAR SKIES · HAVE A GREAT DAY"
+                else -> "HAVE A GOOD NIGHT"
+            }
+            val msg = "   $cityPrefix${env.formatHour(env.hour)}  ·  $temp  ·  ${W.label.uppercase()}  ·  ${env.currentSeason.uppercase()}  ·  $advisory   "
             ctx.font = "bold 15px monospace"
-            ctx.fillStyle = "#ffb020"
-            val wMsg = ctx.measureText(msg)
-            val off = (t * 30) % wMsg
-            ctx.fillText(msg + msg, -off, 18)
-            // LED dot grid
-            ctx.fillStyle = "rgba(0,0,0,0.35)"
+            ctx.fillStyle = "#fbbf24"
+            val wMsg = max(1f, ctx.measureText(msg))
+            val off = (t * 32f) % wMsg
+            ctx.fillText(msg + msg, -off, 17)
+            // Subtle LED dot grid
+            ctx.fillStyle = "rgba(0,0,0,0.28)"
             var x = 0; while (x < 256) { ctx.fillRect(x, 0, 1, 24); x += 2 }
             tickerObj.tex.needsUpdate()
-            tickerMat.emissiveIntensity = (0.5 + 0.5 * night).toFloat()
+            tickerMat.emissiveIntensity = (0.65 + 0.35 * night).toFloat()
         }
     }
 

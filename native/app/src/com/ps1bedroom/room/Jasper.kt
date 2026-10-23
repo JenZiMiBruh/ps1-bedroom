@@ -1,6 +1,7 @@
 package com.ps1bedroom.room
 
 import com.ps1bedroom.room.engine.Canvas2D
+import com.ps1bedroom.room.engine.CanvasTex
 import com.ps1bedroom.room.engine.Geo
 import com.ps1bedroom.room.engine.Group
 import com.ps1bedroom.room.engine.Material
@@ -132,12 +133,16 @@ class Jasper(private val room: Room, private val env: Environment) {
             dogPart(dogHead, 0.06f, 0.06f, 0.04f, dogCream, s * 0.085f, -0.06f, 0.08f)                      // cheeks
         }
         // Eyes: pixel-art, ice blue; his LEFT eye (the +X side) is brown on the bottom half
+        eyeCanvases.clear(); eyeMats.clear()
         for ((s, split) in listOf(-1 to false, 1 to true)) {
-            val obj = createCanvasTex(8, 8) { ctx, _, _ -> drawDogEye(ctx, split) }
-            val eye = Mesh(Geo.plane(0.05f, 0.05f), PS1.material(map = obj.tex, color = 0xffffff, emissive = 0xffffff, emissiveMap = obj.tex, emissiveIntensity = 0.12f,
-                polygonOffset = true, polygonOffsetFactor = -3f, polygonOffsetUnits = -3f))
+            val obj = createCanvasTex(8, 8) { ctx, _, _ -> drawDogEye(ctx, split, closed = false) }
+            val mat = PS1.material(map = obj.tex, color = 0xffffff, emissive = 0xffffff, emissiveMap = obj.tex, emissiveIntensity = 0.12f,
+                polygonOffset = true, polygonOffsetFactor = -3f, polygonOffsetUnits = -3f)
+            val eye = Mesh(Geo.plane(0.05f, 0.05f), mat)
             eye.position.set(s * 0.06f, 0.03f, 0.111f)
             dogHead.add(eye)
+            eyeCanvases += obj to split
+            eyeMats += mat
             dogPart(dogHead, 0.06f, 0.02f, 0.02f, dogCream, s * 0.06f, 0.07f, 0.105f) // tan eyebrow spot
         }
         // Legs: hip / shoulder pivots, plus a knee / hock joint in each so they fold under him
@@ -170,8 +175,22 @@ class Jasper(private val room: Room, private val env: Environment) {
         sendDog(pickDogSpot())
     }
 
-    private fun drawDogEye(ctx: Canvas2D, split: Boolean) {
+    private val eyeCanvases = ArrayList<Pair<CanvasTex, Boolean>>()
+    private val eyeMats = ArrayList<Material>()
+    private var eyesClosedState = false
+    private var nextBlinkAt = 2.4f
+    private var blinkEndAt = 0f
+    private var doubleBlinkAt = 0f
+
+    private fun drawDogEye(ctx: Canvas2D, split: Boolean, closed: Boolean = false) {
         ctx.clearRect(0, 0, 8, 8)
+        if (closed) {
+            ctx.fillStyle = colors.coat; ctx.fillRect(0, 0, 8, 8)
+            ctx.fillStyle = colors.dark; ctx.fillRect(0, 0, 8, 3)       // upper lid fold
+            ctx.fillStyle = "#090705"; ctx.fillRect(0, 4, 8, 2)         // closed lash line
+            ctx.fillStyle = colors.light; ctx.fillRect(1, 6, 6, 1)      // soft lower lid highlight
+            return
+        }
         ctx.fillStyle = "#120c08"; ctx.fillRect(0, 0, 8, 8)            // dark lid rim
         ctx.fillStyle = "#2e7fd0"; ctx.fillRect(1, 1, 6, 6)            // iris
         ctx.fillStyle = "#7cc4f5"; ctx.fillRect(1, 1, 6, 2)            // lighter top
@@ -180,12 +199,23 @@ class Jasper(private val room: Room, private val env: Environment) {
         ctx.fillStyle = "#ffffff"; ctx.fillRect(4, 2, 1, 1)            // catch-light
     }
 
+    private fun refreshEyes(closed: Boolean) {
+        eyesClosedState = closed
+        for (i in eyeCanvases.indices) {
+            val (obj, split) = eyeCanvases[i]
+            drawDogEye(obj.ctx, split, closed)
+            obj.tex.needsUpdate()
+            eyeMats[i].emissiveIntensity = if (closed) 0f else 0.12f
+        }
+    }
+
     /** jasperColors: the chosen preset (or "custom") and its three colours. */
     var colors = PRESETS.getValue("classic"); private set
     var colorPreset = "classic"; private set
     fun applyColors(p: Preset, key: String = PRESETS.entries.firstOrNull { it.value === p }?.key ?: "custom") {
         colors = p; colorPreset = key
         dogTan.color.setStyle(p.coat); dogDark.color.setStyle(p.dark); dogCream.color.setStyle(p.light)
+        if (eyeCanvases.isNotEmpty()) refreshEyes(eyesClosedState)
     }
     /** One part's colour from the custom swatches ("coat", "dark" or "light"). */
     fun setPart(part: String, hex: String) {
@@ -209,7 +239,7 @@ class Jasper(private val room: Room, private val env: Environment) {
         val spots = arrayListOf(
             Spot("rug", Vec3(0.6f, 0f, 1.5f), if (night) "sleep" else "lie", 2f),
             Spot("door", Vec3(2.3f, 0f, 2.65f), "sit", if (doorOpen) 3f else 1f),
-            Spot("bed", Vec3(2.95f, 0.83f, -0.55f), "sleep", if (night) 6f else 1f, bed = true),
+            Spot("bed", Vec3(2.75f, 0.85f, 0.25f), "sleep", if (night) 6f else 1f, bed = true),
             Spot("tv", Vec3(-1.25f, 0f, 1.55f), "lie", if (bedroomTvOn) 2.5f else 0.5f),
             Spot("desk", Vec3(-0.35f, 0f, 0.15f), "sit", if (sittingAtDesk) 5f else 0.6f)
         )
@@ -227,9 +257,9 @@ class Jasper(private val room: Room, private val env: Environment) {
     private fun sendDog(s: Spot) {
         spot = s
         path.clear()
-        if (onBed) { jump = Jump(pos.clone(), Vec3(1.25f, 0f, -0.55f), 0f, 0.9f, 0f); onBed = false }
+        if (onBed) { jump = Jump(pos.clone(), Vec3(1.25f, 0f, 0.25f), 0f, 0.9f, 0f); onBed = false }
         path += DOG_HUB.clone()
-        if (s.bed) path += Vec3(1.25f, 0f, -0.55f)
+        if (s.bed) path += Vec3(1.25f, 0f, 0.25f)
         if (!s.bed) path += Vec3(s.pos.x, 0f, s.pos.z) // native fix: for the bed he stops at its edge and jumps up from there
         state = "walk"
     }
@@ -314,6 +344,24 @@ class Jasper(private val room: Room, private val env: Environment) {
         tailSegs[1].rotation.x = -0.25f * standK + TAIL_LIE2 * lieK + TAIL_SIT2 * sitK
         tailSegs[2].rotation.x = -0.3f * standK
         dogTail.rotation.y = sin(t * (if (petting) 16f else (if (pose == "walk") 7f else 2f))) * (if (petting) 0.6f else (if (pose == "sleep") 0.04f else 0.15f))
+        // Eyes: closed whenever he's sleeping or curled up on the bed; natural blinking animation when awake
+        val sleepingOrOnBed = pose == "sleep" || onBed
+        val blinking = if (!sleepingOrOnBed) {
+            if (t >= nextBlinkAt) {
+                blinkEndAt = t + 0.14f
+                // Occasional double-blink for extra life
+                if (doubleBlinkAt == 0f && rnd.nextFloat() < 0.24f) {
+                    doubleBlinkAt = blinkEndAt + 0.12f
+                    nextBlinkAt = doubleBlinkAt
+                } else {
+                    doubleBlinkAt = 0f
+                    nextBlinkAt = t + 2.6f + rnd.nextFloat() * 3.4f
+                }
+            }
+            t < blinkEndAt
+        } else false
+        val wantEyesClosed = sleepingOrOnBed || blinking
+        if (wantEyesClosed != eyesClosedState) refreshEyes(wantEyesClosed)
         // Soft snores while asleep at night
         if (pose == "sleep" && state == "rest" && t > nextSnore) { nextSnore = t + 4.2f + rnd.nextFloat() * 1.5f; onSound("snore", soundPos()) }
     }
@@ -331,7 +379,7 @@ class Jasper(private val room: Room, private val env: Environment) {
         "He rests his chin on your knee and sighs like it has been a long day."
     )
 
-    /** Tap: tail thumps and a head tilt; a sleeping Jasper opens one eye and lies awake. */
+    /** Tap: tail thumps and a head tilt; a sleeping Jasper opens one eye and lies awake (unless curled up on the bed). */
     /** 1.3 hooks: petting (achievements), sleep mode sends him to bed, the alarm makes him wag. */
     var onPet: () -> Unit = {}
     fun goToBed() { dogSpots().firstOrNull { it.name == "bed" }?.let { sendDog(it) } }
@@ -339,8 +387,15 @@ class Jasper(private val room: Room, private val env: Environment) {
     fun petDog(t: Float) {
         onPet()
         wagUntil = t + 2.5f
-        if (pose == "sleep") { pose = "lie"; toast("🐕 Jasper opens one eye (the half-brown one), yawns, and thumps his tail twice.") }
-        else toast("🐕 JASPER: ${DOG_PETS[rnd.nextInt(DOG_PETS.size)]}")
+        if (onBed) {
+            pose = "sleep"
+            toast("🐕 Jasper keeps his eyes closed on the bed, sighs happily, and thumps his tail twice.")
+        } else if (pose == "sleep") {
+            pose = "lie"
+            toast("🐕 Jasper opens his eyes, yawns, and thumps his tail twice.")
+        } else {
+            toast("🐕 JASPER: ${DOG_PETS[rnd.nextInt(DOG_PETS.size)]}")
+        }
         onSound("boof", soundPos())
     }
 

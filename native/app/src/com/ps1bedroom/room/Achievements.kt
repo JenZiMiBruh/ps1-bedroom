@@ -117,8 +117,9 @@ class AchievementPop(private val act: Activity, private val root: FrameLayout) {
         card.addView(shine, FrameLayout.LayoutParams(dpi(70f), dpi(64f)))   // fixed: match-parent in a wrap-content card made it screen-tall
         card.background = cardBg
         card.minimumWidth = dpi(220f)
-        card.elevation = dp(12f)
-        root.addView(card, FrameLayout.LayoutParams(-2, -2, Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply { topMargin = dpi(14f); leftMargin = dpi(16f); rightMargin = dpi(16f) })
+        card.elevation = dp(22f)
+        // Bottom-reachable trophy banner above the bottom dock
+        root.addView(card, FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply { bottomMargin = dpi(120f); leftMargin = dpi(16f); rightMargin = dpi(16f) })
     }
     private var hideRun: Runnable? = null
     fun show(a: Array<String>, h: Int) {
@@ -130,13 +131,14 @@ class AchievementPop(private val act: Activity, private val root: FrameLayout) {
         small.setTextColor(col)
         icon.text = a[0]; name.text = a[1]; desc.text = a[2]
         card.visibility = View.VISIBLE
+        card.bringToFront()
         card.outlineSpotShadowColorCompat(col)
-        // ach-drop: in, hold, out
-        card.translationY = -dp(160f)
+        // ach-rise: in from bottom, hold, out
+        card.translationY = dp(160f)
         card.animate().cancel()
         card.animate().translationY(0f).setDuration(420).setInterpolator(OvershootInterpolator(1.2f)).start()
         hideRun?.let { root.removeCallbacks(it) }
-        hideRun = Runnable { card.animate().translationY(-dp(160f)).setDuration(500).setInterpolator(DecelerateInterpolator()).withEndAction { card.visibility = View.INVISIBLE }.start() }.also { root.postDelayed(it, 3700) }
+        hideRun = Runnable { card.animate().translationY(dp(160f)).setDuration(500).setInterpolator(DecelerateInterpolator()).withEndAction { card.visibility = View.INVISIBLE }.start() }.also { root.postDelayed(it, 3700) }
         // shine sweep
         shine.translationX = -dp(140f)
         root.postDelayed({ shine.animate().translationX(card.width + dp(40f)).setDuration(1100).start() }, 500)

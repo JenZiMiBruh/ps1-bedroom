@@ -21,18 +21,22 @@ class Settings(private val app: App, private val ctx: Context) {
     var qualityMode = "balanced"; private set
     var vibeMode = "signature"; private set
     var fpsChoice = "auto"
-    var ecoIdle = true
+    var ecoIdle = false
     var tempUnit = if (Locale.getDefault().country == "US") "F" else "C"
     var startScreenEnabled = true
     var tutorialSeen = false
     var sleepDim = true
     var masterVolume = 0.85f
     var debugFreeCam = false
+    // Falling leaves & outdoor debris controls (0f..2.5f, default 1.0f = 100%)
+    @JvmField var debrisAmount = 1.0f
+    @JvmField var debrisSpeed = 1.0f
+    @JvmField var debrisFreq = 1.0f
     // Live weather (Open-Meteo)
     var weatherMode = "manual"; private set   // manual · auto · live
     var cityName = ""
     var liveTempC: Double? = null
-    @Volatile var liveStatus = "Type a city to sync the weather (and the sun's position) with the real world."
+    @Volatile var liveStatus = "Tap Live or type a city to sync the weather, temperature, and sun with the real world."
     private var autoNextAt = 0L
     private var liveNextAt = 0L
     // Timers
@@ -108,6 +112,9 @@ class Settings(private val app: App, private val ctx: Context) {
     }
     fun setRealisticMoon(on: Boolean) { env.realisticMoon = on; env.applyEnvironmentSettings(); changed() }
     fun setCycleMinutes(m: Double) { env.cycleMinutes = m; setTimeMode("cycle") }
+    fun setDebrisAmount(v: Float) { debrisAmount = v.coerceIn(0f, 2.5f); app.weatherFx.setDebrisParams(debrisAmount, debrisSpeed, debrisFreq); changed() }
+    fun setDebrisSpeed(v: Float) { debrisSpeed = v.coerceIn(0.2f, 2.5f); app.weatherFx.setDebrisParams(debrisAmount, debrisSpeed, debrisFreq); changed() }
+    fun setDebrisFreq(v: Float) { debrisFreq = v.coerceIn(0.2f, 2.5f); app.weatherFx.setDebrisParams(debrisAmount, debrisSpeed, debrisFreq); changed() }
 
     // ---------- Live weather (Open-Meteo, no key needed) ----------
     private fun wmoToKind(code: Int, wind: Double): String {
@@ -131,31 +138,45 @@ class Settings(private val app: App, private val ctx: Context) {
         c.connectTimeout = 8000; c.readTimeout = 8000
         try { return JSONObject(c.inputStream.bufferedReader().use { it.readText() }) } finally { c.disconnect() }
     }
-    /** Looks the city up and syncs the weather, the temperature and the sun's position (network on its own thread). */
+    /** Looks the city up (or auto-detects via IP geolocation if blank) and syncs the weather, temperature, and sun position. */
     fun fetchLiveWeather(city: String, quiet: Boolean) {
         val q = city.trim()
-        if (q.isEmpty()) return
-        liveStatus = "Looking up $q…"; changed()
-        liveNextAt = System.currentTimeMillis() + 20 * 60000L
+        liveStatus = if (q.isNotEmpty()) "Looking up $q…" else "Finding your local weather…"; changed()
+        liveNextAt = System.currentTimeMillis() + 15 * 60000L
         Thread {
             try {
-                val geo = getJson("https://geocoding-api.open-meteo.com/v1/search?name=${URLEncoder.encode(q, "UTF-8")}&count=1&language=en&format=json")
-                val results = geo.optJSONArray("results")
-                if (results == null || results.length() == 0) { liveStatus = "Couldn't find \"$q\". Try a nearby bigger city."; app.post { changed() }; return@Thread }
-                val place = results.getJSONObject(0)
-                val lat = place.getDouble("latitude"); val lon = place.getDouble("longitude")
+                var lat = env.lat; var lon = env.lon; var name = q; var admin = ""
+                if (q.isNotEmpty()) {
+                    val geo = getJson("https://geocoding-api.open-meteo.com/v1/search?name=${URLEncoder.encode(q, "UTF-8")}&count=1&language=en&format=json")
+                    val results = geo.optJSONArray("results")
+                    if (results == null || results.length() == 0) { liveStatus = "Couldn't find \"$q\". Try a nearby bigger city."; app.post { changed() }; return@Thread }
+                    val place = results.getJSONObject(0)
+                    lat = place.getDouble("latitude"); lon = place.getDouble("longitude")
+                    name = place.getString("name"); admin = place.optString("admin1", "")
+                } else {
+                    try {
+                        val ip = getJson("https://get.geojs.io/v1/ip/geo.json")
+                        lat = ip.getString("latitude").toDouble(); lon = ip.getString("longitude").toDouble()
+                        name = ip.optString("city", "").ifEmpty { ip.optString("region", "Local") }
+                        admin = ip.optString("region", "")
+                    } catch (_: Exception) {
+                        val ip2 = getJson("https://ipwho.is/")
+                        lat = ip2.getDouble("latitude"); lon = ip2.getDouble("longitude")
+                        name = ip2.optString("city", "Local"); admin = ip2.optString("region", "")
+                    }
+                }
                 val fc = getJson("https://api.open-meteo.com/v1/forecast?latitude=$lat&longitude=$lon&current=temperature_2m,weather_code,wind_speed_10m&timezone=auto")
                 val c = fc.getJSONObject("current")
                 val tempC = c.getDouble("temperature_2m")
                 val kind = wmoToKind(c.getInt("weather_code"), c.getDouble("wind_speed_10m"))
-                val name = place.getString("name"); val admin = place.optString("admin1", "")
                 app.post {
                     env.lat = lat; env.lon = lon; env.lonKnown = true
                     cityName = name
                     liveTempC = tempC
                     val desc = Environment.WEATHER_KINDS.getValue(kind).label
-                    liveStatus = "$name${if (admin.isNotEmpty()) ", $admin" else ""} · ${tempC.roundToInt()}°C / ${(tempC * 9 / 5 + 32).roundToInt()}°F · $desc"
+                    liveStatus = "$name${if (admin.isNotEmpty() && admin != name) ", $admin" else ""} · ${tempC.roundToInt()}°C / ${(tempC * 9 / 5 + 32).roundToInt()}°F · $desc"
                     if (weatherMode == "live") setWeatherKind(kind, quiet) else { env.applyEnvironmentSettings(); changed() }
+                    app.exterior.markWeatherDirty()
                 }
             } catch (e: Exception) {
                 liveStatus = "No connection right now. Keeping the last weather and trying again later."
@@ -176,7 +197,8 @@ class Settings(private val app: App, private val ctx: Context) {
     fun setWeatherMode(mode: String) {
         weatherMode = mode
         if (mode == "auto") autoNextAt = System.currentTimeMillis() + 8 * 60000L
-        if (mode == "live" && cityName.isNotEmpty()) fetchLiveWeather(cityName, true)
+        if (mode == "live") fetchLiveWeather(cityName, false)
+        app.exterior.markWeatherDirty()
         changed()
     }
     fun pickWeather(kind: String) { weatherMode = "manual"; setWeatherKind(kind) }
@@ -295,7 +317,7 @@ class Settings(private val app: App, private val ctx: Context) {
                 val next = nextOf(listOf("live") + env.TIME_PRESETS.map { it.first }, presetNameNow() ?: (if (env.timeMode == "preset") "" else "live"))
                 if (next == "live") { setTimeMode("live"); app.toast("🕰 LIVE CLOCK · ${env.formatHour(env.hour)}") } else setTimePreset(next)
             }
-            "temp" -> { tempUnit = if (tempUnit == "F") "C" else "F"; app.toast("🌡 ${formatTemp(currentTempC())}"); changed() }
+            "temp" -> { tempUnit = if (tempUnit == "F") "C" else "F"; app.exterior.markWeatherDirty(); app.toast("🌡 ${formatTemp(currentTempC())}"); changed() }
             "season" -> {
                 val next = nextOf(listOf("live", "spring", "summer", "fall", "winter"), if (env.seasonMode == "live") "live" else env.currentSeason)
                 setSeasonChoice(next)
@@ -303,9 +325,9 @@ class Settings(private val app: App, private val ctx: Context) {
             }
             "weather" -> {
                 val kinds = Environment.WEATHER_KINDS.keys.toList()
-                val list = if (cityName.isNotEmpty()) kinds + "live" else kinds
+                val list = kinds + "live"
                 val next = nextOf(list, if (weatherMode == "live") "live" else env.weatherKind)
-                if (next == "live") { setWeatherMode("live"); app.toast("🌦 LIVE WEATHER · $cityName"); return }
+                if (next == "live") { setWeatherMode("live"); app.toast("🌦 LIVE WEATHER${if (cityName.isNotEmpty()) " · $cityName" else ""}"); return }
                 pickWeather(next)
             }
             "place" -> { setOutside(nextOf(Places.OUTSIDE_ENVS.keys.toList(), app.sky.outsideEnv)) }
@@ -326,7 +348,7 @@ class Settings(private val app: App, private val ctx: Context) {
         lastBeat = now
         sleepTick()
         if (weatherMode == "auto" && now > autoNextAt) autoWeatherStep()
-        if (weatherMode == "live" && cityName.isNotEmpty() && liveNextAt in 1..now) fetchLiveWeather(cityName, true)
+        if (weatherMode == "live" && liveNextAt in 1..now) fetchLiveWeather(cityName, true)
         focusTick()
         app.hud?.refreshStatus()
         app.publishMedia()
@@ -353,6 +375,7 @@ class Settings(private val app: App, private val ctx: Context) {
         put("jitter", app.jitterBase.toDouble()); put("affine", app.renderer.ps1Uniforms.affineStrength.toDouble()); put("dither", app.renderer.post.ditherStrength.toDouble())
         put("volumetric", env.userVolumetricSetting.toDouble()); put("sway", app.swayAmount.toDouble()); put("ao", app.aoBase.toDouble())
         put("tempUnit", tempUnit); put("fpsChoice", fpsChoice); put("ecoIdle", ecoIdle)
+        put("debrisAmount", debrisAmount.toDouble()); put("debrisSpeed", debrisSpeed.toDouble()); put("debrisFreq", debrisFreq.toDouble())
         put("poster", app.extras.posterChoice); put("colors", JSONObject(app.extras.roomColors as Map<*, *>)); put("decor", app.extras.decorMode); put("bandPoster", app.furniture.bandPoster); put("lava", if (app.desk.lavaOn) app.desk.lavaIdx else -1); put("console", app.consoles.current); put("jasper", JSONObject().put("preset", app.jasper.colorPreset).put("coat", app.jasper.colors.coat).put("dark", app.jasper.colors.dark).put("light", app.jasper.colors.light)); put("heater", app.extras.heaterMode)
         put("outside", app.sky.outsideEnv); put("startScreen", startScreenEnabled); put("tutorialSeen", tutorialSeen); put("sleepDim", sleepDim)
     }
@@ -401,7 +424,11 @@ class Settings(private val app: App, private val ctx: Context) {
             env.userVolumetricSetting = s.optDouble("volumetric", 1.0).toFloat()
             app.swayAmount = s.optDouble("sway", 0.4).toFloat()
             fpsChoice = s.optString("fpsChoice", "auto")
-            ecoIdle = s.optBoolean("ecoIdle", true)
+            ecoIdle = s.optBoolean("ecoIdle", false)
+            debrisAmount = s.optDouble("debrisAmount", 1.0).toFloat().coerceIn(0f, 2.5f)
+            debrisSpeed = s.optDouble("debrisSpeed", 1.0).toFloat().coerceIn(0.2f, 2.5f)
+            debrisFreq = s.optDouble("debrisFreq", 1.0).toFloat().coerceIn(0.2f, 2.5f)
+            app.weatherFx.setDebrisParams(debrisAmount, debrisSpeed, debrisFreq)
             setQuality(s.optString("quality", "balanced"), true)
             if (s.has("ao")) app.aoBase = s.getDouble("ao").toFloat()
             if (s.has("res")) app.setResolution(s.getInt("res"))
@@ -426,7 +453,7 @@ class Settings(private val app: App, private val ctx: Context) {
             sleepDim = s.optBoolean("sleepDim", true)
         } catch (e: Exception) { android.util.Log.w("PS1Bedroom", "Some saved settings could not be restored", e) }
         env.applyEnvironmentSettings()
-        if (weatherMode == "live" && cityName.isNotEmpty()) fetchLiveWeather(cityName, true)
+        if (weatherMode == "live") fetchLiveWeather(cityName, true)
         if (weatherMode == "auto") autoNextAt = System.currentTimeMillis() + 10 * 60000L
         lastJson = snapshot().toString()
     }

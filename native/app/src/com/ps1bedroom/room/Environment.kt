@@ -241,8 +241,9 @@ class Environment(private val scene: Scene, private val room: Room, private val 
             // moonlight shafts are fainter than sunlight's at the same Light rays setting
             (0.38f + 0.62f * daylight.toFloat().coerceIn(0f, 1f))
 
-        // Snow caps in winter (trees and seasonal foliage come with the places outside)
-        for (sc in room.snowCapMeshes) sc.visible = winter
+        // Snow caps in winter or whenever it is actively snowing outside
+        val showSnow = winter || isSnowingNow()
+        for (sc in room.snowCapMeshes) sc.visible = showSnow
 
         for (fn in envHooks) fn()
     }
@@ -264,7 +265,12 @@ class Environment(private val scene: Scene, private val room: Room, private val 
 
     /** The HTML re-applies the environment every 20 s in live mode and every second in time-lapse (animate loop). */
     private var lastEnvApply = 0L
+    private var lastClockTick = 0L
     fun tick(nowMs: Long) {
+        if (timeMode != "preset" && nowMs - lastClockTick >= 1000L) {
+            lastClockTick = nowMs
+            hour = currentHour()
+        }
         if (timeMode != "preset" && nowMs - lastEnvApply > (if (timeMode == "cycle") 1000 else 20000)) {
             lastEnvApply = nowMs
             applyEnvironmentSettings()

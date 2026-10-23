@@ -10,7 +10,7 @@
 
 <p>Kotlin + OpenGL ES 3. No web view, no browser engine.<br>Made to run all night: cool phone, clean sound, long battery.</p>
 
-![Release](https://img.shields.io/badge/📅%20RELEASE-October%2021%2C%202026-ff3ea5?style=for-the-badge&labelColor=1a1033)
+![Release](https://img.shields.io/badge/🎃%20RELEASE-Halloween%20(Oct%2031%2C%202026)-ff3ea5?style=for-the-badge&labelColor=1a1033)
 ![Google Play](https://img.shields.io/badge/GOOGLE%20PLAY-before%20the%20end%20of%202026-22c55e?style=for-the-badge&logo=googleplay&logoColor=white&labelColor=1a1033)
 
 ![Native build](https://img.shields.io/badge/native%20build-v0.45-a78bfa?style=flat-square&labelColor=1a1033)
@@ -31,9 +31,13 @@
 
 ## 📅 Release dates
 
+> [!IMPORTANT]
+> **🎃 Update — Sorry for the short delay!**
+> We're really sorry for missing our original October 21 target. We wanted to take a few extra days to make sure full controller support, big-screen / thumb-friendly UI, richer seasonal & weather reactions, and final polish feel just right on every device. The native Android version will now officially release on **Halloween (October 31, 2026)**! Thank you so much for your patience.
+
 | | |
 |---|---|
-| 🚀 **Native Android release** | **October 21, 2026**, here on GitHub Releases |
+| 🎃 **Native Android release** | **Halloween — October 31, 2026**, here on GitHub Releases |
 | ▶️ **Google Play** | **Before the end of 2026** |
 
 When the native app ships, it takes over from the current web-based Android app as **PS1 Bedroom** on your phone. Your room is still your room.

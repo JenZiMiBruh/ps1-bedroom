@@ -254,7 +254,7 @@ class Ps1(private val room: Room, private val tv: Tv) {
     fun phase(t: Float): String {
         if (!ps1On) return "off"
         if (lidOpen) return "menu"
-        val e = t - bootStart
+        val e = max(0f, t - bootStart)
         return if (e < PS1_BOOT_SECONDS) "boot" else (if (e < PS1_BOOT_SECONDS + 4) "title" else "game")
     }
     fun update(dt: Float) {
@@ -310,12 +310,15 @@ class Ps1(private val room: Room, private val tv: Tv) {
     }
     fun padPress(t: Float) { padPressAt = t; sfx("ps1Pad") }
     /** Seconds into the game loop (after the boot and title screens). */
-    fun gameTime(t: Float) = t - bootStart - PS1_BOOT_SECONDS - 4
+    fun gameTime(t: Float) = max(0f, t - bootStart - PS1_BOOT_SECONDS - 4)
     /** The disc swap drives the lid directly. */
     fun setLid(open: Boolean) { lidOpen = open }
     fun showDiscLabel(tex: com.ps1bedroom.room.engine.Texture) { ps1Disc.materials[1].map = tex }
-    /** A new disc is in: power on (or reboot) and put the TV on A/V 1. */
-    fun gameInserted(t: Float) { if (!ps1On) powerToggle(t) else { switchTvToPs1(t); startBoot(t) } }
+    /** A new disc is in: close any open tray/menu, power on (or reboot), and put the TV on A/V 1. */
+    fun gameInserted(t: Float) {
+        lidOpen = false
+        if (!ps1On) powerToggle(t) else { switchTvToPs1(t); startBoot(t) }
+    }
 
     // ---- The PlayStation's picture on A/V 1 (HTML 2802-3010) ----
     fun drawScreen(ctx: Canvas2D, w: Int, h: Int, t: Float) {

@@ -310,6 +310,7 @@ class App : GLSurfaceView.Renderer {
                 room.extraBatchExcluded.addAll(decor.stringBulbs)
                 jasper = Jasper(room, env); jasper.build()
                 room.extraDynamicRoots += jasper.dogGroup
+                room.extraDynamicRoots += jasper.bowlsGroup
                 extras = Extras(room, env, tv, desk, bedroom); extras.build(); tv.tapes = extras
                 room.extraDynamicRoots.addAll(extras.dynamicRoots())
                 myMusic.buildRoomParts(); room.extraDynamicRoots.addAll(myMusic.dynamicRoots())

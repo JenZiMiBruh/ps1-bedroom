@@ -24,6 +24,13 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.47", "PS3/PS5 disc insertion fix, Jasper eating & drinking animations, lightning frequency & natural thunder", listOf(
+            "Fixed PS3, PS4, and PS5 staying on the boot/menu screen when inserting a game: slot-loading consoles now properly close the menu state and transition cleanly through boot into the game's title screen and gameplay",
+            "Fixed Jasper's food and water bowls: tapping the red or blue bowl (or pressing Feed / Water) now visibly fills the bowl with chunky kibble or glossy water above the rim, with pour/kibble sounds",
+            "Fixed Jasper's eating and drinking animation: he now walks all the way to the specific bowl before starting his eating/drinking timer, bends his front legs and lowers his head and moving jaw/tongue right into the bowl while the food/water visibly depletes",
+            "Added Lightning Frequency setting in Menu → World → Weather (Off, Rare, Normal, Frequent, Constant, defaulting to Normal)",
+            "Redesigned thunder & lightning audio: replaced the harsh high-frequency white-noise snap and synth sine sweep with a warm, natural multi-echo acoustic thunder rumble"
+        )),
         Entry("0.46", "New widgets, thunderstorm audio & crash fix, YouTube TV fix, dynamic world & Jasper care", listOf(
             "Fixed thunderstorm weather crash (ConcurrentModificationException on the audio thread) and added crisp electric lightning crack + deep rolling thunder audio",
             "Fixed YouTube TV playback on the CRT glass and ensured turning off the TV from any source immediately stops YouTube",

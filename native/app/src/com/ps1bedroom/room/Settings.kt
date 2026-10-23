@@ -33,6 +33,8 @@ class Settings(private val app: App, private val ctx: Context) {
     @JvmField var debrisAmount = 1.0f
     @JvmField var debrisSpeed = 1.0f
     @JvmField var debrisFreq = 1.0f
+    // Lightning frequency ("off" | "rare" | "normal" | "frequent" | "constant")
+    @JvmField var lightningFreq = "normal"
     // Live weather (Open-Meteo)
     var weatherMode = "manual"; private set   // manual · auto · live
     var cityName = ""
@@ -144,6 +146,11 @@ class Settings(private val app: App, private val ctx: Context) {
     fun setDebrisAmount(v: Float) { debrisAmount = v.coerceIn(0f, 2.5f); app.weatherFx.setDebrisParams(debrisAmount, debrisSpeed, debrisFreq); changed() }
     fun setDebrisSpeed(v: Float) { debrisSpeed = v.coerceIn(0.2f, 2.5f); app.weatherFx.setDebrisParams(debrisAmount, debrisSpeed, debrisFreq); changed() }
     fun setDebrisFreq(v: Float) { debrisFreq = v.coerceIn(0.2f, 2.5f); app.weatherFx.setDebrisParams(debrisAmount, debrisSpeed, debrisFreq); changed() }
+    fun setLightningFreq(mode: String) {
+        lightningFreq = if (mode in listOf("off", "rare", "normal", "frequent", "constant")) mode else "normal"
+        app.weatherFx.lightningFreq = lightningFreq
+        changed()
+    }
 
     // ---------- Live weather (Open-Meteo, no key needed) ----------
     private fun wmoToKind(code: Int, wind: Double): String {
@@ -405,6 +412,7 @@ class Settings(private val app: App, private val ctx: Context) {
         put("volumetric", env.userVolumetricSetting.toDouble()); put("sway", app.swayAmount.toDouble()); put("ao", app.aoBase.toDouble())
         put("tempUnit", tempUnit); put("fpsChoice", fpsChoice); put("ecoIdle", ecoIdle)
         put("debrisMode", debrisMode); put("debrisAmount", debrisAmount.toDouble()); put("debrisSpeed", debrisSpeed.toDouble()); put("debrisFreq", debrisFreq.toDouble())
+        put("lightningFreq", lightningFreq)
         put("lightsOut", env.lightsOut)
         put("carsMode", app.places.carsMode); put("carsDensity", app.places.carsDensity.toDouble()); put("carsStayMin", app.places.carsStayMinutes.roundToInt())
         put("poster", app.extras.posterChoice); put("colors", JSONObject(app.extras.roomColors as Map<*, *>)); put("decor", app.extras.decorMode); put("bandPoster", app.furniture.bandPoster); put("lava", if (app.desk.lavaOn) app.desk.lavaIdx else -1); put("console", app.consoles.current)
@@ -465,6 +473,8 @@ class Settings(private val app: App, private val ctx: Context) {
             debrisSpeed = s.optDouble("debrisSpeed", 1.0).toFloat().coerceIn(0.2f, 2.5f)
             debrisFreq = s.optDouble("debrisFreq", 1.0).toFloat().coerceIn(0.2f, 2.5f)
             app.weatherFx.setDebrisParams(debrisAmount, debrisSpeed, debrisFreq)
+            lightningFreq = s.optString("lightningFreq", "normal").let { if (it in listOf("off", "rare", "normal", "frequent", "constant")) it else "normal" }
+            app.weatherFx.lightningFreq = lightningFreq
             env.lightsOut = s.optString("lightsOut", "gradual").let { if (it in listOf("gradual", "early", "never")) it else "gradual" }
             app.places.carsMode = s.optString("carsMode", "random").let { if (it in listOf("random", "classic", "none")) it else "random" }
             app.places.carsDensity = s.optDouble("carsDensity", 0.7).toFloat().coerceIn(0.25f, 1.0f)

@@ -618,6 +618,10 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
             }
             "auto" -> note("The weather drifts naturally on its own every 10-20 minutes, fitting the season.")
         }
+        val lfOpts = listOf("off" to "Off", "rare" to "Rare", "normal" to "Normal", "frequent" to "Frequent", "constant" to "Constant")
+        h4("Lightning frequency", lfOpts.firstOrNull { it.first == s.lightningFreq }?.second ?: "Normal")
+        chips(lfOpts.map { (k, label) -> Triple(label, s.lightningFreq == k, { post { s.setLightningFreq(k) } }) })
+        note("Controls how often lightning flashes and thunder rolls during thunderstorms and heatwaves.", true)
         buildDebrisControls()
     }
     private fun buildSky() {

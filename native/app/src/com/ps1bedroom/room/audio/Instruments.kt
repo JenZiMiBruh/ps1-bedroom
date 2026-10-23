@@ -3,6 +3,7 @@ package com.ps1bedroom.room.audio
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.ceil
+import kotlin.math.cos
 import kotlin.math.ln
 import kotlin.math.max
 import kotlin.math.min
@@ -333,35 +334,44 @@ object Buffers {
             }
         }
     }
-    /** Sharp lightning crack + chesty low-mid thunder boom & rolling rumble swells (90–600 Hz body + sub punch). */
-    fun thunder(ctx: AudioCtx) = make(ctx, 6.5) { d, sr ->
+    /** Natural rolling acoustic thunder (deep brown/pink pressure rumble with organic cloud-reflection swells, no harsh hiss or sine sweeps). */
+    fun thunder(ctx: AudioCtx) = make(ctx, 5.8) { d, sr ->
         var brown = 0.0
-        var lowMid = 0.0
-        var midCrack = 0.0
+        var warmBody = 0.0
+        var smoothOut = 0.0
+        var flutterLp = 0.0
         val swells = arrayOf(
-            doubleArrayOf(0.04, 0.16, 1.35),
-            doubleArrayOf(rand(0.28, 0.55), 0.42, 1.05),
-            doubleArrayOf(rand(0.95, 1.55), 0.75, 0.80),
-            doubleArrayOf(rand(2.05, 2.85), 1.05, 0.55),
-            doubleArrayOf(rand(3.40, 4.30), 1.25, 0.32)
+            doubleArrayOf(0.05, 0.14, 1.00),
+            doubleArrayOf(rand(0.32, 0.58), 0.36, rand(0.72, 0.92)),
+            doubleArrayOf(rand(0.95, 1.45), 0.65, rand(0.50, 0.72)),
+            doubleArrayOf(rand(1.90, 2.65), 0.95, rand(0.32, 0.48)),
+            doubleArrayOf(rand(3.15, 3.95), 1.25, rand(0.16, 0.26))
         )
+        // A few brief, warm acoustic micro-bursts in the first 0.22s for the initial pressure wave (never high-pitched or hissy)
+        val tearCenters = doubleArrayOf(0.015, rand(0.045, 0.075), rand(0.10, 0.145), rand(0.165, 0.22))
         for (i in d.indices) {
             val t = i / sr
             val w = Random.nextDouble() * 2 - 1
-            brown = (brown + 0.045 * w) / 1.045
-            lowMid = (lowMid + 0.18 * w) / 1.18
-            midCrack = (midCrack + 0.42 * w) / 1.42
-            var env = kotlin.math.exp(-t * 0.55) * 0.42
+            brown = (brown + 0.024 * w) / 1.024
+            warmBody = (warmBody + 0.11 * w) / 1.11
+            flutterLp = (flutterLp + 0.004 * w) / 1.004
+            var env = kotlin.math.exp(-t * 0.72) * 0.35
             for ((c, width, a) in swells) env += a * kotlin.math.exp(-((t - c) / width).pow(2))
-            // Crisp electric tear / crackle in first 0.38s + deep resonant boom sweep (145 Hz -> 42 Hz)
-            val snap = if (t < 0.38) (w * 0.55 + midCrack * 0.85) * kotlin.math.exp(-t * 11.0) * (0.65 + 0.35 * sin(t * 95.0)) else 0.0
-            val boomFreq = 42.0 + 105.0 * kotlin.math.exp(-t * 4.2)
-            val boom = sin(2 * PI * boomFreq * t) * kotlin.math.exp(-t * 1.65) * 0.95
-            val subRumble = sin(2 * PI * (58.0 + 18.0 * sin(t * 2.7)) * t) * env * 0.55
-            val body = (brown * 2.2 + (lowMid - brown) * 2.8) * env
-            // Soft saturation so the crack and rumble sit evenly without squashing the tail
-            val raw = body + boom + subRumble + snap
-            d[i] = kotlin.math.tanh(raw * 0.85).toFloat()
+            // Natural turbulent air modulation so the rumble rolls instead of sounding like static
+            val flutter = (0.76 + 0.24 * sin(t * 11.5) * cos(t * 4.3) + flutterLp * 1.4).coerceIn(0.35, 1.35)
+            var tear = 0.0
+            if (t < 0.32) {
+                for ( idx in tearCenters.indices) {
+                    val tc = tearCenters[idx]
+                    tear += kotlin.math.exp(-((t - tc) / 0.014).pow(2)) * (0.85 - idx * 0.16)
+                }
+            }
+            val sub = brown * 2.4
+            val mid = (warmBody - brown) * (1.35 + tear * 1.6)
+            val raw = (sub + mid) * env * flutter
+            // Final warm low-pass smoothing (~550 Hz) so there is zero harsh high-frequency hiss
+            smoothOut += (raw - smoothOut) * 0.075
+            d[i] = smoothOut.toFloat()
         }
     }
     @Suppress("unused") private fun unused() = ln(min(1.0, 1.0))

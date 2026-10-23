@@ -112,7 +112,6 @@ class Sound(private val app: App) {
     private lateinit var rain: Gain; private lateinit var glassSpot: Spot; private lateinit var rainGlass: Gain; private lateinit var rainHeavy: Gain
     private lateinit var wind: Gain; private lateinit var windFilter: Filter
     private lateinit var thunderBufs: List<AudioBuffer>; private lateinit var thunderFilter: Filter
-    private lateinit var lightningSnap: NoiseSynth; private lateinit var thunderBoom: MembraneSynth
     private lateinit var crickets: Gain; private lateinit var leaves: Gain; private lateinit var breeze: Gain
     private lateinit var howl: Gain; private lateinit var howlFilter: Filter; private lateinit var city: Gain
     private lateinit var birds: List<Synth>; private lateinit var peeper: Synth
@@ -273,21 +272,14 @@ class Sound(private val app: App) {
         lfos += Lfo(ctx, windGust.gain, 0.045, 0.25, 1.0)
         Noise(ctx, "brown").start().chain(windFilter, windGust, gain(1.5), wind)
         thunderBufs = listOf(Buffers.thunder(ctx), Buffers.thunder(ctx), Buffers.thunder(ctx))
-        thunderFilter = filt(1600.0, "lowpass")
-        val thunderBoost = gain(2.6)
+        thunderFilter = filt(520.0, "lowpass", 0.7)
+        val thunderBoost = gain(1.15)
         thunderFilter.connect(thunderBoost)
         thunderBoost.connect(weatherBus)
-        // Also feed a room-rattling low-end sub directly to master (scaled by weather volume) so thunder is felt inside the room even when the blinds are shut
-        val thunderRoom = gain(0.55)
-        thunderBoost.chain(filt(280.0, "lowpass"), thunderRoom, windowLevel)
-        val thunderFar = gain(0.85); thunderBoost.connect(thunderFar); thunderFar.connect(farIn)
-        lightningSnap = NoiseSynth(ctx, "white", Envelope(ctx, 0.001, 0.09, 0.0, 0.06)).also {
-            it.chain(filt(2200.0, "bandpass", 0.9), gain(1.4), weatherBus)
-        }
-        thunderBoom = MembraneSynth(ctx, 0.08, 3.5, Envelope(ctx, 0.005, 0.65, 0.0, 0.45)).also {
-            it.volume.value = 2.0
-            it.chain(filt(240.0, "lowpass"), thunderBoost)
-        }
+        // Warm low-end room rumble so thunder is gently felt inside the bedroom without harshness
+        val thunderRoom = gain(0.28)
+        thunderBoost.chain(filt(170.0, "lowpass", 0.6), thunderRoom, windowLevel)
+        val thunderFar = gain(0.55); thunderBoost.connect(thunderFar); thunderFar.connect(farIn)
         // ---- Season / time layers
         crickets = gain(0.0); crickets.chain(filt(6000.0, "lowpass"), natureBus)
         val cr = Player(ctx, Buffers.crickets(ctx)); cr.loop = true; cr.chain(gain(0.12), crickets); cr.start()
@@ -479,24 +471,23 @@ class Sound(private val app: App) {
         }
     }
 
-    /** Lightning: crisp electric crack on flash + rolling thunder boom 0.08-1.15 s later. */
+    /** Thunderclap: natural acoustic rumble 0.15-1.4 s after the flash, with a warm low-pass sweep as it echoes away. */
     fun thunderclap() {
         if (!ready || !playing) return
         ctx.sync {
-            val distance = rnd.nextDouble() * 0.75
-            val now = ctx.currentTime + 0.02
-            // Immediate electric lightning snap / sizzle at the moment of the flash
-            lightningSnap.triggerAttackRelease(0.08, now, (0.95 - distance * 0.45).coerceIn(0.35, 1.0))
-            val t = now + 0.06 + distance * 1.05
-            // Deep low-end boom punch + rolling multi-swell thunder buffer
-            thunderBoom.triggerAttackRelease(if (distance < 0.35) "G1" else "E1", 0.55, t, (1.0 - distance * 0.4).coerceIn(0.45, 1.0))
+            val distance = rnd.nextDouble()
+            val t = ctx.currentTime + 0.15 + distance * 1.25
             val p = Player(ctx, pick(thunderBufs))
-            p.playbackRate = rand(0.82, 1.12)
-            p.volume.value = 3.5 - distance * 5.0
+            p.playbackRate = rand(0.74, 1.04)
+            p.volume.value = -1.5 - distance * 6.5
             p.connect(thunderFilter)
-            thunderFilter.frequency.setValueAtTime(2400.0 - distance * 1200.0, t)
+            val startCutoff = 680.0 - distance * 360.0
+            val endCutoff = 140.0 - distance * 35.0
+            thunderFilter.frequency.cancelScheduledValues(t)
+            thunderFilter.frequency.setValueAtTime(startCutoff, t)
+            thunderFilter.frequency.exponentialRampToValueAtTime(endCutoff.coerceAtLeast(95.0), t + 3.6)
             p.start(t)
-            pendingDispose += (t + 7.5) to { p.dispose() }
+            pendingDispose += (t + 7.2) to { p.dispose() }
         }
     }
 
@@ -1051,19 +1042,54 @@ class Sound(private val app: App) {
             val spot = Spot(Vec3().copy(at), 1.2, 1.0, 0.15, master, vol.getValue("sfx"))
             val t0 = ctx.currentTime + 0.02
             val parts = ArrayList<Any>()
-            if (kind == "boof") {
-                val thump = MembraneSynth(ctx, 0.05, 2.0, Envelope(ctx, 0.005, 0.18, 0.0, 0.05)); thump.volume.value = -10.0; thump.connect(spot.level); thump.triggerAttackRelease("A2", 0.15, t0, 0.8)
-                val breath = Noise(ctx, "brown"); val bf = filt(650.0, "bandpass", 1.2); val bg = gain(0.0)
-                breath.connect(bf); bf.connect(bg); bg.connect(spot.level)
-                bg.gain.setValueAtTime(0.0, t0); bg.gain.linearRampToValueAtTime(0.5, t0 + 0.03); bg.gain.linearRampToValueAtTime(0.0, t0 + 0.22)
-                breath.start(t0); breath.stop(t0 + 0.3)
-                parts.addAll(listOf(thump, breath, bf, bg))
-            } else {
-                val n = Noise(ctx, "brown"); val f = filt(260.0, "lowpass", 0.8); val g = gain(0.0)
-                n.connect(f); f.connect(g); g.connect(spot.level)
-                g.gain.setValueAtTime(0.0, t0); g.gain.linearRampToValueAtTime(0.35, t0 + 1.1); g.gain.linearRampToValueAtTime(0.0, t0 + 2.2)
-                n.start(t0); n.stop(t0 + 2.3)
-                parts.addAll(listOf(n, f, g))
+            when (kind) {
+                "boof" -> {
+                    val thump = MembraneSynth(ctx, 0.05, 2.0, Envelope(ctx, 0.005, 0.18, 0.0, 0.05)); thump.volume.value = -10.0; thump.connect(spot.level); thump.triggerAttackRelease("A2", 0.15, t0, 0.8)
+                    val breath = Noise(ctx, "brown"); val bf = filt(650.0, "bandpass", 1.2); val bg = gain(0.0)
+                    breath.connect(bf); bf.connect(bg); bg.connect(spot.level)
+                    bg.gain.setValueAtTime(0.0, t0); bg.gain.linearRampToValueAtTime(0.5, t0 + 0.03); bg.gain.linearRampToValueAtTime(0.0, t0 + 0.22)
+                    breath.start(t0); breath.stop(t0 + 0.3)
+                    parts.addAll(listOf(thump, breath, bf, bg))
+                }
+                "eat" -> {
+                    val crunch = NoiseSynth(ctx, "pink", Envelope(ctx, 0.002, 0.045, 0.0, 0.02))
+                    val cf = filt(1450.0, "bandpass", 1.6)
+                    crunch.chain(cf, gain(0.45), spot.level)
+                    crunch.triggerAttackRelease(0.04, t0, rand(0.55, 0.9))
+                    crunch.triggerAttackRelease(0.035, t0 + 0.09, rand(0.4, 0.75))
+                    parts.addAll(listOf(crunch, cf))
+                }
+                "drink" -> {
+                    val lap = Synth(ctx, "sine", Envelope(ctx, 0.006, 0.07, 0.0, 0.04)).also { it.volume.value = -16.0 }
+                    val f0 = rand(380.0, 460.0)
+                    lap.connect(spot.level)
+                    lap.triggerAttack(f0, t0, 0.7)
+                    lap.frequency.exponentialRampToValueAtTime(f0 * 1.45, t0 + 0.065)
+                    lap.triggerRelease(t0 + 0.07)
+                    parts.add(lap)
+                }
+                "fillFood" -> {
+                    val rattle = NoiseSynth(ctx, "pink", Envelope(ctx, 0.002, 0.03, 0.0, 0.015))
+                    val rf = filt(2100.0, "bandpass", 1.8)
+                    rattle.chain(rf, gain(0.5), spot.level)
+                    for (i in 0 until 6) rattle.triggerAttackRelease(0.025, t0 + i * 0.045, rand(0.45, 0.9))
+                    parts.addAll(listOf(rattle, rf))
+                }
+                "fillWater" -> {
+                    val pour = Noise(ctx, "pink"); val pf = filt(1200.0, "bandpass", 1.1); val pg = gain(0.0)
+                    pour.connect(pf); pf.connect(pg); pg.connect(spot.level)
+                    pf.frequency.setValueAtTime(950.0, t0); pf.frequency.exponentialRampToValueAtTime(1650.0, t0 + 0.38)
+                    pg.gain.setValueAtTime(0.0, t0); pg.gain.linearRampToValueAtTime(0.38, t0 + 0.06); pg.gain.linearRampToValueAtTime(0.0, t0 + 0.42)
+                    pour.start(t0); pour.stop(t0 + 0.45)
+                    parts.addAll(listOf(pour, pf, pg))
+                }
+                else -> {
+                    val n = Noise(ctx, "brown"); val f = filt(260.0, "lowpass", 0.8); val g = gain(0.0)
+                    n.connect(f); f.connect(g); g.connect(spot.level)
+                    g.gain.setValueAtTime(0.0, t0); g.gain.linearRampToValueAtTime(0.35, t0 + 1.1); g.gain.linearRampToValueAtTime(0.0, t0 + 2.2)
+                    n.start(t0); n.stop(t0 + 2.3)
+                    parts.addAll(listOf(n, f, g))
+                }
             }
             pendingDispose += (t0 + 3.2) to { for (p in parts) when (p) { is Node -> p.dispose(); is Instrument -> p.dispose() }; spot.remove() }
         } } catch (e: Exception) { }

@@ -85,8 +85,11 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
     var debrisAmount = 1.0f; private set
     var debrisSpeed = 1.0f; private set
     var debrisFreq = 1.0f; private set
+    /** User-configurable lightning frequency ("off", "rare", "normal", "frequent", "constant"). */
+    var lightningFreq = "normal"
     private var lastWeatherKind = ""
     private var stormIntroTimer = 0f
+    private var lightningCooldown = 0f
     fun setDebrisParams(amount: Float, speed: Float, freq: Float) {
         debrisAmount = amount.coerceIn(0f, 2.5f)
         debrisSpeed = speed.coerceIn(0.2f, 2.5f)
@@ -549,12 +552,24 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
     /** The animate loop's lightning: a random flash in storms (and far-off heat lightning), the room lights spiking with it. */
     fun updateLightning(frameScale: Float) {
         val W = env.W
+        val dtSec = frameScale / 60f
+        if (lightningCooldown > 0f) lightningCooldown = max(0f, lightningCooldown - dtSec)
+        val freqMult = when (lightningFreq) {
+            "off" -> 0f
+            "rare" -> 0.4f
+            "frequent" -> 2.0f
+            "constant" -> 3.5f
+            else -> 1.0f // "normal"
+        }
         val triggerIntro = if (stormIntroTimer > 0f) {
-            stormIntroTimer -= frameScale / 60f
-            stormIntroTimer <= 0f && W.base == "storm"
+            stormIntroTimer -= dtSec
+            stormIntroTimer <= 0f && W.base == "storm" && freqMult > 0f
         } else false
-        if (triggerIntro || (W.lightning && rand() < (if (W.base == "storm") 0.012f else 0.004f) * frameScale)) {
+        // Natural spacing: "normal" averages a strike every ~14-18s in a storm with at least a 4.5s gap between flashes
+        val baseChance = if (W.base == "storm") 0.0014f else 0.0005f
+        if (triggerIntro || (W.lightning && freqMult > 0f && lightningCooldown <= 0f && rand() < baseChance * freqMult * frameScale)) {
             lightningFlash = if (W.base == "storm") 1.0f else 0.6f
+            lightningCooldown = (if (W.base == "storm") 5.5f else 9.0f) / max(0.35f, freqMult)
             if (W.base == "storm") onThunder?.invoke() // heat lightning is too far away to hear
         }
         if (lightningFlash > 0) {

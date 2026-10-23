@@ -58,6 +58,7 @@ class WindowWidget : AppWidgetProvider() {
         fun saveShots(ctx: Context, clear: Bitmap, withBlinds: Bitmap) {
             for ((b, f) in listOf(clear to shotFile(ctx, false), withBlinds to shotFile(ctx, true)))
                 try { FileOutputStream(f).use { b.compress(Bitmap.CompressFormat.PNG, 100, it) } } catch (e: Exception) { }
+            ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putLong("shotAt", System.currentTimeMillis()).apply()
             updateAll(ctx)
         }
         fun updateAll(ctx: Context) {
@@ -74,7 +75,9 @@ class WindowWidget : AppWidgetProvider() {
             v.setViewVisibility(R.id.ww_time, if (o.time) View.VISIBLE else View.GONE)
             v.setViewVisibility(R.id.ww_date, if (o.date) View.VISIBLE else View.GONE)
             val weather = p.getString("infoWeather", null); val place = p.getString("infoPlace", null)
-            val line = listOfNotNull(weather.takeIf { o.weather }, place.takeIf { o.place }).joinToString("  ·  ")
+            val shotAt = p.getLong("shotAt", 0L)
+            val ago = if (shotAt > 0) ((System.currentTimeMillis() - shotAt) / 60000L).let { m -> if (m < 1) "now" else if (m < 60) "${m}m ago" else "${m / 60}h ago" } else null
+            val line = listOfNotNull(weather.takeIf { o.weather }, place.takeIf { o.place }, ago?.let { "📷 $it" }).joinToString("  ·  ")
             v.setTextViewText(R.id.ww_weather, if (weather == null) "Open PS1 Bedroom to look outside" else line)
             v.setViewVisibility(R.id.ww_weather, if (weather == null || line.isNotEmpty()) View.VISIBLE else View.GONE)
             v.setViewVisibility(R.id.ww_info, if (o.time || o.date || line.isNotEmpty() || weather == null) View.VISIBLE else View.GONE)
@@ -84,6 +87,19 @@ class WindowWidget : AppWidgetProvider() {
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
             v.setOnClickPendingIntent(R.id.ww_root, open)
             v.setOnClickPendingIntent(R.id.ww_refresh, refreshPi)
+            // Room controls right on the window (work whether the room is open or not)
+            val raw = ctx.getSharedPreferences("ps1bedroom", Context.MODE_PRIVATE).getString("settings.v1", null)
+            val s = if (raw != null) try { org.json.JSONObject(raw) } catch (_: Exception) { org.json.JSONObject() } else org.json.JSONObject()
+            val on = Color.WHITE; val off = Color.argb(150, 255, 255, 255)
+            v.setTextColor(R.id.ww_light_btn, if (s.optBoolean("fanLight", false)) on else off)
+            v.setTextViewText(R.id.ww_sound_btn, if (s.optBoolean("audioOn", true)) "🔊" else "🔈")
+            v.setTextColor(R.id.ww_tv_btn, if (s.optBoolean("tv", true)) on else off)
+            v.setOnClickPendingIntent(R.id.ww_light_btn, RoomWidgetReceiver.cmdPendingIntent(ctx, "toggle_light", 202))
+            v.setOnClickPendingIntent(R.id.ww_tv_btn, RoomWidgetReceiver.cmdPendingIntent(ctx, "toggle_tv", 203))
+            v.setOnClickPendingIntent(R.id.ww_sound_btn, RoomWidgetReceiver.cmdPendingIntent(ctx, "toggle_sound", 204))
+            v.setOnClickPendingIntent(R.id.ww_weather_btn, RoomWidgetReceiver.cmdPendingIntent(ctx, "step_weather", 205))
+            v.setOnClickPendingIntent(R.id.ww_blinds_btn, RoomWidgetReceiver.cmdPendingIntent(ctx, "cycle_blinds", 206))
+            v.setOnClickPendingIntent(R.id.ww_place_btn, RoomWidgetReceiver.cmdPendingIntent(ctx, "step_place", 207))
             return v
         }
         /** The PS1 window frame: a painted wooden frame with a cross bar, like the bedroom's own window. */

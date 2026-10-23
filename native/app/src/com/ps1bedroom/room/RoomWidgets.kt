@@ -54,6 +54,12 @@ class RoomWidgetReceiver : BroadcastReceiver() {
             ctx.getSharedPreferences("ps1bedroom", Context.MODE_PRIVATE).edit().putString("settings.v1", obj.toString()).apply()
         }
 
+        /** The alarm-time button steps through sensible wake-up times. */
+        fun nextAlarmTime(cur: String): String {
+            val opts = listOf("05:30", "06:00", "06:30", "07:00", "07:30", "08:00", "08:30", "09:00", "10:00")
+            return opts[(opts.indexOf(cur) + 1).let { if (it <= 0 && cur !in opts) 0 else it } % opts.size]
+        }
+
         /** Updates all home-screen widgets from the latest room state (or persisted preferences). */
         fun updateAllWidgets(ctx: Context, app: App? = null) {
             if (app != null && app.isBuilt) {
@@ -64,6 +70,8 @@ class RoomWidgetReceiver : BroadcastReceiver() {
                     .putString("infoWeatherOnly", st.weather)
                     .putString("infoPlace", "${p.icon} ${p.name.replace(Regex(" \\(.*\\)$"), "")}")
                     .putString("infoWeather", "${st.time.substringBefore(' ')} ${st.temp} ${st.weather}")
+                    .putString("infoSeason", st.season)
+                    .putString("infoStation", app.extras.RADIO_STATIONS.getOrElse(app.extras.radioStation) { "OFF" }.substringBefore(':'))
                     .putString("sleepLeft", st.timer ?: "")
                     .putBoolean("alarmOn", app.alarm.on)
                     .putString("alarmTime", app.alarm.time)
@@ -75,6 +83,7 @@ class RoomWidgetReceiver : BroadcastReceiver() {
             SleepAlarmWidget.updateAll(ctx)
             JasperWidget.updateAll(ctx)
             WindowWidget.updateAll(ctx)
+            NowPlayingWidget.update(ctx, MediaService.state, force = true)
         }
     }
 
@@ -89,8 +98,30 @@ class RoomWidgetReceiver : BroadcastReceiver() {
             when (cmd) {
                 "toggle_sound" -> s.put("audioOn", !s.optBoolean("audioOn", true))
                 "toggle_light" -> s.put("fanLight", !s.optBoolean("fanLight", false))
+                "toggle_fan" -> s.put("fanSpin", !s.optBoolean("fanSpin", true))
+                "toggle_lamp" -> s.put("lamp", !s.optBoolean("lamp", false))
                 "toggle_tv" -> s.put("tv", !s.optBoolean("tv", true))
                 "cycle_blinds" -> s.put("blinds", (s.optInt("blinds", 0) + 1) % 4)
+                "next_station" -> {
+                    val r = (s.optInt("radio", 0) + 1) % 4
+                    s.put("radio", r)
+                    ctx.getSharedPreferences("window_widget", Context.MODE_PRIVATE).edit().putString("infoStation", listOf("OFF", "Q 97.1 FM", "ALT 104.3 FM", "MY MUSIC")[r]).apply()
+                }
+                "step_season" -> {
+                    val list = listOf("spring", "summer", "fall", "winter")
+                    val cur = s.optString("season", "fall")
+                    val next = list[(list.indexOf(cur) + 1) % list.size]
+                    s.put("seasonMode", "manual"); s.put("season", next)
+                    ctx.getSharedPreferences("window_widget", Context.MODE_PRIVATE).edit().putString("infoSeason", next.replaceFirstChar { it.uppercase() }).apply()
+                }
+                "alarm_time" -> {
+                    val ap = ctx.getSharedPreferences("ps1bedroom", Context.MODE_PRIVATE)
+                    val nt = nextAlarmTime(ap.getString("alarm.time", "07:00") ?: "07:00")
+                    ap.edit().putString("alarm.time", nt).apply()
+                    ctx.getSharedPreferences("window_widget", Context.MODE_PRIVATE).edit().putString("alarmTime", nt).apply()
+                }
+                "jasper_pet" -> ctx.getSharedPreferences("window_widget", Context.MODE_PRIVATE).edit().putString("jasperMood", "Tail wagging! 🐾💕").apply()
+                "paper_toss" -> ctx.startActivity(Intent(ctx, MainActivity::class.java).apply { action = "com.ps1bedroom.room.WIDGET_paper_toss"; addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP) })
                 "step_weather" -> {
                     val keys = Environment.WEATHER_KINDS.keys.toList()
                     val cur = s.optString("weatherKind", "clear")
@@ -159,11 +190,14 @@ class ClockWeatherWidget : AppWidgetProvider() {
             val temp = wp.getString("infoTemp", "72°F") ?: "72°F"
             val weather = wp.getString("infoWeatherOnly", "☀️ Clear") ?: "☀️ Clear"
             val place = wp.getString("infoPlace", "🌆 Downtown") ?: "🌆 Downtown"
+            val season = wp.getString("infoSeason", "") ?: ""
+            val sIcon = when (season.lowercase()) { "spring" -> "🌸"; "summer" -> "☀️"; "fall" -> "🍂"; "winter" -> "❄️"; else -> "" }
             v.setTextViewText(R.id.cw_temp, temp)
-            v.setTextViewText(R.id.cw_weather, "$weather  ·  $place")
+            v.setTextViewText(R.id.cw_weather, listOfNotNull(if (season.isNotEmpty()) "$sIcon $season" else null, weather, place).joinToString("  ·  "))
             v.setOnClickPendingIntent(R.id.cw_root, RoomWidgetReceiver.openPendingIntent(ctx, 300))
             v.setOnClickPendingIntent(R.id.cw_step_weather, RoomWidgetReceiver.cmdPendingIntent(ctx, "step_weather", 301))
             v.setOnClickPendingIntent(R.id.cw_step_place, RoomWidgetReceiver.cmdPendingIntent(ctx, "step_place", 302))
+            v.setOnClickPendingIntent(R.id.cw_step_season, RoomWidgetReceiver.cmdPendingIntent(ctx, "step_season", 303))
             return v
         }
     }
@@ -188,17 +222,24 @@ class QuickControlsWidget : AppWidgetProvider() {
             val tvOn = s.optBoolean("tv", true)
             val blinds = s.optInt("blinds", 0)
             val blindNames = arrayOf("Slatted", "Open", "Up", "Shut")
+            val fanOn = s.optBoolean("fanSpin", true)
+            val dim = Color.rgb(0xb9, 0xb4, 0xe6)
             v.setTextViewText(R.id.qc_sound, "${if (sndOn) "🔊" else "🔈"}\n${if (sndOn) "On" else "Muted"}")
-            v.setTextColor(R.id.qc_sound, if (sndOn) Color.rgb(0x86, 0xef, 0xac) else Color.rgb(0xb9, 0xb4, 0xe6))
+            v.setTextColor(R.id.qc_sound, if (sndOn) Color.rgb(0x86, 0xef, 0xac) else dim)
             v.setTextViewText(R.id.qc_light, "💡\n${if (lightOn) "On" else "Off"}")
-            v.setTextColor(R.id.qc_light, if (lightOn) Color.rgb(0xff, 0xd2, 0x7d) else Color.rgb(0xb9, 0xb4, 0xe6))
+            v.setTextColor(R.id.qc_light, if (lightOn) Color.rgb(0xff, 0xd2, 0x7d) else dim)
+            v.setTextViewText(R.id.qc_fan, "🌀\n${if (fanOn) "On" else "Off"}")
+            v.setTextColor(R.id.qc_fan, if (fanOn) Color.rgb(0x7d, 0xd3, 0xfc) else dim)
             v.setTextViewText(R.id.qc_tv, "📺\n${if (tvOn) "On" else "Off"}")
-            v.setTextColor(R.id.qc_tv, if (tvOn) Color.rgb(0x7d, 0xd3, 0xfc) else Color.rgb(0xb9, 0xb4, 0xe6))
+            v.setTextColor(R.id.qc_tv, if (tvOn) Color.rgb(0x7d, 0xd3, 0xfc) else dim)
             v.setTextViewText(R.id.qc_blinds, "🪟\n${blindNames.getOrElse(blinds) { "Slatted" }}")
-            v.setTextColor(R.id.qc_blinds, if (blinds != 3) Color.WHITE else Color.rgb(0xb9, 0xb4, 0xe6))
+            v.setTextColor(R.id.qc_blinds, if (blinds != 3) Color.WHITE else dim)
+            val wp = ctx.getSharedPreferences("window_widget", Context.MODE_PRIVATE)
+            v.setTextViewText(R.id.qc_status, "${wp.getString("infoTemp", "") ?: ""} ${wp.getString("infoWeatherOnly", "") ?: ""}".trim().ifEmpty { "Tap to toggle" })
             v.setOnClickPendingIntent(R.id.qc_root, RoomWidgetReceiver.openPendingIntent(ctx, 400))
             v.setOnClickPendingIntent(R.id.qc_sound, RoomWidgetReceiver.cmdPendingIntent(ctx, "toggle_sound", 401))
             v.setOnClickPendingIntent(R.id.qc_light, RoomWidgetReceiver.cmdPendingIntent(ctx, "toggle_light", 402))
+            v.setOnClickPendingIntent(R.id.qc_fan, RoomWidgetReceiver.cmdPendingIntent(ctx, "toggle_fan", 406))
             v.setOnClickPendingIntent(R.id.qc_tv, RoomWidgetReceiver.cmdPendingIntent(ctx, "toggle_tv", 403))
             v.setOnClickPendingIntent(R.id.qc_blinds, RoomWidgetReceiver.cmdPendingIntent(ctx, "cycle_blinds", 404))
             v.setOnClickPendingIntent(R.id.qc_sleep, RoomWidgetReceiver.cmdPendingIntent(ctx, "sleep_mode", 405))
@@ -227,11 +268,14 @@ class SleepAlarmWidget : AppWidgetProvider() {
             v.setTextViewText(R.id.sa_alarm_status, if (alarmOn) "⏰ $alarmTime ON" else "⏰ $alarmTime Off")
             v.setTextColor(R.id.sa_alarm_status, if (alarmOn) Color.rgb(0x86, 0xef, 0xac) else Color.rgb(0xb9, 0xb4, 0xe6))
             v.setTextViewText(R.id.sa_timer_status, if (sleepLeft.isNotEmpty()) "Sleep timer active: $sleepLeft remaining" else "One tap: lights down, fan on & Jasper on the bed")
-            v.setTextViewText(R.id.sa_btn_alarm, if (alarmOn) "⏰ Alarm: ON" else "⏰ Alarm: OFF")
+            v.setTextViewText(R.id.sa_btn_alarm, if (alarmOn) "⏰ ON" else "⏰ OFF")
+            v.setTextViewText(R.id.sa_btn_alarm_time, "🕒 $alarmTime")
+            v.setTextViewText(R.id.sa_btn_15, if (sleepLeft.isNotEmpty()) "⏾ Cancel" else "⏾ 15m")
             v.setOnClickPendingIntent(R.id.sa_root, RoomWidgetReceiver.openPendingIntent(ctx, 500))
             v.setOnClickPendingIntent(R.id.sa_btn_sleep, RoomWidgetReceiver.cmdPendingIntent(ctx, "sleep_mode", 501))
             v.setOnClickPendingIntent(R.id.sa_btn_15, RoomWidgetReceiver.cmdPendingIntent(ctx, "sleep_15", 502))
             v.setOnClickPendingIntent(R.id.sa_btn_alarm, RoomWidgetReceiver.cmdPendingIntent(ctx, "toggle_alarm", 503))
+            v.setOnClickPendingIntent(R.id.sa_btn_alarm_time, RoomWidgetReceiver.cmdPendingIntent(ctx, "alarm_time", 504))
             return v
         }
     }
@@ -298,6 +342,7 @@ class JasperWidget : AppWidgetProvider() {
             v.setTextViewText(R.id.jw_title, "🐕 JASPER · $mood")
             v.setTextViewText(R.id.jw_stats, "🍖 $hunger%   💧 $thirst%   💤 $energy%   🎾 $funLvl%")
             v.setOnClickPendingIntent(R.id.jw_root, RoomWidgetReceiver.openPendingIntent(ctx, 600))
+            v.setOnClickPendingIntent(R.id.jw_pet, RoomWidgetReceiver.cmdPendingIntent(ctx, "jasper_pet", 605))
             v.setOnClickPendingIntent(R.id.jw_feed, RoomWidgetReceiver.cmdPendingIntent(ctx, "jasper_feed", 601))
             v.setOnClickPendingIntent(R.id.jw_water, RoomWidgetReceiver.cmdPendingIntent(ctx, "jasper_water", 602))
             v.setOnClickPendingIntent(R.id.jw_play, RoomWidgetReceiver.cmdPendingIntent(ctx, "jasper_play", 603))

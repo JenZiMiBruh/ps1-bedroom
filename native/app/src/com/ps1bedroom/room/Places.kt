@@ -372,6 +372,22 @@ class Places(
     }
     private fun bush3D(group: Group, x: Float, z: Float, s: Float, col: String = "#3b6b33"): Mesh { val b = add(group, GeoCurves.icosahedron(0.3f * s, 0), kitMat("leaves", col), x, 0.32f + 0.2f * s, z); b.scale.y = 0.7f; return b }
     private fun pyramidRoof(r: Float, h: Float) = Geo.cylinder(0.01f, r, h, 4, 1).rotateY(P4)
+    private class ChimneyEmitter(val group: Group, val puffs: List<Mesh>, val mats: List<Material>, val seed: Float)
+    private val chimneyEmitters = ArrayList<ChimneyEmitter>()
+    private val smokeGeo by lazy { Geo.sphere(0.14f, 6, 5) }
+    private fun addChimneySmoke(parent: Group, x: Float, y: Float, z: Float, rotY: Float = 0f) {
+        val g = sub(parent, x, y, z, rotY)
+        g.visible = false
+        val puffs = ArrayList<Mesh>(6)
+        val mats = ArrayList<Material>(6)
+        for (i in 0 until 6) {
+            val m = PS1.basic(color = 0xe8eef6, transparent = true, opacity = 0f, depthWrite = false)
+            val mesh = add(g, smokeGeo, m, 0f, 0f, 0f)
+            puffs += mesh
+            mats += m
+        }
+        chimneyEmitters += ChimneyEmitter(g, puffs, mats, chimneyEmitters.size * 0.37f)
+    }
     // Gable-roofed house with siding, shingle roof, windows that light up, a door, porch light and a chimney
     private fun house3D(group: Group, x: Float, z: Float, w: Float = 2.4f, h: Float = 1.3f, d: Float = 1.7f, wall: String = "#d6c7a1", roof: String = "#5b3a32",
                         rotY: Float = 0f, garage: Boolean = false, flat: Boolean = false, roofKind: String = "shingles", wallKind: String = "siding"): Group {
@@ -381,6 +397,7 @@ class Places(
         else {
             val rf = add(g, pyramidRoof(1f, 1f), kitMat(roofKind, roof, 3f, 2f), 0f, h + 0.42f, 0f); rf.scale.set((w + 0.3f) / 1.414f, 0.85f, (d + 0.3f) / 1.414f)
             add(g, Geo.box(0.22f, 0.6f, 0.22f), kitMat("brick", "#8a4a3a"), w * 0.28f, h + 0.6f, -d * 0.15f)
+            addChimneySmoke(g, w * 0.28f, h + 0.9f, -d * 0.15f, -rotY)
         }
         val front = d / 2 + 0.01f
         floatArrayOf(-w * 0.3f, w * 0.3f).forEachIndexed { i, wx -> if (!(garage && i == 1)) windowPane(g, 0.42f, 0.36f, wx, h * 0.6f, front) }
@@ -584,6 +601,8 @@ class Places(
             val shed = sub(g, -3.0f, 0.32f, -9.2f)
             box(shed, 1.6f, 1.3f, 1.2f, 0xb45309, 0f, 0.65f, 0f)
             add(shed, Geo.cone(1.3f, 0.5f, 4), mat(0x374151), 0f, 1.55f, 0f).rotation.y = P4
+            add(shed, Geo.box(0.18f, 0.45f, 0.18f), kitMat("brick", "#8a4a3a"), 0.42f, 1.58f, -0.2f)
+            addChimneySmoke(shed, 0.42f, 1.82f, -0.2f)
             box(g, 0.5f, 0.3f, 0.35f, 0x111111, 1.6f, 0.95f, -5.4f); cyl(g, 0.02f, 0.02f, 0.6f, 0x333333, 1.6f, 0.6f, -5.4f, 4)
             for ((x, z) in listOf(-2.2f to -5.6f, -1.6f to -5.6f)) box(g, 0.5f, 0.12f, 1.4f, 0x5b3a1a, x, 0.38f, z)
             // Wind chimes hanging just outside the window
@@ -604,6 +623,9 @@ class Places(
                 box(t, 4.2f, 0.14f, 1.4f, stripe, 0f, 0.75f, 0f)
                 trailerBodies += box(t, 4.2f, 0.60f, 1.4f, col, 0f, 1.12f, 0f)
                 box(t, 4.3f, 0.06f, 1.5f, 0x9ca3af, 0f, 1.45f, 0f)
+                cyl(t, 0.05f, 0.05f, 0.36f, 0x6b7280, -0.85f, 1.66f, -0.25f, 6)
+                cyl(t, 0.08f, 0.08f, 0.03f, 0x4b5563, -0.85f, 1.85f, -0.25f, 6)
+                addChimneySmoke(t, -0.85f, 1.88f, -0.25f, -rotY)
                 val winMat = PS1.material(color = 0x1f2937, emissive = 0xffc977, emissiveIntensity = 0f, polygonOffset = true, polygonOffsetFactor = -2f, polygonOffsetUnits = -2f)
                 windowMats += winMat to floatArrayOf(0.5f, 0.8f, 0.3f)[trailerNo++ % 3]
                 for (wx in floatArrayOf(-1.2f, 0.6f)) add(t, Geo.plane(0.5f, 0.35f), winMat, wx, 1.08f, 0.73f)
@@ -659,7 +681,7 @@ class Places(
             tumbleweed = add(g, wireIcosahedron(0.25f, 1, 0.012f), PS1.basic(color = 0x9b7b4f), -6f, 0.57f, -6.2f)
         }
         // Tropical island: palms, tiki torches, a hammock, an outrigger canoe, the lagoon
-        islandSea = waterPlane(G.getValue("island"), -8.6f, 7.5f, "#2bb3b8", false)
+        islandSea = waterPlane(G.getValue("island"), -8.6f, 6.8f, "#2bb3b8", false)
         run {
             val g = G.getValue("island")
             palm3D(g, -1.4f, -5.2f, 1.05f, 0.18f); palm3D(g, 3.4f, -6.4f, 0.95f, -0.22f); palm3D(g, 1.6f, -7.6f, 0.8f, 0.1f)
@@ -672,7 +694,7 @@ class Places(
             box(g, 1.8f, 0.14f, 0.3f, 0x8b5a2b, -2.0f, 0.4f, -7.2f).rotation.y = 0.3f
         }
         // Beach boardwalk: palms, a lifeguard stand, an umbrella, the sea rolling in
-        beachSea = waterPlane(G.getValue("beach"), -9.0f, 7f, "#2a6f9e", false)
+        beachSea = waterPlane(G.getValue("beach"), -9.0f, 6.4f, "#2a6f9e", false)
         foam = add(G.getValue("beach"), planeG(30f, 0.35f), PS1.basic(color = 0xffffff, transparent = true, opacity = 0.55f, depthWrite = false), 0.8f, 0.35f, -9.0f)
         foam.rotation.x = -P2
         run {
@@ -737,6 +759,8 @@ class Places(
                 val x = -5.2f + i * 2.25f; val h = 3.4f + (i % 2) * 0.7f
                 add(g, boxG(2.2f, h, 2f), kitMat("brick", bricks[i % 4], 3f, h / 0.7f), x, 0.32f + h / 2, -9.7f)
                 add(g, boxG(2.3f, 0.14f, 2.1f), mat(0x3b3430), x, 0.32f + h + 0.07f, -9.7f)
+                add(g, Geo.box(0.24f, 0.52f, 0.24f), kitMat("brick", "#5b2a22"), x + 0.62f, 0.32f + h + 0.36f, -9.35f)
+                addChimneySmoke(g, x + 0.62f, 0.32f + h + 0.62f, -9.35f)
                 for (fl in 0 until 3) { var wx = -0.6f; while (wx <= 0.6f + 1e-4f) { windowPane(g, 0.32f, 0.46f, x + wx, 1.4f + fl * 0.95f, -8.69f); wx += 0.6f } }
                 // stoop
                 for (s in 0 until 3) add(g, Geo.box(0.7f, 0.12f, 0.3f), kitMat("concrete", "#8d8780"), x - 0.5f, 0.38f + s * 0.12f, -8.45f + (2 - s) * 0.12f)
@@ -775,6 +799,8 @@ class Places(
             add(gnome, Geo.cone(0.07f, 0.18f, 6), mat(0xdc2626), 0f, 0.34f, 0f)
             tree3D(g, 3.8f, -9.6f, 1.3f); tree3D(g, -4.0f, -9.4f, 1.1f)
             for ((x, z) in listOf(-2.5f to -10.1f, -1.5f to -10.15f, 1.8f to -10.1f)) bush3D(g, x, z, 1.2f, "#4a7a3a")
+            house3D(g, -1.8f, -12.6f, w = 2.4f, h = 1.35f, d = 1.7f, wall = "#d9cfc2", roof = "#5b3a32")
+            house3D(g, 2.2f, -12.8f, w = 2.4f, h = 1.3f, d = 1.7f, wall = "#c5d1db", roof = "#3f4650")
         }
         // Trailer park: corrugated siding, skirting, a wooden deck with lawn chairs and a grill, a mailbox row
         run {
@@ -833,8 +859,7 @@ class Places(
         }
         // Lakeside and forest: a cabin across the water, stumps, ferns and mushrooms in the woods
         run {
-            val cabin = house3D(G.getValue("lake"), -3.0f, -13.6f, w = 2.0f, h = 1.1f, d = 1.5f, wall = "#7a5232", roof = "#3f3a30", wallKind = "wood", roofKind = "shingles")
-            cabin.rotation.y = 0.3f
+            house3D(G.getValue("lake"), -3.0f, -13.6f, w = 2.0f, h = 1.1f, d = 1.5f, wall = "#7a5232", roof = "#3f3a30", rotY = 0.3f, wallKind = "wood", roofKind = "shingles")
             val f = G.getValue("forest")
             for ((x, z) in listOf(0.2f to -5.0f, 2.6f to -6.0f, -1.8f to -6.6f)) add(f, Geo.cylinder(0.18f, 0.22f, 0.25f, 8), kitMat("bark", "#5b3d26"), x, 0.45f, z)
             for (i in 0 until 8) add(f, Geo.cone(0.22f, 0.3f, 5), kitMat("needles", "#3f6b2f"), -3f + i * 0.9f, 0.47f, -5.2f - (i % 3) * 0.9f).rotation.x = PF
@@ -846,18 +871,20 @@ class Places(
             val rockMat = kitMat("rock", "#7b818c")
             for (m in mountainRocks) m.material = rockMat
             val fm = G.getValue("mountains")
+            house3D(fm, -2.8f, -9.8f, w = 1.9f, h = 1.1f, d = 1.5f, wall = "#6b4a2e", roof = "#3b302a", rotY = 0.25f, wallKind = "wood", roofKind = "shingles")
             for (i in 0 until 6) {
                 add(fm, Geo.box(0.08f, 0.55f, 0.08f), kitMat("wood", "#6b4a2a"), -3f + i * 1.2f, 0.6f, -5.4f)
                 if (i < 5) add(fm, Geo.box(1.2f, 0.06f, 0.06f), kitMat("wood", "#6b4a2a"), -2.4f + i * 1.2f, 0.75f, -5.4f).rotation.z = 0.05f * (if (i % 2 == 1) 1 else -1)
             }
         }
-        // Countryside: a red barn with white trim and a silo in 3D, textured fence and hay, a couple of cows
+        // Countryside: a red barn with white trim and a silo in 3D, a farmhouse with a brick chimney, textured fence and hay, a couple of cows
         run {
             val g = G.getValue("countryside")
             val hayMat = kitMat("hay", "#d4b04a")
             for (m in countryHay) m.material = hayMat
             val postMat = kitMat("wood", "#8a6a4a", 1f, 1f); val railMat = kitMat("wood", "#8a6a4a", 20f, 1f)
             countryWood.forEachIndexed { i, m -> m.material = if (i < 32) postMat else railMat }
+            house3D(g, -3.2f, -12.0f, w = 2.2f, h = 1.25f, d = 1.6f, wall = "#e8e2d2", roof = "#5a4640", rotY = 0.15f)
             val barn = sub(g, 2.8f, 0.32f, -12.5f, -0.3f)
             add(barn, boxG(3.2f, 2.0f, 2.6f), kitMat("wood", "#a8322a", 4f, 2f), 0f, 1.0f, 0f)
             add(barn, Geo.cylinder(0.01f, 1.0f, 1.0f, 4).rotateY(P4), kitMat("corrugated", "#5b5f66", 4f, 2f), 0f, 2.55f, 0f).scale.set(2.4f, 1.1f, 2.0f)
@@ -1005,15 +1032,15 @@ class Places(
         scatter(G.getValue("forest"), tuftMat, 30, -6f, 7f, -4.2f, -8f, 0.4f, 0.7f, 0.5f, 502)
         scatter(G.getValue("lake"), pineSpr, 30, -11f, 12.6f, -13.2f, -15.4f, 1.2f, 2.2f, 2f, 503, listOf(fa(-3.0f, -13.6f, 1.4f)))
         scatter(G.getValue("lake"), tuftMat, 18, -6f, 7f, -4.2f, -7.4f, 0.4f, 0.6f, 0.5f, 504)
-        scatter(G.getValue("mountains"), pineSpr, 16, -11f, 12.6f, -7f, -15.4f, 0.9f, 1.5f, 2f, 505, listOf(fa(0.8f, -11f, 3.2f))) // keep the middle open so the peaks show
+        scatter(G.getValue("mountains"), pineSpr, 16, -11f, 12.6f, -7f, -15.4f, 0.9f, 1.5f, 2f, 505, listOf(fa(0.8f, -11f, 3.2f), fa(-2.8f, -9.8f, 1.8f))) // keep the middle open so the peaks show
         scatter(G.getValue("mountains"), rockSpr, 10, -6f, 7f, -4.4f, -8f, 0.6f, 1.0f, 0.5f, 506)
         // Leafy places: street trees and hedges in the middle distance, grass tufts near the window
         scatter(G.getValue("suburbs"), decidMat, 10, -11f, 12.6f, -11.5f, -14.5f, 1.6f, 2.4f, 1.6f, 511)
         scatter(G.getValue("suburbs"), tuftMat, 16, -6f, 7f, -4.0f, -5.2f, 0.3f, 0.5f, 0.5f, 512)
-        scatter(G.getValue("house"), decidMat, 14, -11f, 12.6f, -11.0f, -14.8f, 1.8f, 2.8f, 1.6f, 513)
+        scatter(G.getValue("house"), decidMat, 14, -11f, 12.6f, -11.0f, -14.8f, 1.8f, 2.8f, 1.6f, 513, listOf(fa(-1.8f, -12.6f, 2.0f), fa(2.2f, -12.8f, 2.0f)))
         scatter(G.getValue("house"), tuftMat, 26, -6f, 7f, -4.0f, -9.8f, 0.3f, 0.55f, 0.5f, 514, listOf(fa(2.6f, -8.0f, 1.0f), fa(-0.6f, -6.8f, 1.2f), fa(-3.0f, -9.2f, 1.0f), fa(2.8f, -6.0f, 0.8f)))
-        scatter(G.getValue("countryside"), decidMat, 12, -11f, 12.6f, -13.5f, -15.4f, 1.6f, 2.6f, 1.6f, 515)
-        scatter(G.getValue("countryside"), tuftMat, 30, -8f, 9f, -6.4f, -11f, 0.4f, 0.7f, 0.5f, 516, listOf(fa(2.8f, -12.5f, 2.6f), fa(5.0f, -12.0f, 0.8f), fa(1.6f, -8.0f, 0.6f), fa(2.6f, -8.6f, 0.6f), fa(-0.8f, -9.5f, 0.6f)))
+        scatter(G.getValue("countryside"), decidMat, 12, -11f, 12.6f, -13.5f, -15.4f, 1.6f, 2.6f, 1.6f, 515, listOf(fa(-3.2f, -12.0f, 2.2f)))
+        scatter(G.getValue("countryside"), tuftMat, 30, -8f, 9f, -6.4f, -11f, 0.4f, 0.7f, 0.5f, 516, listOf(fa(-3.2f, -12.0f, 2.0f), fa(2.8f, -12.5f, 2.6f), fa(5.0f, -12.0f, 0.8f), fa(1.6f, -8.0f, 0.6f), fa(2.6f, -8.6f, 0.6f), fa(-0.8f, -9.5f, 0.6f)))
         scatter(G.getValue("trailer"), dryBush, 10, -11f, 12.6f, -13f, -15.2f, 1.0f, 1.8f, 0.6f, 517)
         scatter(G.getValue("trailer"), dryTuft, 20, -8f, 9f, -4.7f, -12.5f, 0.3f, 0.5f, 0.5f, 518, listOf(fa(-1.4f, -6.2f, 2.3f), fa(3.6f, -9.5f, 2.3f), fa(-2.8f, -12.0f, 2.3f), fa(-2.6f, -7.85f, 1.6f), fa(2.2f, -7.85f, 1.6f)))
         scatter(G.getValue("neighborhood"), decidMat, 6, -11f, 12.6f, -12.0f, -14.5f, 1.6f, 2.4f, 1.6f, 519)
@@ -1124,6 +1151,36 @@ class Places(
             if (tr.parent?.visible == true) {
                 tr.rotation.z = sin(t * treeSpeed + i * 1.4f) * treeSway
                 tr.rotation.x = cos(t * (treeSpeed * 0.8f) + i) * (treeSway * 0.5f)
+            }
+        }
+        // 3D chimney smoke curling upward and drifting -X with the wind in winter or snow
+        val winterSmoke = (env.currentSeason == "winter" || env.isSnowingNow()) && !envDef().noSnow
+        val activeGroup = G[e]
+        val smokeCol = if (sky.isNight()) 0x9aa8c2 else 0xe8eef6
+        for (em in chimneyEmitters) {
+            var p: Object3D? = em.group.parent
+            var inActive = false
+            while (p != null) {
+                if (p === activeGroup) { inActive = true; break }
+                p = p.parent
+            }
+            if (!inActive || !winterSmoke) {
+                if (em.group.visible) em.group.visible = false
+                continue
+            }
+            em.group.visible = true
+            val n = em.puffs.size
+            for (i in 0 until n) {
+                val puff = em.puffs[i]
+                val m = em.mats[i]
+                val age = ((t * 0.42f + em.seed + i.toFloat() / n) % 1f)
+                puff.position.x = -age * (0.48f + W.wind * 1.45f) + sin(t * 1.8f + i * 1.3f + em.seed) * 0.08f * age
+                puff.position.y = 0.06f + age * 1.48f
+                puff.position.z = cos(t * 1.4f + i * 1.7f + em.seed) * 0.06f * age
+                val sc = 0.55f + age * 1.55f
+                puff.scale.set(sc, sc * 0.82f, sc)
+                m.color.setHex(smokeCol)
+                m.opacity = sin(age * PF) * (if (sky.isNight()) 0.36f else 0.46f)
             }
         }
         when (e) {

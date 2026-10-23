@@ -15,8 +15,8 @@ import android.widget.RemoteViews
 class NowPlayingWidget : AppWidgetProvider() {
     companion object {
         private var last: MediaService.State? = null
-        fun update(ctx: Context, s: MediaService.State?) {
-            if (s != null && s.sameAs(last)) return
+        fun update(ctx: Context, s: MediaService.State?, force: Boolean = false) {
+            if (!force && s != null && s.sameAs(last)) return
             last = s
             val mgr = AppWidgetManager.getInstance(ctx)
             val ids = mgr.getAppWidgetIds(ComponentName(ctx, NowPlayingWidget::class.java))
@@ -38,6 +38,10 @@ class NowPlayingWidget : AppWidgetProvider() {
             v.setOnClickPendingIntent(R.id.w_prev, if (live) ctl("prev", 1) else open)
             v.setOnClickPendingIntent(R.id.w_play, if (live) ctl("toggle", 2) else open)
             v.setOnClickPendingIntent(R.id.w_next, if (live) ctl("next", 3) else open)
+            // 📻 steps the boombox to the next station (works with the room closed too: it starts there next time)
+            val station = ctx.getSharedPreferences("window_widget", android.content.Context.MODE_PRIVATE).getString("infoStation", null)
+            if (s == null && station != null && station != "OFF") v.setTextViewText(R.id.w_sub, "📻 $station · tap to open")
+            v.setOnClickPendingIntent(R.id.w_station, RoomWidgetReceiver.cmdPendingIntent(ctx, "next_station", 104))
             return v
         }
     }

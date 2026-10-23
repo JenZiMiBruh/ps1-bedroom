@@ -257,6 +257,47 @@ class YouTubeTv(private val act: Activity, private val root: FrameLayout, privat
         <iframe src="${embedUrl(v)}" allow="autoplay; encrypted-media; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin" title="YouTube on the bedroom TV"></iframe>
         <div class="scan"></div><div class="px"></div></body></html>"""
 
+    // ---- v0.48: the player really lives ON the TV. It runs on a private off-screen display whose pixels go straight
+    // into the CRT's screen texture (YouTubeFeed), so it's lit, wobbles and curves with the glass like any channel.
+    // Only Full screen moves the player into the normal window. ----
+    private var vd: android.hardware.display.VirtualDisplay? = null
+    private var pres: android.app.Presentation? = null
+    private var presRoot: FrameLayout? = null
+    private var feedSurface: android.view.Surface? = null
+    private fun ensureTvDisplay(): FrameLayout? {
+        presRoot?.let { return it }
+        val s = feedSurface ?: return null
+        return try {
+            val dm = act.getSystemService(Context.DISPLAY_SERVICE) as android.hardware.display.DisplayManager
+            val d = dm.createVirtualDisplay("PS1BedroomTV", SW, SH, 160, s, 0)
+            vd = d
+            val rootV = FrameLayout(act).apply { setBackgroundColor(Color.rgb(4, 4, 5)) }
+            val p = android.app.Presentation(act, d.display)
+            p.setContentView(rootV)
+            p.setCancelable(false)
+            p.show()
+            pres = p; presRoot = rootV
+            rootV
+        } catch (e: Exception) { android.util.Log.w("PS1Bedroom", "TV display failed", e); null }
+    }
+    private fun releaseTvDisplay() {
+        try { pres?.dismiss() } catch (_: Exception) { }
+        try { vd?.release() } catch (_: Exception) { }
+        pres = null; presRoot = null; vd = null
+    }
+    /** Puts the WebView where it should be: on the TV's own display, or the real window when Full. */
+    private fun placeWeb() {
+        val w = web ?: return
+        val target: ViewGroup = if (isFull) screen else (ensureTvDisplay() ?: screen)
+        if (w.parent !== target) {
+            (w.parent as? ViewGroup)?.removeView(w)
+            target.addView(w, 0, FrameLayout.LayoutParams(-1, -1))
+        }
+        val onTv = target !== screen
+        layer.visibility = if (isFull || (!onTv && active)) View.VISIBLE else View.GONE
+        screen.visibility = if (isFull) View.VISIBLE else if (onTv) View.GONE else View.INVISIBLE
+    }
+
     @SuppressLint("SetJavaScriptEnabled")
     private fun newWeb(): WebView = WebView(act).apply {
         settings.javaScriptEnabled = true
@@ -278,17 +319,16 @@ class YouTubeTv(private val act: Activity, private val root: FrameLayout, privat
         if (v == null) { app.toast("📺 That doesn't look like a YouTube link"); return }
         web?.let {
             try { it.loadUrl("about:blank"); it.onPause() } catch (_: Exception) { }
-            screen.removeView(it)
+            (it.parent as? ViewGroup)?.removeView(it)
             it.destroy()
         }
         val w = newWeb(); web = w
-        screen.addView(w, 0, FrameLayout.LayoutParams(-1, -1))
-        w.loadDataWithBaseURL("$ORIGIN/", page(v), "text/html", "utf-8", null)
         active = true
-        lastPts.fill(Float.NaN)   // the first placement always lands
-        layer.visibility = View.VISIBLE
-        screen.visibility = if (isFull) View.VISIBLE else View.INVISIBLE
         screen.scaleX = 1f; screen.scaleY = 1f; screen.rotation = 0f; screen.translationX = 0f; screen.translationY = 0f
+        placeWeb()
+        w.loadDataWithBaseURL("$ORIGIN/", page(v), "text/html", "utf-8", null)
+        // The TV's screen texture: once the GL thread has made it, move the player onto the TV's own display
+        if (feedSurface == null) app.ensureYtFeed { s -> act.runOnUiThread { feedSurface = s; if (active) placeWeb() } }
         playing = true
         playBtn.text = "⏸"
         bar.visibility = View.VISIBLE
@@ -328,13 +368,12 @@ class YouTubeTv(private val act: Activity, private val root: FrameLayout, privat
                 it.evaluateJavascript("(function(){var f=document.querySelector('iframe');if(f)f.src='about:blank';})()", null)
                 it.loadUrl("about:blank")
                 it.onPause()
-                it.pauseTimers()
             } catch (_: Exception) { }
-            screen.removeView(it)
+            (it.parent as? ViewGroup)?.removeView(it)
             it.destroy()
         }
         web = null
-        try { android.webkit.WebView(act).resumeTimers() } catch (_: Exception) { }
+        releaseTvDisplay()
         setFull(false)
         layer.visibility = View.GONE; screen.visibility = View.GONE; bar.visibility = View.GONE
         app.post {
@@ -369,6 +408,7 @@ class YouTubeTv(private val act: Activity, private val root: FrameLayout, privat
         }
         layer.setBackgroundColor(if (f) Color.BLACK else Color.TRANSPARENT)
         web?.evaluateJavascript("document.body.classList.toggle('full', $f)", null)
+        if (web != null) placeWeb() else if (!f) layer.visibility = View.GONE
         layer.invalidate()
     }
     val dialogOpen get() = dialog.visibility == View.VISIBLE
@@ -444,6 +484,8 @@ class YouTubeTv(private val act: Activity, private val root: FrameLayout, privat
     /** GL thread: corners TL, TR, BL, BR in view pixels (src is in the same order), and the PS1 grid size. */
     private val lastPts = FloatArray(8); private var lastShow = false
     fun place(pts: FloatArray, visible: Boolean, px: Float) {
+        // v0.48: the picture is drawn by the TV itself; the overlay is only the fallback before the TV display exists
+        if (presRoot != null) return
         // A still camera gives the same corners every frame: no UI-thread work then
         if (visible == lastShow && pts.contentEquals(lastPts)) return
         System.arraycopy(pts, 0, lastPts, 0, 8); lastShow = visible

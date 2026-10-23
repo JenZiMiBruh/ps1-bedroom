@@ -331,6 +331,10 @@ class Hud(private val act: Activity, private val root: FrameLayout, private val 
     fun wakeFromSleep() = act.runOnUiThread { sleepOverlay.visibility = View.GONE; app.post { app.settings.wake() } }
     fun openBoombox() = act.runOnUiThread { (boombox ?: BoomboxPanel(act, root, app).also { boombox = it }).open() }
     fun refreshBoombox() { boombox?.refresh() }
+    /** Paper Toss mini-game (tap the wastebasket, Menu → Fun, or the widget). */
+    @Volatile private var paperToss: PaperToss? = null
+    val isPaperTossOpen: Boolean get() = paperToss?.isOpen == true
+    fun openPaperToss() = act.runOnUiThread { menu.close(); (paperToss ?: PaperToss(act, root, app).also { paperToss = it }).open() }
     private val POSTURE_ORDER = listOf("walk", "chair", "bed", "orbit")
     fun cyclePosture(dir: Int) {
         val idx = POSTURE_ORDER.indexOf(currentMode).coerceAtLeast(0)
@@ -338,6 +342,7 @@ class Hud(private val act: Activity, private val root: FrameLayout, private val 
         app.post { app.setPlayerMode(next) }
     }
     fun back(): Boolean {
+        paperToss?.let { if (it.isOpen) { it.close(); return true } }
         boombox?.let { if (it.isOpen) { it.close(); return true } }
         if (pcDesktop.isOpen) { pcDesktop.close(); return true }
         if (app.ytActive || yt.dialogOpen) { if (yt.back()) return true }

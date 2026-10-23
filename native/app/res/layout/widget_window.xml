@@ -13,20 +13,95 @@
         android:scaleType="centerCrop"
         android:contentDescription="The view out of your window" />
 
-    <TextView
-        android:id="@+id/ww_refresh"
-        android:layout_width="32dp"
-        android:layout_height="32dp"
+    <LinearLayout
+        android:id="@+id/ww_actions"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:layout_gravity="top|end"
         android:layout_margin="8dp"
-        android:gravity="center"
-        android:text="↻"
-        android:textColor="#FFE8E4FF"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        android:fontFamily="monospace"
-        android:background="@drawable/widget_bg"
-        android:contentDescription="Refresh window snapshot" />
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/ww_light_btn"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:gravity="center"
+            android:text="💡"
+            android:textSize="13sp"
+            android:background="@drawable/widget_btn_bg"
+            android:contentDescription="Toggle the ceiling light" />
+
+        <TextView
+            android:id="@+id/ww_tv_btn"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_marginStart="4dp"
+            android:gravity="center"
+            android:text="📺"
+            android:textSize="13sp"
+            android:background="@drawable/widget_btn_bg"
+            android:contentDescription="Toggle the TV" />
+
+        <TextView
+            android:id="@+id/ww_sound_btn"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_marginStart="4dp"
+            android:gravity="center"
+            android:text="🔊"
+            android:textSize="13sp"
+            android:background="@drawable/widget_btn_bg"
+            android:contentDescription="Toggle room sound" />
+
+        <TextView
+            android:id="@+id/ww_weather_btn"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_marginStart="4dp"
+            android:gravity="center"
+            android:text="🌦"
+            android:textSize="13sp"
+            android:background="@drawable/widget_btn_bg"
+            android:contentDescription="Next weather" />
+
+        <TextView
+            android:id="@+id/ww_blinds_btn"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_marginStart="4dp"
+            android:gravity="center"
+            android:text="🪟"
+            android:textColor="#FFE8E4FF"
+            android:textSize="13sp"
+            android:background="@drawable/widget_btn_bg"
+            android:contentDescription="Cycle window blinds" />
+
+        <TextView
+            android:id="@+id/ww_place_btn"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_marginStart="4dp"
+            android:gravity="center"
+            android:text="🗺️"
+            android:textColor="#FFE8E4FF"
+            android:textSize="13sp"
+            android:background="@drawable/widget_btn_bg"
+            android:contentDescription="Next place outside" />
+
+        <TextView
+            android:id="@+id/ww_refresh"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_marginStart="4dp"
+            android:gravity="center"
+            android:text="↻"
+            android:textColor="#FFE8E4FF"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:fontFamily="monospace"
+            android:background="@drawable/widget_btn_bg"
+            android:contentDescription="Refresh window snapshot" />
+    </LinearLayout>
 
     <LinearLayout
         android:id="@+id/ww_info"
@@ -74,7 +149,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
-            android:text="Open PS1 Bedroom to look outside"
+            android:text="☀️ 72°F Clear  ·  🌆 Downtown"
             android:textColor="#FFFFD27D"
             android:textSize="12sp"
             android:textStyle="bold"

@@ -27,7 +27,7 @@
                 android:format12Hour="h:mm a"
                 android:format24Hour="HH:mm"
                 android:textColor="#FFFF4D6D"
-                android:textSize="30sp"
+                android:textSize="28sp"
                 android:textStyle="bold"
                 android:fontFamily="monospace"
                 android:shadowColor="#99FF1A40"
@@ -54,12 +54,26 @@
             android:paddingEnd="10dp"
             android:paddingTop="6dp"
             android:paddingBottom="6dp"
+            android:background="@drawable/widget_btn_bg"
             android:text="72°F"
             android:textColor="#FF7DD3FC"
-            android:textSize="18sp"
+            android:textSize="17sp"
             android:textStyle="bold"
             android:fontFamily="monospace" />
     </LinearLayout>
+
+    <TextView
+        android:id="@+id/cw_weather"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="5dp"
+        android:text="🍂 Fall  ·  ☀️ Clear  ·  🌆 Downtown"
+        android:textColor="#FFFFD27D"
+        android:textSize="11sp"
+        android:textStyle="bold"
+        android:fontFamily="monospace"
+        android:maxLines="1"
+        android:ellipsize="end" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -69,41 +83,40 @@
         android:gravity="center_vertical">
 
         <TextView
-            android:id="@+id/cw_weather"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="☀️ Clear · 🌆 Downtown"
-            android:textColor="#FFFFD27D"
-            android:textSize="12sp"
-            android:textStyle="bold"
-            android:fontFamily="monospace"
-            android:maxLines="1"
-            android:ellipsize="end" />
-
-        <TextView
             android:id="@+id/cw_step_weather"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:paddingStart="8dp"
-            android:paddingEnd="8dp"
-            android:paddingTop="4dp"
-            android:paddingBottom="4dp"
-            android:text="🌦 Next"
+            android:layout_width="0dp"
+            android:layout_height="30dp"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:background="@drawable/widget_btn_bg"
+            android:text="🌦 Weather"
             android:textColor="#FFF0ABFC"
             android:textSize="11sp"
             android:textStyle="bold"
             android:fontFamily="monospace" />
 
         <TextView
+            android:id="@+id/cw_step_season"
+            android:layout_width="0dp"
+            android:layout_height="30dp"
+            android:layout_weight="1"
+            android:layout_marginStart="5dp"
+            android:gravity="center"
+            android:background="@drawable/widget_btn_bg"
+            android:text="🍂 Season"
+            android:textColor="#FFFFD27D"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:fontFamily="monospace" />
+
+        <TextView
             android:id="@+id/cw_step_place"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="4dp"
-            android:paddingStart="8dp"
-            android:paddingEnd="8dp"
-            android:paddingTop="4dp"
-            android:paddingBottom="4dp"
+            android:layout_width="0dp"
+            android:layout_height="30dp"
+            android:layout_weight="1"
+            android:layout_marginStart="5dp"
+            android:gravity="center"
+            android:background="@drawable/widget_btn_bg"
             android:text="🪟 Place"
             android:textColor="#FF7DD3FC"
             android:textSize="11sp"

@@ -119,6 +119,8 @@ class App : GLSurfaceView.Renderer {
         return false
     }
     private val shotPos = Vec3()
+    /** GL thread, right before the app goes to the background: one fresh snapshot so the Window widget shows the room as you left it. */
+    fun windowShotOnLeave() { if (built && windowWidgets && onWindowShot != null) { lastShotT = lastT; takeWindowShot() } }
     private fun takeWindowShot() {
         val px = camera.position.x; val py = camera.position.y; val pz = camera.position.z
         val rx = camera.rotation.x; val ry = camera.rotation.y; val rz = camera.rotation.z
@@ -238,7 +240,9 @@ class App : GLSurfaceView.Renderer {
             g3.render(ps1.gameTime(t), SystemClock.uptimeMillis())
             tv.useFeed(g3.rt.texture)
         } else {
-            tv.useFeed(null)
+            // YouTube plays on the TV's own display: its newest frame becomes the CRT's picture
+            val f = ytFeed
+            if (ytActive && f != null && hud?.yt?.isFull != true) { f.update(); tv.useFeed(f.rt.texture) } else tv.useFeed(null)
         }
     }
     /** YouTube's texture on the TV (made on the GL thread the first time a video plays). */
@@ -520,6 +524,7 @@ class App : GLSurfaceView.Renderer {
             "string" -> decor.cycleStringLights()
             "dog" -> jasper.petDog(lastT)
             "dogFood" -> jasper.feed(lastT)
+            "wastebasket" -> { sfx("caseClick"); hud?.openPaperToss() }
             "dogWater" -> jasper.giveWater(lastT)
             "tv" -> if (ytActive) hud?.yt?.let { yt -> hud?.runUi { yt.togglePlay() } } else tv.cycleBedroomTvChannel(lastT)
             "tvPower" -> tvPower()

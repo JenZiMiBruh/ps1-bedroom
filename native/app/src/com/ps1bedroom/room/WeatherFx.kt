@@ -154,9 +154,9 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
 
         // Seasonal ground below the window (grass, flowering grass, fallen leaves, snow; darker when wet)
         groundCanvasObj = createCanvasTex(128, 128, 7f, 5f) { _, _, _ -> }
-        outdoorGround = Mesh(Geo.plane(26f, 13f, 8, 4), Material(map = groundCanvasObj.tex, ps1 = false)) // MeshLambertMaterial
+        outdoorGround = Mesh(Geo.plane(26f, 12.2f, 8, 4), Material(map = groundCanvasObj.tex, ps1 = false)) // MeshLambertMaterial
         outdoorGround.rotation.x = (-PI / 2).toFloat()
-        outdoorGround.position.set(0.8f, 0.32f, -9.8f)
+        outdoorGround.position.set(0.8f, 0.32f, -9.4f)
         scene.add(outdoorGround)
 
         // Soft glow just outside the window so it reads as the room's light source

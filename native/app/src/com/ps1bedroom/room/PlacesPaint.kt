@@ -350,33 +350,34 @@ class PlacesPaint(private val sky: Sky, private val env: Environment, private va
             }
             "beach" -> {
                 ctx.fillStyle = T(i3(14, 18, 34), i3(110, 130, 150), 0.55)
-                ctx.beginPath(); ctx.ellipse(300, 212, 90, 11, 0, PI, 0); ctx.fill()
-                paintWater(ctx, 211.0, i3(70, 140, 190), i3(18, 70, 120))
-                // The pier out over the water, with the amusement park on it (the wheel turns, drawn live)
-                ctx.fillStyle = T(i3(14, 12, 12), i3(120, 100, 80)); ctx.fillRect(40, 214, 170, 4)
-                run { var x = 44; while (x < 210) { ctx.fillRect(x, 218, 2, 14); x += 12 } }
-                ctx.fillStyle = T(i3(12, 12, 16), i3(180, 70, 60)); ctx.fillRect(150, 196, 30, 18); ctx.fillStyle = T(i3(20, 20, 24), i3(240, 220, 120)); ctx.fillRect(150, 192, 30, 4)
+                ctx.beginPath(); ctx.ellipse(300, 195, 90, 11, 0, PI, 0); ctx.fill()
+                paintWater(ctx, 194.0, i3(70, 140, 190), i3(18, 70, 120))
+                // The pier out over the water, with the amusement park on it (above y=195 so the 3D sea plane never clips the pier or Ferris wheel)
+                ctx.fillStyle = T(i3(22, 18, 18), i3(135, 108, 82)); ctx.fillRect(38, 187, 174, 4)
+                run { var x = 42; while (x < 210) { ctx.fillRect(x, 191, 2, 10); x += 11 } }
+                if (isNight()) {
+                    ctx.fillStyle = "rgba(255,220,140,0.85)"
+                    run { var x = 44; while (x < 206) { ctx.fillRect(x, 186, 2, 1); x += 8 } }
+                }
+                ctx.fillStyle = T(i3(28, 16, 22), i3(195, 76, 66)); ctx.fillRect(152, 173, 30, 14)
+                ctx.fillStyle = T(i3(36, 32, 20), i3(244, 218, 108))
+                ctx.beginPath(); ctx.moveTo(149, 173); ctx.lineTo(167, 164); ctx.lineTo(185, 173); ctx.closePath(); ctx.fill()
+                litWindow(ctx, 156, 177, 6, 4, 0.1); litWindow(ctx, 171, 177, 6, 4, 0.25)
                 // Lighthouse on the rocks
                 ctx.fillStyle = T(i3(10, 10, 16), i3(96, 88, 80))
-                ctx.beginPath(); ctx.moveTo(408, 256); ctx.lineTo(420, 214); ctx.lineTo(446, 204); ctx.lineTo(484, 206); ctx.lineTo(512, 212); ctx.lineTo(512, 256); ctx.closePath(); ctx.fill()
-                for (i in 0 until 6) { ctx.fillStyle = if (i % 2 == 1) T(i3(30, 12, 14), i3(200, 40, 40)) else T(i3(40, 42, 50), i3(240, 240, 236)); ctx.fillRect(458, 168 + i * 6, 10, 6) }
-                ctx.fillStyle = T(i3(14, 14, 20), i3(60, 60, 66)); ctx.fillRect(456, 160, 14, 8); ctx.fillRect(460, 154, 6, 6)
+                ctx.beginPath(); ctx.moveTo(408, 256); ctx.lineTo(420, 197); ctx.lineTo(446, 187); ctx.lineTo(484, 189); ctx.lineTo(512, 195); ctx.lineTo(512, 256); ctx.closePath(); ctx.fill()
+                for (i in 0 until 6) { ctx.fillStyle = if (i % 2 == 1) T(i3(30, 12, 14), i3(200, 40, 40)) else T(i3(40, 42, 50), i3(240, 240, 236)); ctx.fillRect(458, 151 + i * 6, 10, 6) }
+                ctx.fillStyle = T(i3(14, 14, 20), i3(60, 60, 66)); ctx.fillRect(456, 143, 14, 8); ctx.fillRect(460, 137, 6, 6)
                 ctx.fillStyle = "rgba(255,255,255,${0.25 + 0.35 * env.daylight})"
                 run { var x = 0; while (x < 410) { ctx.fillRect(x, 250 + sin(x * 0.3) * 2, 6, 1); x += 9 } }
             }
             "lake" -> {
                 ridge(ctx, ridgePts(21, 172.0, 34.0, 30.0, 14.0), T(i3(18, 22, 40), i3(120, 140, 170), 0.55))
-                pines(ctx, 22, 208.0, 10.0, 20.0, 7.0, T(i3(8, 16, 14), i3(40, 70, 50), 0.2), snowCap())
-                paintWater(ctx, 208.0, i3(120, 160, 190), i3(40, 80, 100))
-                ctx.save(); ctx.globalAlpha = 0.28f; ctx.translate(0, 416); ctx.scale(1, -1)
-                pines(ctx, 22, 208.0, 10.0, 20.0, 7.0, T(i3(8, 16, 14), i3(40, 70, 50), 0.2), null)
+                pines(ctx, 22, 196.0, 10.0, 20.0, 7.0, T(i3(8, 16, 14), i3(40, 70, 50), 0.2), snowCap())
+                paintWater(ctx, 196.0, i3(120, 160, 190), i3(40, 80, 100))
+                ctx.save(); ctx.globalAlpha = 0.28f; ctx.translate(0, 392); ctx.scale(1, -1)
+                pines(ctx, 22, 196.0, 10.0, 20.0, 7.0, T(i3(8, 16, 14), i3(40, 70, 50), 0.2), null)
                 ctx.restore()
-                ctx.fillStyle = T(i3(14, 10, 10), i3(90, 60, 40)); ctx.fillRect(150, 199, 16, 9)
-                ctx.fillStyle = T(i3(24, 14, 14), i3(120, 62, 50)); ctx.fillRect(161, 191, 3, 6) // cabin chimney
-                ctx.fillStyle = T(i3(14, 10, 10), i3(90, 60, 40))
-                ctx.beginPath(); ctx.moveTo(147, 199); ctx.lineTo(158, 192); ctx.lineTo(169, 199); ctx.closePath(); ctx.fill()
-                litWindow(ctx, 154, 202, 4, 3, 0.05)
-                if (isNight()) { ctx.fillStyle = "rgba(255,200,120,0.35)"; ctx.fillRect(155, 210, 2, 18) }
             }
             "forest" -> {
                 val (gn, gd) = seasonGreen()
@@ -427,10 +428,10 @@ class PlacesPaint(private val sky: Sky, private val env: Environment, private va
                 ctx.fillStyle = T(i3(40, 40, 40), i3(236, 230, 220)); ctx.fillRect(122, 194, 10, 12)
                 ctx.fillStyle = T(i3(24, 26, 32), i3(170, 176, 180)); ctx.fillRect(148, 170, 12, 36)
                 ctx.beginPath(); ctx.ellipse(154, 170, 6, 5, 0, PI, 0); ctx.fill()
-                ctx.fillStyle = T(i3(22, 22, 26), i3(230, 224, 206)); ctx.fillRect(320, 192, 26, 14)
-                ctx.fillStyle = T(i3(28, 14, 14), i3(135, 64, 52)); ctx.fillRect(339, 181, 3, 8) // farmhouse chimney
-                ctx.fillStyle = T(i3(14, 12, 14), i3(80, 60, 56)); ctx.beginPath(); ctx.moveTo(316, 192); ctx.lineTo(333, 182); ctx.lineTo(350, 192); ctx.closePath(); ctx.fill()
-                litWindow(ctx, 325, 196, 5, 4, 0.1); litWindow(ctx, 337, 196, 5, 4, 0.3)
+                ctx.fillStyle = T(i3(22, 22, 26), i3(230, 224, 206)); ctx.fillRect(210, 182, 26, 14)
+                ctx.fillStyle = T(i3(28, 14, 14), i3(135, 64, 52)); ctx.fillRect(229, 171, 3, 8) // farmhouse chimney
+                ctx.fillStyle = T(i3(14, 12, 14), i3(80, 60, 56)); ctx.beginPath(); ctx.moveTo(206, 182); ctx.lineTo(223, 172); ctx.lineTo(240, 182); ctx.closePath(); ctx.fill()
+                litWindow(ctx, 215, 186, 5, 4, 0.1); litWindow(ctx, 227, 186, 5, 4, 0.3)
                 ctx.fillStyle = T(i3(14, 14, 18), i3(120, 120, 126)); ctx.beginPath(); ctx.moveTo(424, 206); ctx.lineTo(429, 166); ctx.lineTo(431, 166); ctx.lineTo(436, 206); ctx.closePath(); ctx.fill()
                 // Cows in the near field (they stay put at night)
                 val r = makeRng(52)
@@ -488,26 +489,46 @@ class PlacesPaint(private val sky: Sky, private val env: Environment, private va
         val W = env.W
         when (places.outsideEnv) {
             "beach" -> {
-                glitter(ctx, 212.0, t, false)
-                // Ferris wheel on the pier
-                val a = t * 0.25
-                ctx.strokeStyle = if (night) "rgba(255,120,200,0.9)" else T(i3(20, 20, 26), i3(220, 220, 230)); ctx.lineWidth = 1f
-                ctx.beginPath(); ctx.arc(110, 186, 24, 0, PI * 2); ctx.stroke()
+                glitter(ctx, 195.0, t, false)
+                // Ferris wheel on the pier (positioned at y=156, r=22 so the full wheel, gondolas, and A-frame legs sit cleanly on the pier at y=187)
+                val cx = 116.0; val cy = 156.0; val r = 22.0
+                val a = t * 0.32
+                // Support A-frame towers down to the pier deck (y=187)
+                ctx.strokeStyle = if (night) "rgba(180,190,225,0.85)" else T(i3(32, 34, 42), i3(130, 136, 148))
+                ctx.lineWidth = 2f
+                ctx.beginPath()
+                ctx.moveTo(cx - 13, 187.0); ctx.lineTo(cx, cy); ctx.lineTo(cx + 13, 187.0)
+                ctx.moveTo(cx - 9, 176.0); ctx.lineTo(cx + 9, 176.0)
+                ctx.stroke()
+                // Inner and outer wheel rims
+                ctx.strokeStyle = if (night) "rgba(255,110,205,0.95)" else T(i3(28, 30, 38), i3(230, 232, 240))
+                ctx.lineWidth = 1.6f
+                ctx.beginPath(); ctx.arc(cx, cy, r, 0, PI * 2); ctx.stroke()
+                ctx.strokeStyle = if (night) "rgba(90,235,255,0.8)" else T(i3(24, 26, 34), i3(195, 200, 212))
+                ctx.lineWidth = 1f
+                ctx.beginPath(); ctx.arc(cx, cy, r * 0.62, 0, PI * 2); ctx.stroke()
+                // Radial spokes and upright gondolas
                 val cols = arrayOf("#ffe14d", "#2ef2ff", "#ff3ea5", "#7cff6b")
+                ctx.strokeStyle = if (night) "rgba(255,150,220,0.8)" else T(i3(24, 26, 34), i3(210, 212, 222))
                 for (i in 0 until 8) {
-                    val b = a + i * PI / 4; val x = 110 + cos(b) * 24; val y = 186 + sin(b) * 24
-                    ctx.beginPath(); ctx.moveTo(110, 186); ctx.lineTo(x, y); ctx.stroke()
-                    ctx.fillStyle = if (night) cols[i % 4] else T(i3(20, 20, 26), i3(230, 80, 70)); ctx.fillRect(x - 2, y, 4, 3)
+                    val b = a + i * PI / 4
+                    val x = cx + cos(b) * r
+                    val y = cy + sin(b) * r
+                    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(x, y); ctx.stroke()
+                    ctx.fillStyle = if (night) cols[i % 4] else T(i3(30, 30, 38), i3(230, 80, 70))
+                    ctx.fillRect(x - 2.5, y - 0.5, 5, 3.5)
                 }
-                ctx.fillStyle = T(i3(14, 14, 18), i3(90, 90, 96)); ctx.fillRect(108, 186, 4, 28)
+                // Glowing center hub
+                ctx.fillStyle = if (night) "#fff6c8" else "#e2e8f0"
+                ctx.fillRect(cx - 2, cy - 2, 4, 4)
                 if (night) {
                     val lb = t * 0.9f; val c = cos(lb)
                     ctx.save(); ctx.globalAlpha = 0.18f + 0.2f * max(0f, sin(lb)); ctx.fillStyle = "#fff6c8"
-                    ctx.beginPath(); ctx.moveTo(463, 163); ctx.lineTo(463 + c * 260, 150); ctx.lineTo(463 + c * 260, 176); ctx.closePath(); ctx.fill(); ctx.restore()
-                    ctx.fillStyle = "rgba(255,246,200,${0.5 + 0.5 * max(0f, sin(lb))})"; ctx.fillRect(460, 161, 6, 4)
+                    ctx.beginPath(); ctx.moveTo(463, 146); ctx.lineTo(463 + c * 260, 133); ctx.lineTo(463 + c * 260, 159); ctx.closePath(); ctx.fill(); ctx.restore()
+                    ctx.fillStyle = "rgba(255,246,200,${0.5 + 0.5 * max(0f, sin(lb))})"; ctx.fillRect(460, 144, 6, 4)
                 }
             }
-            "lake" -> glitter(ctx, 209.0, t, true)
+            "lake" -> glitter(ctx, 197.0, t, true)
             "island" -> {
                 glitter(ctx, 212.0, t, false)
                 // The volcano smokes by day and glows at night
@@ -577,26 +598,24 @@ class PlacesPaint(private val sky: Sky, private val env: Environment, private va
                 ctx.stroke()
             }
         }
-        // Cozy chimney smoke curling into the sky in winter, snow, or chilly fall evenings/mornings (drifting -X with the wind)
-        val chillyFall = env.currentSeason == "fall" && (env.currentTime in setOf("night", "dusk", "dawn") || env.isPrecipNow())
-        val coldSmoke = (env.currentSeason == "winter" || env.isSnowingNow() || chillyFall) && env.windowActivity() > 0.15
-        if (coldSmoke && places.outsideEnv in setOf("suburbs", "house", "countryside", "lake", "mountains")) {
+        // Cozy chimney smoke curling into the sky in winter or snow (drifting -X with the wind)
+        val coldSmoke = (env.currentSeason == "winter" || env.isSnowingNow()) && !places.envDef().noSnow
+        if (coldSmoke && places.outsideEnv in setOf("suburbs", "house", "countryside", "mountains")) {
             val chimneys = when (places.outsideEnv) {
-                "suburbs" -> arrayOf(118 to 198, 252 to 196, 396 to 198)
-                "countryside" -> arrayOf(340 to 181)
-                "lake" -> arrayOf(162 to 191)
+                "suburbs" -> arrayOf(118 to 196, 252 to 194, 396 to 196)
+                "countryside" -> arrayOf(230 to 171)
                 "mountains" -> arrayOf(213 to 177)
-                else -> arrayOf(188 to 198, 344 to 196)
+                else -> arrayOf(188 to 196, 344 to 194)
             }
-            ctx.fillStyle = if (night) "rgba(180, 195, 220, 0.24)" else "rgba(235, 240, 248, 0.30)"
+            ctx.fillStyle = if (night) "rgba(185, 200, 225, 0.32)" else "rgba(238, 243, 250, 0.38)"
             for ((cx, cy) in chimneys) {
                 for (p in 0 until 5) {
                     val age = (t * 0.65 + p * 0.2) % 1.0
                     // Drift left (-X) in the exact same wind direction as rain, snow, and falling leaves
                     val sx = cx - age * (9.0 + W.wind * 24.0) + sin(t * 1.8 + p) * 2.0
                     val sy = cy - age * 24.0
-                    val rad = 1.8 + age * 4.8
-                    ctx.beginPath(); ctx.ellipse(sx, sy, rad, rad * 0.75, 0.0, 0.0, PI * 2); ctx.fill()
+                    val rad = 2.0 + age * 5.0
+                    ctx.beginPath(); ctx.ellipse(sx, sy, rad, rad * 0.78, 0.0, 0.0, PI * 2); ctx.fill()
                 }
             }
         }

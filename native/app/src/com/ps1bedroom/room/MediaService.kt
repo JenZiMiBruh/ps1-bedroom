@@ -109,8 +109,11 @@ class MediaService : Service() {
     private fun ctl(cmd: String, code: Int) = PendingIntent.getService(this, code, Intent(this, MediaService::class.java).setAction(ACTION_CONTROL).putExtra("cmd", cmd), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
 
     /** Session metadata + playback state + the MediaStyle notification. */
+    private val roomArt: Bitmap? by lazy { try { android.graphics.BitmapFactory.decodeResource(resources, R.mipmap.ic_launcher) } catch (_: Exception) { null } }
     fun publish() {
-        val s = state ?: State(true, "PS1 Bedroom", "The room is playing", "", null, false, 0, 0)
+        val s0 = state ?: State(true, "PS1 Bedroom", "The room is playing", "", null, false, 0, 0)
+        // The room always has a cover (like any music app), so the phone's media player card looks right
+        val s = if (s0.art == null) State(s0.playing, s0.title, s0.artist, s0.album, roomArt, s0.music, s0.posMs, s0.durMs) else s0
         val meta = MediaMetadata.Builder()
             .putString(MediaMetadata.METADATA_KEY_TITLE, s.title)
             .putString(MediaMetadata.METADATA_KEY_ARTIST, s.artist)

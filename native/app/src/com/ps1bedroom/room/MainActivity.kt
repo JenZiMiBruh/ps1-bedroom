@@ -74,19 +74,27 @@ class MainActivity : Activity() {
             when (cmd) {
                 "toggle_sound" -> app.toggleAudio()
                 "toggle_light" -> { app.toggleFanLight(); app.settings.changed() }
+                "toggle_fan" -> { app.fan.toggleCeilingFanSpin(); app.sound.updateLayered(); app.settings.changed() }
+                "toggle_lamp" -> { app.furniture.toggleLamp(); app.settings.changed() }
                 "toggle_tv" -> { app.tvPower(); app.settings.changed() }
                 "cycle_blinds" -> { app.room.cycleWindowBlinds(); app.settings.changed() }
                 "step_weather" -> app.settings.stepStatus("weather")
+                "step_season" -> app.settings.stepStatus("season")
                 "step_place" -> app.settings.stepStatus("place")
+                "next_station" -> { val n = app.extras.RADIO_STATIONS.size; app.extras.setStation((app.extras.radioStation + 1) % n, app.furniture.radioDisplayMat); if (!app.sound.playing && app.extras.radioStation > 0) app.toggleAudio(); app.publishMedia(); app.settings.changed() }
                 "sleep_mode" -> app.settings.startSleepMode()
                 "sleep_15" -> app.settings.setSleepTimer(if (app.settings.sleepEnd > 0) 0 else 15)
                 "toggle_alarm" -> { app.alarm.set(on = !app.alarm.on); app.settings.changed() }
+                "alarm_time" -> { app.alarm.set(time = RoomWidgetReceiver.nextAlarmTime(app.alarm.time)); app.toast("⏰ Alarm set for ${app.alarm.time}"); app.settings.changed() }
+                "jasper_pet" -> { app.jasper.petDog(app.lastFrameT); app.settings.changed() }
                 "jasper_feed" -> { app.jasper.feed(app.lastFrameT); app.settings.changed() }
                 "jasper_water" -> { app.jasper.giveWater(app.lastFrameT); app.settings.changed() }
                 "jasper_play" -> { app.jasper.playWith(app.lastFrameT); app.settings.changed() }
                 "jasper_sleep" -> { app.jasper.sendToSleep(app.lastFrameT); app.settings.changed() }
                 "refresh_window" -> { app.windowShotNow = true; app.toast("🪟 Updated Window widget snapshot!") }
+                "paper_toss" -> app.hud?.runUi { app.hud?.openPaperToss() }
             }
+            app.windowShotNow = true   // every widget change shows up on the Window widget straight away
             app.settings.saveNow()
         }
         return true
@@ -203,6 +211,12 @@ class MainActivity : Activity() {
     override fun onPause() {
         // In picture-in-picture the activity is paused but still on screen: keep drawing
         if (android.os.Build.VERSION.SDK_INT >= 24 && isInPictureInPictureMode) { super.onPause(); return }
+        // One last Window-widget snapshot of the room as you leave it (waits at most ~400 ms)
+        if (app.isBuilt && app.windowWidgets) {
+            val latch = java.util.concurrent.CountDownLatch(1)
+            view.queueEvent { try { app.windowShotOnLeave() } catch (_: Exception) { } finally { latch.countDown() } }
+            try { latch.await(400, java.util.concurrent.TimeUnit.MILLISECONDS) } catch (_: Exception) { }
+        }
         pacer.stop(); view.onPause(); app.glActive = false; super.onPause()
     }
     override fun onStop() { if (android.os.Build.VERSION.SDK_INT >= 24 && isInPictureInPictureMode) { pacer.stop(); view.onPause(); app.glActive = false }; super.onStop() }

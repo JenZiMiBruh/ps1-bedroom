@@ -28,7 +28,7 @@
             android:layout_height="wrap_content"
             android:text="PS1 Bedroom"
             android:textColor="#FFFFFFFF"
-            android:textSize="14sp"
+            android:textSize="13sp"
             android:textStyle="bold"
             android:fontFamily="monospace"
             android:maxLines="1"
@@ -38,35 +38,48 @@
             android:id="@+id/w_sub"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Tap to open your room"
+            android:text="Tap 📻 for radio · Tap to open room"
             android:textColor="#FFB9B4E6"
-            android:textSize="11sp"
+            android:textSize="10sp"
             android:fontFamily="monospace"
             android:maxLines="1"
             android:ellipsize="end" />
     </LinearLayout>
 
+    <TextView
+        android:id="@+id/w_station"
+        android:layout_width="34dp"
+        android:layout_height="34dp"
+        android:gravity="center"
+        android:background="@drawable/widget_btn_bg"
+        android:text="📻"
+        android:textSize="14sp"
+        android:contentDescription="Next radio station" />
+
     <ImageButton
         android:id="@+id/w_prev"
-        android:layout_width="36dp"
-        android:layout_height="36dp"
-        android:background="@android:color/transparent"
+        android:layout_width="34dp"
+        android:layout_height="34dp"
+        android:layout_marginStart="3dp"
+        android:background="@drawable/widget_btn_bg"
         android:contentDescription="Previous"
         android:src="@android:drawable/ic_media_previous" />
 
     <ImageButton
         android:id="@+id/w_play"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
-        android:background="@android:color/transparent"
+        android:layout_width="38dp"
+        android:layout_height="38dp"
+        android:layout_marginStart="3dp"
+        android:background="@drawable/widget_btn_bg"
         android:contentDescription="Play or pause"
         android:src="@android:drawable/ic_media_play" />
 
     <ImageButton
         android:id="@+id/w_next"
-        android:layout_width="36dp"
-        android:layout_height="36dp"
-        android:background="@android:color/transparent"
+        android:layout_width="34dp"
+        android:layout_height="34dp"
+        android:layout_marginStart="3dp"
+        android:background="@drawable/widget_btn_bg"
         android:contentDescription="Next"
         android:src="@android:drawable/ic_media_next" />
 </LinearLayout>

@@ -24,6 +24,15 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.48", "YouTube really on the TV, Paper Toss, fixed Ferris wheel, winter chimney smoke & better widgets", listOf(
+            "YouTube now plays ON the bedroom TV itself: the player runs on the TV's own display and becomes the CRT's picture, so it curves, wobbles and lights the room like any channel (no more floating overlay). Full screen still works",
+            "NEW mini-game: PAPER TOSS. Tap the wastebasket by the desk and flick crumpled paper in. A different wind every throw, the basket backs away as your streak grows, swishes score a bonus, the ceiling fan adds drift, and your best is saved",
+            "Beach Boardwalk: the Ferris wheel is fixed. It sits properly on the pier (no more sinking into the sea), with an A-frame, two rims, upright gondolas, a lit hub and neon at night",
+            "Winter chimney smoke: real 3D smoke curls up from every chimney in winter and snow (suburbs, backyard neighbours, brownstones, trailers, the lakeside cabin, the mountain lodge and the farmhouse) and drifts with the wind",
+            "Window widget: actually refreshes (a fresh snapshot whenever you change something from a widget and when you leave the app), shows when it was taken, and has room controls: light, TV, sound, weather, blinds and place",
+            "Widgets redesigned with retro buttons: ceiling fan on Quick Controls, season button on Clock & Weather, alarm time on Sleep & Alarm, Pet on Jasper, and a 📻 next-station button on Now Playing",
+            "The room's sound always shows a cover in the phone's media player card"
+        )),
         Entry("0.47", "PS3/PS5 disc insertion fix, Jasper eating & drinking animations, lightning frequency & natural thunder", listOf(
             "Fixed PS3, PS4, and PS5 staying on the boot/menu screen when inserting a game: slot-loading consoles now properly close the menu state and transition cleanly through boot into the game's title screen and gameplay",
             "Fixed Jasper's food and water bowls: tapping the red or blue bowl (or pressing Feed / Water) now visibly fills the bowl with chunky kibble or glossy water above the rim, with pour/kibble sounds",

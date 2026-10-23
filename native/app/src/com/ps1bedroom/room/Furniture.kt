@@ -246,6 +246,7 @@ class Furniture(private val room: Room) {
         scene.add(basketGroup)
         val basket = propPart(basketGroup, Geo.cylinder(0.17f, 0.13f, 0.42f, 12, 1, true), PS1.material(color = 0x334155, side = DOUBLE_SIDE), 0f, 0.21f, 0f)
         basket.castShadow = true
+        room.registerInteractable(basket, "wastebasket")
         propPart(basketGroup, Geo.cylinder(0.13f, 0.13f, 0.01f, 12), PS1.material(color = 0x1e293b), 0f, 0.005f, 0f)
         val paperMat = PS1.material(color = 0xe5e7eb)
         fun crumple(r: Float, seed: Int): Geometry {

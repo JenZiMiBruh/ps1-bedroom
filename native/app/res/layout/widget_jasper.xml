@@ -16,8 +16,8 @@
 
         <ImageView
             android:id="@+id/jw_avatar"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
+            android:layout_width="46dp"
+            android:layout_height="46dp"
             android:scaleType="fitCenter"
             android:contentDescription="Jasper the German Shepherd" />
 
@@ -62,14 +62,29 @@
         android:gravity="center">
 
         <TextView
-            android:id="@+id/jw_feed"
+            android:id="@+id/jw_pet"
             android:layout_width="0dp"
             android:layout_height="34dp"
             android:layout_weight="1"
             android:gravity="center"
+            android:background="@drawable/widget_btn_bg"
+            android:text="🤚 Pet"
+            android:textColor="#FFFF8FA3"
+            android:textSize="10sp"
+            android:textStyle="bold"
+            android:fontFamily="monospace" />
+
+        <TextView
+            android:id="@+id/jw_feed"
+            android:layout_width="0dp"
+            android:layout_height="34dp"
+            android:layout_weight="1"
+            android:layout_marginStart="4dp"
+            android:gravity="center"
+            android:background="@drawable/widget_btn_bg"
             android:text="🍖 Feed"
             android:textColor="#FFFFD27D"
-            android:textSize="11sp"
+            android:textSize="10sp"
             android:textStyle="bold"
             android:fontFamily="monospace" />
 
@@ -78,10 +93,12 @@
             android:layout_width="0dp"
             android:layout_height="34dp"
             android:layout_weight="1"
+            android:layout_marginStart="4dp"
             android:gravity="center"
+            android:background="@drawable/widget_btn_bg"
             android:text="💧 Water"
             android:textColor="#FF7DD3FC"
-            android:textSize="11sp"
+            android:textSize="10sp"
             android:textStyle="bold"
             android:fontFamily="monospace" />
 
@@ -90,10 +107,12 @@
             android:layout_width="0dp"
             android:layout_height="34dp"
             android:layout_weight="1"
+            android:layout_marginStart="4dp"
             android:gravity="center"
+            android:background="@drawable/widget_btn_bg"
             android:text="🎾 Play"
             android:textColor="#FF86EFAC"
-            android:textSize="11sp"
+            android:textSize="10sp"
             android:textStyle="bold"
             android:fontFamily="monospace" />
 
@@ -102,10 +121,12 @@
             android:layout_width="0dp"
             android:layout_height="34dp"
             android:layout_weight="1"
+            android:layout_marginStart="4dp"
             android:gravity="center"
-            android:text="🛏️ Sleep"
+            android:background="@drawable/widget_btn_bg"
+            android:text="🛏️ Bed"
             android:textColor="#FFF0ABFC"
-            android:textSize="11sp"
+            android:textSize="10sp"
             android:textStyle="bold"
             android:fontFamily="monospace" />
     </LinearLayout>

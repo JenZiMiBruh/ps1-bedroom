@@ -96,6 +96,9 @@ class MainActivity : Activity() {
             }
             app.windowShotNow = true   // every widget change shows up on the Window widget straight away
             app.settings.saveNow()
+            view.post {
+                RoomWidgetReceiver.updateAllWidgets(this@MainActivity, app)
+            }
         }
         return true
     }

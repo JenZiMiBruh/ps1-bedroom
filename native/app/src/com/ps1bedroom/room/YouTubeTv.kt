@@ -241,18 +241,18 @@ class YouTubeTv(private val act: Activity, private val root: FrameLayout, privat
         if (v.start > 0) p.append("&start=").append(v.start)
         return if (v.id != null) "https://www.youtube.com/embed/${v.id}?$p" else "https://www.youtube.com/embed/videoseries?$p"
     }
-    /** The page in the WebView: the player inset in a black tube face, with scanlines (and the PS1 pixel grid). */
+    /** The page in the WebView: the player fits edge-to-edge flush with no border on the TV display. */
     private fun page(v: Vid) = """<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>
-        html,body{margin:0;height:100%;background:#040405;overflow:hidden}
-        iframe,.scan,.px{position:absolute;left:3.6%;top:3.6%;width:92.8%;height:92.8%;border-radius:28px/32px}
-        body.full iframe,body.full .scan,body.full .px{left:0;top:0;width:100%;height:100%;border-radius:10px}
+        html,body{margin:0;padding:0;width:100%;height:100%;background:#000;overflow:hidden}
+        iframe,.scan,.px{position:absolute;left:0;top:0;width:100%;height:100%;border:0;margin:0;padding:0;border-radius:0}
+        body.full iframe,body.full .scan,body.full .px{left:0;top:0;width:100%;height:100%;border:0;border-radius:0}
         iframe{border:0;display:block;filter:saturate(1.12) contrast(1.05) brightness(0.96)}
-        .scan{pointer-events:none;background:repeating-linear-gradient(rgba(0,0,0,.14) 0 2px,transparent 2px 4px);box-shadow:inset 0 0 70px rgba(0,0,0,.7),inset 0 0 8px rgba(0,0,0,.8)}
+        .scan{pointer-events:none;background:repeating-linear-gradient(rgba(0,0,0,.12) 0 2px,transparent 2px 4px);box-shadow:inset 0 0 10px rgba(0,0,0,.35)}
         body{--px:6px}
         .px{pointer-events:none;display:none;background-image:linear-gradient(90deg,rgba(0,0,0,.2) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.2) 1px,transparent 1px);background-size:var(--px) var(--px);mix-blend-mode:multiply}
         body.ps1 .px{display:block}
         body.ps1 iframe{filter:saturate(1.3) contrast(1.14) brightness(.95) blur(.35px)}
-        body.ps1 .scan{background:repeating-linear-gradient(rgba(0,0,0,.2) 0 calc(var(--px)/2),transparent calc(var(--px)/2) var(--px))}
+        body.ps1 .scan{background:repeating-linear-gradient(rgba(0,0,0,.18) 0 calc(var(--px)/2),transparent calc(var(--px)/2) var(--px))}
         </style></head><body class="${if (ps1Look) "ps1" else ""}${if (isFull) " full" else ""}">
         <iframe src="${embedUrl(v)}" allow="autoplay; encrypted-media; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin" title="YouTube on the bedroom TV"></iframe>
         <div class="scan"></div><div class="px"></div></body></html>"""

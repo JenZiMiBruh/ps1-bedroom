@@ -24,6 +24,12 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.49", "Edge-to-edge YouTube on TV, responsive lightning & live blinds on Window widget", listOf(
+            "YouTube on TV border removed: the video now renders flush edge-to-edge with no margins, inset borders, or rounded letterboxing inside the CRT bezel",
+            "Lightning frequency is instantly responsive: changing frequency immediately clears cooldown and triggers an instant flash & thunderclap. Constant mode strikes rapidly every ~0.7-1.6s",
+            "Window widget preview updates immediately on tap: cycling blinds, stepping weather, changing place, or toggling room controls refreshes the widget preview instantly whether the app is open, in the background, or closed",
+            "Closed blinds always show on the Window widget: when blinds are closed in the bedroom, the widget renders fully closed Venetian blinds with realistic beveled slats, overlapping seams, and pull cords"
+        )),
         Entry("0.48", "YouTube really on the TV, Paper Toss, fixed Ferris wheel, winter chimney smoke & better widgets", listOf(
             "YouTube now plays ON the bedroom TV itself: the player runs on the TV's own display and becomes the CRT's picture, so it curves, wobbles and lights the room like any channel (no more floating overlay). Full screen still works",
             "NEW mini-game: PAPER TOSS. Tap the wastebasket by the desk and flick crumpled paper in. A different wind every throw, the basket backs away as your streak grows, swishes score a bonus, the ceiling fan adds drift, and your best is saved",

@@ -87,9 +87,36 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
     var debrisFreq = 1.0f; private set
     /** User-configurable lightning frequency ("off", "rare", "normal", "frequent", "constant"). */
     var lightningFreq = "normal"
+        set(v) {
+            field = v
+            onLightningFreqChanged()
+        }
     private var lastWeatherKind = ""
     private var stormIntroTimer = 0f
     private var lightningCooldown = 0f
+
+    fun onLightningFreqChanged() {
+        lightningCooldown = 0f
+        if (lightningFreq != "off") {
+            // Immediate lightning flash and acoustic thunderclap so user gets instant response to the setting
+            triggerLightningStrike(instantThunder = true)
+        }
+    }
+
+    fun triggerLightningStrike(instantThunder: Boolean = false) {
+        if (lightningFreq == "off") return
+        val isStorm = env.W.base == "storm"
+        lightningFlash = if (isStorm || instantThunder) 1.0f else 0.7f
+        lightningCooldown = nextLightningInterval()
+        if (isStorm || instantThunder) onThunder?.invoke()
+    }
+
+    private fun nextLightningInterval(): Float = when (lightningFreq) {
+        "constant" -> 0.7f + rand() * 0.9f    // 0.7s - 1.6s between strikes
+        "frequent" -> 2.0f + rand() * 1.6f    // 2.0s - 3.6s
+        "rare"     -> 14.0f + rand() * 8.0f   // 14s - 22s
+        else       -> 5.0f + rand() * 4.0f    // 5.0s - 9.0s ("normal")
+    }
     fun setDebrisParams(amount: Float, speed: Float, freq: Float) {
         debrisAmount = amount.coerceIn(0f, 2.5f)
         debrisSpeed = speed.coerceIn(0.2f, 2.5f)
@@ -554,24 +581,17 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
         val W = env.W
         val dtSec = frameScale / 60f
         if (lightningCooldown > 0f) lightningCooldown = max(0f, lightningCooldown - dtSec)
-        val freqMult = when (lightningFreq) {
-            "off" -> 0f
-            "rare" -> 0.4f
-            "frequent" -> 2.0f
-            "constant" -> 3.5f
-            else -> 1.0f // "normal"
-        }
+
         val triggerIntro = if (stormIntroTimer > 0f) {
             stormIntroTimer -= dtSec
-            stormIntroTimer <= 0f && W.base == "storm" && freqMult > 0f
+            stormIntroTimer <= 0f && (W.base == "storm" || W.lightning) && lightningFreq != "off"
         } else false
-        // Natural spacing: "normal" averages a strike every ~14-18s in a storm with at least a 4.5s gap between flashes
-        val baseChance = if (W.base == "storm") 0.0014f else 0.0005f
-        if (triggerIntro || (W.lightning && freqMult > 0f && lightningCooldown <= 0f && rand() < baseChance * freqMult * frameScale)) {
-            lightningFlash = if (W.base == "storm") 1.0f else 0.6f
-            lightningCooldown = (if (W.base == "storm") 5.5f else 9.0f) / max(0.35f, freqMult)
-            if (W.base == "storm") onThunder?.invoke() // heat lightning is too far away to hear
+
+        val hasLightning = W.lightning || (lightningFreq == "constant" && W.base in listOf("storm", "heat", "rain", "downpour", "overcast", "windy"))
+        if (triggerIntro || (hasLightning && lightningFreq != "off" && lightningCooldown <= 0f)) {
+            triggerLightningStrike()
         }
+
         if (lightningFlash > 0) {
             lightningFlash = max(0f, lightningFlash - 0.08f * frameScale)
             room.moonLight.intensity = env.moonBaseIntensity + lightningFlash * 5.0f

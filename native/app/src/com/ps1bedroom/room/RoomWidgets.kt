@@ -101,7 +101,13 @@ class RoomWidgetReceiver : BroadcastReceiver() {
                 "toggle_fan" -> s.put("fanSpin", !s.optBoolean("fanSpin", true))
                 "toggle_lamp" -> s.put("lamp", !s.optBoolean("lamp", false))
                 "toggle_tv" -> s.put("tv", !s.optBoolean("tv", true))
-                "cycle_blinds" -> s.put("blinds", (s.optInt("blinds", 0) + 1) % 4)
+                "cycle_blinds" -> {
+                    val blindOrder = intArrayOf(0, 1, 3, 2)
+                    val cur = s.optInt("blinds", 0)
+                    val idx = blindOrder.indexOf(cur).let { if (it < 0) 0 else it }
+                    val next = blindOrder[(idx + 1) % blindOrder.size]
+                    s.put("blinds", next)
+                }
                 "next_station" -> {
                     val r = (s.optInt("radio", 0) + 1) % 4
                     s.put("radio", r)
@@ -128,7 +134,25 @@ class RoomWidgetReceiver : BroadcastReceiver() {
                     val next = keys[(keys.indexOf(cur) + 1) % keys.size]
                     s.put("weatherMode", "manual"); s.put("weatherKind", next)
                     val wLabel = Environment.WEATHER_KINDS[next]?.label ?: "Clear"
-                    ctx.getSharedPreferences("window_widget", Context.MODE_PRIVATE).edit().putString("infoWeatherOnly", wLabel).apply()
+                    val wp = ctx.getSharedPreferences("window_widget", Context.MODE_PRIVATE)
+                    val oldInfo = wp.getString("infoWeather", "") ?: ""
+                    val timePart = oldInfo.substringBefore(' ', "12:00 PM")
+                    val tempPart = wp.getString("infoTemp", "72°F")
+                    val icon = when (next) {
+                        "storm" -> "⛈️"
+                        "heat" -> "⚡"
+                        "rain", "downpour" -> "🌧️"
+                        "drizzle", "sunshower" -> "🌦️"
+                        "snow", "blizzard", "flurries" -> "🌨️"
+                        "fog", "mist" -> "🌫️"
+                        "windy" -> "💨"
+                        "overcast", "partly" -> "⛅"
+                        else -> "☀️"
+                    }
+                    wp.edit()
+                        .putString("infoWeatherOnly", wLabel)
+                        .putString("infoWeather", "$timePart $tempPart $icon $wLabel".trim())
+                        .apply()
                 }
                 "step_place" -> {
                     val keys = Places.OUTSIDE_ENVS.keys.toList()

@@ -39,7 +39,7 @@ class WindowWidget : AppWidgetProvider() {
         fun options(ctx: Context, id: Int): Options {
             val p = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             return Options(p.getBoolean("time$id", true), p.getBoolean("date$id", true), p.getBoolean("weather$id", true),
-                p.getBoolean("place$id", true), p.getBoolean("frame$id", true), p.getBoolean("blinds$id", false),
+                p.getBoolean("place$id", true), p.getBoolean("frame$id", true), p.getBoolean("blinds$id", true),
                 p.getBoolean("refreshBtn$id", true), p.getInt("refreshMin", 5))
         }
         fun saveOptions(ctx: Context, id: Int, o: Options) {
@@ -69,9 +69,20 @@ class WindowWidget : AppWidgetProvider() {
             val o = options(ctx, id)
             val p = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             val v = android.widget.RemoteViews(ctx.packageName, R.layout.widget_window)
-            val shot = shotFile(ctx, o.blinds).takeIf { it.exists() }?.let { BitmapFactory.decodeFile(it.path) }
-            if (shot != null) v.setImageViewBitmap(R.id.ww_view, if (o.frame) framed(shot) else shot)
-            else v.setImageViewResource(R.id.ww_view, R.mipmap.ic_launcher)
+
+            // Persisted room settings
+            val raw = ctx.getSharedPreferences("ps1bedroom", Context.MODE_PRIVATE).getString("settings.v1", null)
+            val s = if (raw != null) try { org.json.JSONObject(raw) } catch (_: Exception) { org.json.JSONObject() } else org.json.JSONObject()
+            val blindsState = s.optInt("blinds", 0) // 0 slatted · 1 tilted open · 3 rolled up · 2 closed
+
+            // Base snapshot from room (or fallback outdoor view)
+            val baseShot = shotFile(ctx, false).takeIf { it.exists() }?.let { BitmapFactory.decodeFile(it.path) }
+                ?: shotFile(ctx, true).takeIf { it.exists() }?.let { BitmapFactory.decodeFile(it.path) }
+                ?: fallbackWindow(ctx, s)
+
+            val rendered = renderWindow(baseShot, blindsState, o.blinds, o.frame, s)
+            v.setImageViewBitmap(R.id.ww_view, rendered)
+
             v.setViewVisibility(R.id.ww_time, if (o.time) View.VISIBLE else View.GONE)
             v.setViewVisibility(R.id.ww_date, if (o.date) View.VISIBLE else View.GONE)
             val weather = p.getString("infoWeather", null); val place = p.getString("infoPlace", null)
@@ -88,12 +99,15 @@ class WindowWidget : AppWidgetProvider() {
             v.setOnClickPendingIntent(R.id.ww_root, open)
             v.setOnClickPendingIntent(R.id.ww_refresh, refreshPi)
             // Room controls right on the window (work whether the room is open or not)
-            val raw = ctx.getSharedPreferences("ps1bedroom", Context.MODE_PRIVATE).getString("settings.v1", null)
-            val s = if (raw != null) try { org.json.JSONObject(raw) } catch (_: Exception) { org.json.JSONObject() } else org.json.JSONObject()
             val on = Color.WHITE; val off = Color.argb(150, 255, 255, 255)
             v.setTextColor(R.id.ww_light_btn, if (s.optBoolean("fanLight", false)) on else off)
             v.setTextViewText(R.id.ww_sound_btn, if (s.optBoolean("audioOn", true)) "🔊" else "🔈")
             v.setTextColor(R.id.ww_tv_btn, if (s.optBoolean("tv", true)) on else off)
+            // Blinds indicator: show closed highlight when shut
+            val blindIcons = listOf("🪟", "🪟", "🚪", "🔼")
+            v.setTextViewText(R.id.ww_blinds_btn, blindIcons.getOrElse(blindsState) { "🪟" })
+            v.setTextColor(R.id.ww_blinds_btn, if (blindsState == 2) Color.rgb(255, 185, 90) else on)
+
             v.setOnClickPendingIntent(R.id.ww_light_btn, RoomWidgetReceiver.cmdPendingIntent(ctx, "toggle_light", 202))
             v.setOnClickPendingIntent(R.id.ww_tv_btn, RoomWidgetReceiver.cmdPendingIntent(ctx, "toggle_tv", 203))
             v.setOnClickPendingIntent(R.id.ww_sound_btn, RoomWidgetReceiver.cmdPendingIntent(ctx, "toggle_sound", 204))
@@ -102,17 +116,190 @@ class WindowWidget : AppWidgetProvider() {
             v.setOnClickPendingIntent(R.id.ww_place_btn, RoomWidgetReceiver.cmdPendingIntent(ctx, "step_place", 207))
             return v
         }
-        /** The PS1 window frame: a painted wooden frame with a cross bar, like the bedroom's own window. */
-        private fun framed(src: Bitmap): Bitmap {
-            val out = src.copy(Bitmap.Config.ARGB_8888, true)
-            val c = Canvas(out); val w = out.width.toFloat(); val h = out.height.toFloat()
-            val t = w * 0.035f
-            val wood = Paint().apply { color = Color.rgb(0xe8, 0xe4, 0xda) }
-            val shade = Paint().apply { color = Color.argb(90, 0, 0, 0) }
-            c.drawRect(0f, 0f, w, t, wood); c.drawRect(0f, h - t, w, h, wood); c.drawRect(0f, 0f, t, h, wood); c.drawRect(w - t, 0f, w, h, wood)
-            c.drawRect(w / 2 - t * 0.4f, 0f, w / 2 + t * 0.4f, h, wood)          // the middle bar
-            c.drawRect(t, t, w - t, t + t * 0.35f, shade); c.drawRect(t, t, t + t * 0.35f, h - t, shade)   // inner shadow
+        /** Composites live window blinds, weather atmosphere, and wooden casing over the window shot. */
+        private fun renderWindow(base: Bitmap, blindsState: Int, showBlinds: Boolean, frame: Boolean, s: org.json.JSONObject): Bitmap {
+            val out = base.copy(Bitmap.Config.ARGB_8888, true)
+            val c = Canvas(out)
+            val w = out.width.toFloat()
+            val h = out.height.toFloat()
+            val t = if (frame) w * 0.038f else 0f
+            val left = t
+            val top = t
+            val right = w - t
+            val bottom = h - t
+            val winW = right - left
+            val winH = bottom - top
+
+            // Weather atmosphere overlay on the glass
+            val weatherKind = s.optString("weatherKind", "clear")
+            if (weatherKind in listOf("rain", "downpour", "sunshower", "storm")) {
+                val rainP = Paint().apply { color = Color.argb(120, 205, 225, 255); strokeWidth = 1.8f }
+                for (i in 0 until 30) {
+                    val rx = left + ((i * 37) % winW.toInt()).toFloat()
+                    val ry = top + ((i * 53) % winH.toInt()).toFloat()
+                    c.drawLine(rx, ry, rx - 6f, ry + 18f, rainP)
+                }
+            } else if (weatherKind in listOf("snow", "blizzard", "flurries")) {
+                val snowP = Paint().apply { color = Color.argb(170, 242, 248, 255) }
+                for (i in 0 until 35) {
+                    val sx = left + ((i * 43) % winW.toInt()).toFloat()
+                    val sy = top + ((i * 61) % winH.toInt()).toFloat()
+                    c.drawCircle(sx, sy, if (i % 3 == 0) 2.2f else 1.4f, snowP)
+                }
+            }
+
+            // Blinds: if blinds are closed in the room (blindsState == 2), ALWAYS show them closed!
+            val mustShowClosed = blindsState == 2
+            val drawBlinds = showBlinds || mustShowClosed
+
+            if (drawBlinds) {
+                val slatBase = Color.rgb(0x8a, 0x9c, 0xc2)
+                val slatLight = Color.rgb(0xb8, 0xca, 0xe8)
+                val slatDark = Color.rgb(0x52, 0x60, 0x7a)
+                val cordCol = Color.argb(220, 0x42, 0x4e, 0x68)
+                val cordHi = Color.argb(180, 0xd8, 0xe4, 0xf6)
+                val cordPaint = Paint().apply { strokeWidth = 1.6f }
+                val cordX = floatArrayOf(left + winW * 0.22f, left + winW * 0.50f, left + winW * 0.78f)
+
+                when (blindsState) {
+                    2 -> {
+                        // 2 = CLOSED: Venetian blinds tilted fully shut covering the window opening
+                        val numSlats = 18
+                        val slatH = winH / numSlats
+                        val pSlat = Paint()
+                        val pHi = Paint().apply { color = slatLight; strokeWidth = 1.5f }
+                        val pSh = Paint().apply { color = slatDark; strokeWidth = 2.0f }
+
+                        // Top header box
+                        val pHeader = Paint().apply { color = Color.rgb(0x76, 0x88, 0xad) }
+                        c.drawRect(left, top, right, top + slatH * 0.9f, pHeader)
+                        c.drawLine(left, top + slatH * 0.9f, right, top + slatH * 0.9f, pSh)
+
+                        for (i in 0 until numSlats) {
+                            val y0 = top + i * slatH
+                            val y1 = y0 + slatH + 1.5f
+                            pSlat.shader = android.graphics.LinearGradient(
+                                0f, y0, 0f, y1,
+                                intArrayOf(Color.rgb(152, 168, 204), slatBase, Color.rgb(116, 132, 164)),
+                                null, android.graphics.Shader.TileMode.CLAMP
+                            )
+                            c.drawRect(left, y0, right, y1, pSlat)
+                            c.drawLine(left, y0, right, y0, pHi)
+                            c.drawLine(left, y1, right, y1, pSh)
+                        }
+
+                        // Bottom weight rail
+                        val pRail = Paint().apply { color = Color.rgb(0x6e, 0x7e, 0xa2) }
+                        c.drawRect(left, bottom - slatH * 0.85f, right, bottom, pRail)
+                        c.drawLine(left, bottom - slatH * 0.85f, right, bottom - slatH * 0.85f, pHi)
+
+                        // 3 Vertical pull cords over the closed slats
+                        for (cx in cordX) {
+                            cordPaint.color = cordCol
+                            c.drawLine(cx, top, cx, bottom, cordPaint)
+                            cordPaint.color = cordHi
+                            c.drawLine(cx + 1f, top, cx + 1f, bottom, cordPaint)
+                        }
+                    }
+                    0 -> {
+                        // 0 = SLATTED: horizontal slat blades with clear gaps revealing the outside
+                        val numSlats = 18
+                        val stepY = winH / numSlats
+                        val slatThick = stepY * 0.44f
+                        val pSlat = Paint()
+                        val pHi = Paint().apply { color = slatLight; strokeWidth = 1.2f }
+                        val pDropShadow = Paint().apply { color = Color.argb(90, 0, 0, 0) }
+
+                        // Top header
+                        c.drawRect(left, top, right, top + stepY * 0.8f, Paint().apply { color = Color.rgb(0x76, 0x88, 0xad) })
+
+                        for (i in 0 until numSlats) {
+                            val y0 = top + i * stepY
+                            val y1 = y0 + slatThick
+                            c.drawRect(left, y1, right, y1 + 3f, pDropShadow)
+                            pSlat.shader = android.graphics.LinearGradient(
+                                0f, y0, 0f, y1,
+                                intArrayOf(Color.rgb(155, 172, 208), slatBase, Color.rgb(122, 138, 170)),
+                                null, android.graphics.Shader.TileMode.CLAMP
+                            )
+                            c.drawRect(left, y0, right, y1, pSlat)
+                            c.drawLine(left, y0, right, y0, pHi)
+                        }
+
+                        // Vertical pull cords
+                        for (cx in cordX) {
+                            cordPaint.color = cordCol
+                            c.drawLine(cx, top, cx, bottom, cordPaint)
+                            cordPaint.color = cordHi
+                            c.drawLine(cx + 1f, top, cx + 1f, bottom, cordPaint)
+                        }
+                    }
+                    1 -> {
+                        // 1 = TILTED OPEN: slats turned edge-on (thin horizontal lines, wide clear view)
+                        val numSlats = 18
+                        val stepY = winH / numSlats
+                        val pLine = Paint().apply { color = Color.argb(200, 0x8a, 0x9c, 0xc2); strokeWidth = 2.0f }
+                        c.drawRect(left, top, right, top + stepY * 0.7f, Paint().apply { color = Color.rgb(0x76, 0x88, 0xad) })
+                        for (i in 0 until numSlats) {
+                            val y = top + i * stepY
+                            c.drawLine(left, y, right, y, pLine)
+                        }
+                        for (cx in cordX) {
+                            cordPaint.color = cordCol
+                            c.drawLine(cx, top, cx, bottom, cordPaint)
+                        }
+                    }
+                    3 -> {
+                        // 3 = ROLLED UP: slats stacked in a compact bundle at top header, glass completely open
+                        val stackH = winH * 0.12f
+                        val pStack = Paint().apply { color = Color.rgb(0x7e, 0x90, 0xb6) }
+                        c.drawRect(left, top, right, top + stackH, pStack)
+                        val pLine = Paint().apply { color = Color.argb(140, 0x48, 0x54, 0x6e); strokeWidth = 1.0f }
+                        for (i in 1..8) {
+                            val ly = top + i * (stackH / 8f)
+                            c.drawLine(left, ly, right, ly, pLine)
+                        }
+                        cordPaint.color = cordCol
+                        c.drawLine(left + winW * 0.08f, top + stackH, left + winW * 0.08f, top + winH * 0.55f, cordPaint)
+                        c.drawLine(left + winW * 0.10f, top + stackH, left + winW * 0.10f, top + winH * 0.58f, cordPaint)
+                    }
+                }
+            }
+
+            // Outer wooden window frame & center mullion
+            if (frame) {
+                val wood = Paint().apply { color = Color.rgb(0xe8, 0xe4, 0xda) }
+                val shade = Paint().apply { color = Color.argb(90, 0, 0, 0) }
+                c.drawRect(0f, 0f, w, t, wood)
+                c.drawRect(0f, h - t, w, h, wood)
+                c.drawRect(0f, 0f, t, h, wood)
+                c.drawRect(w - t, 0f, w, h, wood)
+                c.drawRect(w / 2 - t * 0.4f, 0f, w / 2 + t * 0.4f, h, wood)
+                c.drawRect(t, t, w - t, t + t * 0.35f, shade)
+                c.drawRect(t, t, t + t * 0.35f, h - t, shade)
+            }
+
             return out
+        }
+
+        private fun fallbackWindow(ctx: Context, s: org.json.JSONObject): Bitmap {
+            val bmp = Bitmap.createBitmap(480, 320, Bitmap.Config.ARGB_8888)
+            val c = Canvas(bmp)
+            val p = Paint()
+            val isNight = s.optString("timeMode", "live") == "night"
+            val topCol = if (isNight) Color.rgb(10, 14, 34) else Color.rgb(65, 120, 190)
+            val botCol = if (isNight) Color.rgb(24, 32, 60) else Color.rgb(160, 205, 240)
+            p.shader = android.graphics.LinearGradient(0f, 0f, 0f, 320f, topCol, botCol, android.graphics.Shader.TileMode.CLAMP)
+            c.drawRect(0f, 0f, 480f, 320f, p)
+            val pBuild = Paint().apply { color = if (isNight) Color.rgb(14, 18, 38) else Color.rgb(100, 125, 160) }
+            c.drawRect(40f, 180f, 110f, 320f, pBuild)
+            c.drawRect(130f, 140f, 210f, 320f, pBuild)
+            c.drawRect(230f, 165f, 310f, 320f, pBuild)
+            c.drawRect(330f, 130f, 410f, 320f, pBuild)
+            c.drawRect(420f, 190f, 470f, 320f, pBuild)
+            val pLedge = Paint().apply { color = Color.rgb(50, 58, 80) }
+            c.drawRect(0f, 280f, 480f, 320f, pLedge)
+            return bmp
         }
     }
     override fun onUpdate(ctx: Context, mgr: AppWidgetManager, ids: IntArray) { for (id in ids) mgr.updateAppWidget(id, views(ctx, id)) }

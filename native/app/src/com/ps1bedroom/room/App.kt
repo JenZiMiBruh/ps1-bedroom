@@ -253,25 +253,8 @@ class App : GLSurfaceView.Renderer {
             g3.render(ps1.gameTime(t), SystemClock.uptimeMillis())
             tv.useFeed(g3.rt.texture)
         } else {
-            // YouTube plays ON the TV's screen texture in the 3D room (no overlay)
-            val f = ytFeed
-            if (ytActive && f != null && hud?.yt?.isFull != true) {
-                f.update()
-                tv.useFeed(f.rt.texture)
-            } else {
-                tv.useFeed(null)
-            }
+            tv.useFeed(null)
         }
-    }
-    /** YouTube's texture on the TV (made on the GL thread when playback starts). */
-    @Volatile var ytFeed: YouTubeFeed? = null
-    fun ensureYtFeed(ready: (android.view.Surface) -> Unit) = post {
-        val f = ytFeed ?: YouTubeFeed(640, 480).also { ytFeed = it }
-        ready(f.surface)
-    }
-    fun releaseYtFeed() = post {
-        ytFeed?.release()
-        ytFeed = null
     }
     private var lastTvUpdate = 0.05f
     private val SPHERE_TV_C = Vec3(-2.05f, 1.3f, 0.65f)

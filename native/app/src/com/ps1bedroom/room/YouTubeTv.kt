@@ -47,7 +47,7 @@ class YouTubeTv(private val act: Activity, private val root: FrameLayout, privat
     var isFull = false; private set
     private val SW = 640; private val SH = 480
 
-    // ---- The screen: a 640x480 view drawn into the TV feed texture ----
+    // ---- The screen: a 640x480 view pinned onto the TV glass ----
     private val matrix = Matrix()
     private val inverse = Matrix()
     private val src = floatArrayOf(0f, 0f, SW.toFloat(), 0f, 0f, SH.toFloat(), SW.toFloat(), SH.toFloat())
@@ -57,38 +57,7 @@ class YouTubeTv(private val act: Activity, private val root: FrameLayout, privat
         override fun dispatchTouchEvent(ev: MotionEvent): Boolean = if (isFull) super.dispatchTouchEvent(ev) else false
     }.apply { visibility = View.GONE; tag = Cutout.NO_INSET }
 
-    /** The feed's surface (from the GL thread): while YouTube is on the TV, the player draws into it, not onto the screen. */
-    @Volatile private var feedSurface: android.view.Surface? = null
-
-    private val screen = object : FrameLayout(act) {
-        override fun draw(canvas: Canvas) {
-            if (isFull) {
-                super.draw(canvas)
-                return
-            }
-            val s = feedSurface
-            if (s != null && s.isValid) {
-                try {
-                    val c = s.lockHardwareCanvas()
-                    c.drawColor(Color.rgb(4, 4, 5))
-                    super.draw(c)
-                    s.unlockCanvasAndPost(c)
-                } catch (e: Exception) {
-                    // Surface was released or invalidated
-                }
-            }
-        }
-    }
-
-    /** While it's on the TV, redraw the player into the feed every frame so the video texture stays live. */
-    private val pump = object : Runnable {
-        override fun run() {
-            if (!active || isFull) return
-            screen.invalidate()
-            screen.postOnAnimation(this)
-        }
-    }
-
+    private val screen = FrameLayout(act).apply { setBackgroundColor(Color.BLACK) }
     @Volatile var active = false; private set
     private var web: WebView? = null
 
@@ -273,7 +242,7 @@ class YouTubeTv(private val act: Activity, private val root: FrameLayout, privat
     private fun page(v: Vid) = """<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><style>
         html,body{margin:0;padding:0;width:100%;height:100%;background:#000;overflow:hidden}
         iframe{position:absolute;left:0;top:0;width:100%;height:100%;border:0;margin:0;padding:0;display:block;filter:saturate(1.12) contrast(1.05) brightness(0.96)}
-        .scan{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;background:repeating-linear-gradient(rgba(0,0,0,.10) 0 2px,transparent 2px 4px);box-shadow:inset 0 0 12px rgba(0,0,0,.4)}
+        .scan{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;background:repeating-linear-gradient(rgba(0,0,0,.10) 0 2px,transparent 2px 4px);box-shadow:none}
         body{--px:6px}
         .px{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;display:none;background-image:linear-gradient(90deg,rgba(0,0,0,.2) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.2) 1px,transparent 1px);background-size:var(--px) var(--px);mix-blend-mode:multiply}
         body.ps1 .px{display:block}
@@ -312,27 +281,20 @@ class YouTubeTv(private val act: Activity, private val root: FrameLayout, privat
         }
         val w = newWeb(); web = w
         screen.addView(w, 0, FrameLayout.LayoutParams(-1, -1))
-        w.loadDataWithBaseURL("$ORIGIN/", page(v), "text/html", "utf-8", null)
         active = true
-        // Keep the player laid out and ticking, but when on TV, dispatchDraw diverts
-        // all rendering directly into the TV's texture (zero room overlay).
+        lastPts.fill(Float.NaN)
         layer.visibility = View.VISIBLE
-        layer.setBackgroundColor(Color.TRANSPARENT)
-        screen.visibility = View.VISIBLE
-        screen.scaleX = 1f; screen.scaleY = 1f; screen.rotation = 0f; screen.translationX = 0f; screen.translationY = 0f
+        screen.visibility = if (isFull) View.VISIBLE else View.INVISIBLE
+        if (isFull) {
+            screen.scaleX = 1f; screen.scaleY = 1f; screen.rotation = 0f; screen.translationX = 0f; screen.translationY = 0f
+        }
+        w.loadDataWithBaseURL("$ORIGIN/", page(v), "text/html", "utf-8", null)
         playing = true
         playBtn.text = "⏸"
         bar.visibility = View.VISIBLE
         bar.bringToFront()
         bar.post { clampBar() }
         closeDialog()
-        app.ensureYtFeed { s ->
-            act.runOnUiThread {
-                feedSurface = s
-                screen.removeCallbacks(pump)
-                screen.postOnAnimation(pump)
-            }
-        }
         // Turn on the TV synchronously on the GL thread BEFORE setting ytActive = true so updateBedroomTvScreen paints black
         app.post {
             if (!app.tv.bedroomTvOn) app.tv.toggleBedroomTv(app.lastFrameT)
@@ -361,8 +323,6 @@ class YouTubeTv(private val act: Activity, private val root: FrameLayout, privat
     fun stop(quiet: Boolean = false) {
         active = false
         app.ytActive = false
-        feedSurface = null
-        screen.removeCallbacks(pump)
         web?.let {
             try {
                 it.evaluateJavascript("(function(){var f=document.querySelector('iframe');if(f)f.src='about:blank';})()", null)
@@ -375,7 +335,6 @@ class YouTubeTv(private val act: Activity, private val root: FrameLayout, privat
         web = null
         setFull(false)
         layer.visibility = View.GONE; screen.visibility = View.GONE; bar.visibility = View.GONE
-        app.releaseYtFeed()
         app.post {
             app.tv.ytShowing = false
             app.tv.useFeed(null)
@@ -406,14 +365,12 @@ class YouTubeTv(private val act: Activity, private val root: FrameLayout, privat
             layer.setBackgroundColor(Color.BLACK)
             bar.bringToFront()
         } else {
+            lastPts.fill(Float.NaN)
             layer.setBackgroundColor(Color.TRANSPARENT)
             layer.visibility = View.VISIBLE
-            screen.visibility = View.VISIBLE
-            screen.removeCallbacks(pump)
-            screen.postOnAnimation(pump)
+            screen.visibility = View.INVISIBLE
         }
         web?.evaluateJavascript("document.body.classList.toggle('full', $f)", null)
-        screen.invalidate()
         layer.invalidate()
     }
     val dialogOpen get() = dialog.visibility == View.VISIBLE
@@ -462,8 +419,38 @@ class YouTubeTv(private val act: Activity, private val root: FrameLayout, privat
     @Volatile private var pendingShow = false
     @Volatile private var pendingPx = 6f
     private var lastPx = 0f
-    /** GL thread: when playing in the 3D room, the video is rendered on the CRT mesh itself (no 2D overlay). */
+    private val applyPlacement: Runnable = Runnable {
+        if (!app.ytActive && !active) return@Runnable
+        synchronized(pending) { System.arraycopy(pending, 0, dst, 0, 8) }
+        show = pendingShow
+        if (isFull) return@Runnable
+        // hidden when the TV faces away, is behind the camera, or is off the screen entirely
+        val minX = minOf(minOf(dst[0], dst[2]), minOf(dst[4], dst[6])); val maxX = maxOf(maxOf(dst[0], dst[2]), maxOf(dst[4], dst[6]))
+        val minY = minOf(minOf(dst[1], dst[3]), minOf(dst[5], dst[7])); val maxY = maxOf(maxOf(dst[1], dst[3]), maxOf(dst[5], dst[7]))
+        val onScreen = maxX > 0 && maxY > 0 && minX < layer.width && minY < layer.height
+        screen.visibility = if (show && onScreen) View.VISIBLE else View.INVISIBLE
+        if (!show || !onScreen) return@Runnable
+        // the glass's corners TL, TR, BL -> position, size and tilt (the TV's slight perspective is averaged out)
+        val ax = (dst[0] + dst[4]) / 2; val ay = (dst[1] + dst[5]) / 2                 // middle of the left edge
+        val bx = (dst[2] + dst[6]) / 2; val by = (dst[3] + dst[7]) / 2                 // middle of the right edge
+        val width = kotlin.math.hypot((bx - ax).toDouble(), (by - ay).toDouble()).toFloat()
+        val height = (kotlin.math.hypot((dst[4] - dst[0]).toDouble(), (dst[5] - dst[1]).toDouble()) + kotlin.math.hypot((dst[6] - dst[2]).toDouble(), (dst[7] - dst[3]).toDouble())).toFloat() / 2
+        val ang = Math.toDegrees(kotlin.math.atan2((by - ay).toDouble(), (bx - ax).toDouble())).toFloat()
+        val cx = (dst[0] + dst[2] + dst[4] + dst[6]) / 4; val cy = (dst[1] + dst[3] + dst[5] + dst[7]) / 4
+        screen.pivotX = SW / 2f; screen.pivotY = SH / 2f
+        screen.scaleX = (width * 1.01f) / SW; screen.scaleY = (height * 1.01f) / SH; screen.rotation = ang
+        screen.translationX = cx - SW / 2f; screen.translationY = cy - SH / 2f
+        if (ps1Look && kotlin.math.abs(pendingPx - lastPx) > 0.4f) { lastPx = pendingPx; web?.evaluateJavascript("document.body.style.setProperty('--px','${"%.2f".format(java.util.Locale.US, pendingPx / act.resources.displayMetrics.density)}px')", null) }
+        layer.invalidate()
+    }
+    /** GL thread: corners TL, TR, BL, BR in view pixels (src is in the same order), and the PS1 grid size. */
+    private val lastPts = FloatArray(8); private var lastShow = false
     fun place(pts: FloatArray, visible: Boolean, px: Float) {
-        // Video renders directly onto the CRT screen texture in the 3D room; no 2D window overlay needed
+        // A still camera gives the same corners every frame: no UI-thread work then
+        if (visible == lastShow && pts.contentEquals(lastPts)) return
+        System.arraycopy(pts, 0, lastPts, 0, 8); lastShow = visible
+        synchronized(pending) { System.arraycopy(pts, 0, pending, 0, 8) }
+        pendingShow = visible; pendingPx = px
+        layer.removeCallbacks(applyPlacement); layer.post(applyPlacement)
     }
 }

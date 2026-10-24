@@ -24,10 +24,10 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
-        Entry("0.53.1", "Launch crash fix, crash-free YouTube on CRT TV & performance optimizations", listOf(
+        Entry("0.53.1", "Launch crash fix, TV-pinned YouTube without borders & performance optimizations", listOf(
             "100% reliable launch: eliminated CalledFromWrongThreadException by eagerly constructing all HUD sheets and views on the main UI thread",
-            "Crash-free YouTube on TV: hardware canvas diversion directly feeds the CRT screen texture with zero room overlay and no VirtualDisplay crashes",
-            "Zero border flush fit: YouTube plays directly on the 3D TV glass without borders or window overlays blocking the bedroom",
+            "YouTube pinned flush on CRT TV: restored precise 4-corner perspective tracking with zero borders and seamless CRT bezel fitting",
+            "Zero corner drift: video stays pinned directly onto the TV glass as the camera moves, walks, or orbits",
             "Responsive lightning: any lightning frequency adjustment immediately flashes and triggers thunder in real time",
             "Binder IPC protection: Window widget preview bitmaps are scaled to 360x240, safeguarding against TransactionTooLargeException",
             "Render loop hardening: guarded cold-boot surface metrics and wrapped onDrawFrame with fail-safe error isolation"

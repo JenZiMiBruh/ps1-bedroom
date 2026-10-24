@@ -43,6 +43,16 @@ class Settings(private val app: App, private val ctx: Context) {
     @Volatile var liveWindSpeedKmH = -1f
     @Volatile var liveWindDirDeg = -1f
     var liveWeatherRefreshMinutes = 15; private set
+    var weatherChannelView = "simple"; private set
+    fun setWeatherChannelView(view: String) {
+        weatherChannelView = if (view == "detailed") "detailed" else "simple"
+        changed()
+    }
+    fun toggleWeatherChannelView(): String {
+        weatherChannelView = if (weatherChannelView == "simple") "detailed" else "simple"
+        changed()
+        return weatherChannelView
+    }
     @Volatile var liveStatus = "Tap Live or type a city to sync the weather, temperature, wind, and sun with the real world."
     private var autoNextAt = 0L
     private var liveNextAt = 0L
@@ -455,6 +465,7 @@ class Settings(private val app: App, private val ctx: Context) {
         put("heater", app.extras.heaterMode)
         put("outside", app.sky.outsideEnv); put("startScreen", startScreenEnabled); put("tutorialSeen", tutorialSeen); put("sleepDim", sleepDim)
         put("liveRefreshMin", liveWeatherRefreshMinutes)
+        put("tvWeatherView", weatherChannelView)
     }
     fun saveNow() {
         lastSaved = System.currentTimeMillis()
@@ -491,6 +502,7 @@ class Settings(private val app: App, private val ctx: Context) {
             s.optInt("string", 0).let { if (it > 0) app.decor.setStringLights(it) }
             if (!s.optBoolean("tv", true) && app.tv.bedroomTvOn) app.tv.toggleBedroomTv(0f)
             s.optInt("tvCh", 0).let { if (it in 1 until Tv.PS1_TV_CHANNEL) app.tv.setChannel(it) }
+            weatherChannelView = s.optString("tvWeatherView", "simple")
             app.monitor.setChannel(s.optInt("pcCh", 0))
             app.extras.setStation(s.optInt("radio", 0), app.furniture.radioDisplayMat)
             app.sound.masterVolume = s.optDouble("master", 0.85)

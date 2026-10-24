@@ -498,6 +498,10 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
                 Triple("▶ CHANGE YOUTUBE VIDEO", false, { close(); app.hud?.yt?.openDialog() })
             ))
         }
+        tiles(listOf(
+            Triple("📺 TV REMOTE", false, { close(); app.hud?.openTvRemote() }),
+            Triple("⚡ DEV DEBUG TOOL", false, { close(); app.hud?.openDebugTool() })
+        ))
         val cols = if (sheetW / act.resources.displayMetrics.density >= 520f) 3 else 2
         var row: LinearLayout? = null
         PAGES.entries.forEachIndexed { i, (key, p) ->
@@ -745,6 +749,9 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
         }
         appItems += Triple("LIVING RM TV: ${if (app.sound.livingRoomTvOn) "ON" else "OFF"}", app.sound.livingRoomTvOn, { post { app.sound.livingRoomTvOn = !app.sound.livingRoomTvOn; app.sfx("ui"); app.sound.updateLayered(); s.changed() } })
         appItems += Triple("🖥 USE THE PC", false, { close(); post { app.openPc() } })
+        appItems += Triple("📺 TV REMOTE", false, { close(); app.hud?.openTvRemote() })
+        appItems += Triple("TV WEATHER: ${s.weatherChannelView.uppercase()}", s.weatherChannelView == "simple", { post { app.toggleWeatherView() } })
+        appItems += Triple("⚡ DEV DEBUG TOOL", false, { close(); app.hud?.openDebugTool() })
         tiles(appItems)
         h4("Tidy up")
         tiles(listOf(

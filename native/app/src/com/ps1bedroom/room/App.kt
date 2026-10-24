@@ -286,6 +286,11 @@ class App : GLSurfaceView.Renderer {
     var resShort = 240
     lateinit var settings: Settings
     @Volatile var pacer: FramePacer? = null
+    val effectiveFpsCap: Int get() = pacer?.currentCap(SystemClock.uptimeMillis()) ?: 60
+    @Volatile var lastFps = 60; private set
+    @Volatile var lastFrameTimeMs = 16.6f; private set
+    private var fpsFrames = 0
+    private var fpsTimer = 0L
     fun setResolution(r: Int) { resShort = r; if (surfaceW > 1) renderer.resize(surfaceW, surfaceH, effectiveRes(), jitterBase) }
     fun setJitter(j: Float) { jitterBase = j; if (surfaceW > 1) renderer.resize(surfaceW, surfaceH, effectiveRes(), jitterBase) }
     var jitterBase = 160f
@@ -378,6 +383,7 @@ class App : GLSurfaceView.Renderer {
                 tv.cityText = { settings.cityName.ifEmpty { "LOCAL AREA" }.uppercase() }
                 tv.rawTempC = { settings.currentTempC() }
                 tv.tempUnit = { settings.tempUnit }
+                tv.weatherView = { settings.weatherChannelView }
                 tv.onPowerChanged = { on ->
                     if (!on) {
                         ytActive = false
@@ -424,6 +430,7 @@ class App : GLSurfaceView.Renderer {
 
     override fun onDrawFrame(gl: GL10?) {
         if (!built || surfaceW <= 10 || surfaceH <= 10) return
+        val frameStart = SystemClock.uptimeMillis()
         try {
             val t = (SystemClock.uptimeMillis() - startMs) / 1000f
             val dt = minOf(0.05f, if (lastT < 0f) 0f else t - lastT)
@@ -501,6 +508,14 @@ class App : GLSurfaceView.Renderer {
             if (ytActive) placeYouTube()
             photoCallback?.let { cb -> photoCallback = null; readScreen()?.let { b -> cb(b) } }
             camera.position.copy(basePos)
+            val dur = SystemClock.uptimeMillis() - frameStart
+            lastFrameTimeMs = dur.toFloat()
+            fpsFrames++
+            if (frameStart - fpsTimer >= 1000L) {
+                lastFps = (fpsFrames * 1000L / (frameStart - fpsTimer).coerceAtLeast(1L)).toInt()
+                fpsFrames = 0
+                fpsTimer = frameStart
+            }
         } catch (e: Throwable) {
             android.util.Log.e("PS1Bedroom", "Error in onDrawFrame", e)
         }
@@ -619,7 +634,24 @@ class App : GLSurfaceView.Renderer {
     }
     fun pullChair() = player.moveChair(1) { setPlayerMode("orbit") }
     fun putBackHeld() = library.putBackHeld()
-    fun tvNextChannel() = tv.cycleBedroomTvChannel(lastT)
+    fun tvNextChannel() = tv.stepChannel(1, lastT)
+    fun tvPrevChannel() = tv.stepChannel(-1, lastT)
+    fun tvSetChannel(ch: Int) = tv.setTvChannelDirect(ch, lastT)
+    fun toggleWeatherView(): String {
+        val next = settings.toggleWeatherChannelView()
+        val label = if (next == "simple") "SIMPLE VIEW (High Legibility)" else "DETAILED 90s (WeatherStar 4000)"
+        toast("📺 TV Weather: $label")
+        return next
+    }
+    fun toggleTvZoom() {
+        if (player.mode == "chair" && player.chairSpot == 0) {
+            setPlayerMode("orbit")
+            toast("📺 Camera returned to bedroom view")
+        } else {
+            player.goToChairSpot(0) { setPlayerMode("orbit") }
+            toast("📺 Zoomed in to CRT TV")
+        }
+    }
     fun tvPower() {
         tv.toggleBedroomTv(lastT)
         if (!tv.bedroomTvOn) {
@@ -636,6 +668,7 @@ class App : GLSurfaceView.Renderer {
         if (player.mode != "chair" || player.chairSpot != 1) player.goToChairSpot(1) { setPlayerMode("orbit") }
         hud?.openPc()
     }
+    fun openYouTube() = hud?.runUi { hud?.yt?.openDialog() }
     // ---- Photo mode: the next frame is read back from the screen ----
     @Volatile private var photoCallback: ((android.graphics.Bitmap) -> Unit)? = null
     fun requestPhoto(cb: (android.graphics.Bitmap) -> Unit) { photoCallback = cb }

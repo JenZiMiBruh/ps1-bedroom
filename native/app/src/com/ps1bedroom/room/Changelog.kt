@@ -24,6 +24,15 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.53.6", "Developer Debug Suite, High-Legibility TV Weather View, Trinitron Remote, & Swings Fix", listOf(
+            "In-App Developer Debug Suite: comprehensive retro PS1 debug tool with 6 tabs for instantaneous 1-tap testing of weather, time warp (1x - 300x), day of week, all 15 outside locations, TV channels, Jasper behaviors, and real-time engine diagnostics",
+            "Instant lightning trigger & leaf flurries: dedicated debug buttons to immediately strike lightning with audio + window flash and spawn leaf flurries drifting into the window pane",
+            "High-legibility TV Weather Simple View: giant 26px bold temperature, animated 28px weather icon, bold condition banner, and lower status strips easily readable from across the bedroom in default view",
+            "Retro TV Remote Control: authentic Sony RM-90 style floating remote with power, mute, channel steppers (up/down), direct channel presets, weather view toggle, TV screen zoom, and YouTube",
+            "TV Screen Zoom Camera: seamlessly zoom straight in front of the CRT display to watch broadcasts up close, then tap to return to bedroom orbit view",
+            "Backyard swing set alignment: re-engineered A-frame geometry with inverted V blue metal legs meeting precisely at top crossbar apex, reinforced side braces, and centered swings",
+            "Car leaves clean-up: removed bugged parked car leaf attachments while preserving roof and chimney leaf clusters across all outside environments"
+        )),
         Entry("0.53.5", "Location weather dynamics: freeway traffic rain spray & leaves landing on roofs & cars", listOf(
             "Freeway traffic tire spray: cars driving on the elevated highway kick up realistic tire spray rooster tails that scale with vehicle speed and rain intensity",
             "Taillight spray glow & snow powder: rain spray catches glowing red taillight reflections at night, and switches to a billowing snow powder wake in winter",

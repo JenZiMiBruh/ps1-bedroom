@@ -197,7 +197,6 @@ class Places(
     private fun parkedCar(group: Group, kind: String, x: Float, z: Float, rotY: Float = 0f): Group {
         val v = exterior.parkedVehicle(kind)
         v.scale.set(2.3f, 2.3f, 2.3f); v.position.set(x, 0.32f - 0.04f * 2.3f, z); v.rotation.y = rotY
-        addCarLeaves(v)
         group.add(v)
         return v
     }
@@ -466,25 +465,6 @@ class Places(
         }
     }
 
-    private fun addCarLeaves(v: Group) {
-        val defCol = 0xea580c
-        // Leaf cluster on car hood
-        val m1 = PS1.material(color = defCol)
-        val l1 = Mesh(leafClusterGeo, m1)
-        l1.position.set(0.24f, 0.22f, 0.04f)
-        l1.rotation.x = 0.06f; l1.rotation.y = 0.2f
-        v.add(l1)
-        placeLeaves += PlaceLeaf(l1, m1, l1.position.x, l1.position.y, l1.position.z, 0.8f, 0.2f, placeLeaves.size * 1.3f, "broadleaf")
-
-        // Leaf cluster at windshield wiper cowl
-        val m2 = PS1.material(color = 0xd97706)
-        val l2 = Mesh(leafClusterGeo, m2)
-        l2.position.set(0.06f, 0.32f, -0.03f)
-        l2.rotation.x = -0.25f; l2.rotation.z = -0.1f
-        v.add(l2)
-        placeLeaves += PlaceLeaf(l2, m2, l2.position.x, l2.position.y, l2.position.z, 0.5f, -0.3f, placeLeaves.size * 1.3f, "broadleaf")
-    }
-
     // Gable-roofed house with siding, shingle roof, windows that light up, a door, porch light and a chimney
     private fun house3D(group: Group, x: Float, z: Float, w: Float = 2.4f, h: Float = 1.3f, d: Float = 1.7f, wall: String = "#d6c7a1", roof: String = "#5b3a32",
                         rotY: Float = 0f, garage: Boolean = false, flat: Boolean = false, roofKind: String = "shingles", wallKind: String = "siding"): Group {
@@ -686,12 +666,25 @@ class Places(
             for (i in 0 until 110) houseFence += box(g, 0.2f, 1.5f, 0.04f, 0, -11.1f + i * 0.22f, 1.07f, -10.5f, wood) // runs wall to wall
             box(g, 24f, 0.08f, 0.06f, 0, 0.8f, 1.5f, -10.45f, wood)
             val metal = mat(0x3b82f6)
-            for (side in intArrayOf(-1, 1)) for (dz in floatArrayOf(-0.35f, 0.35f)) { val leg = cyl(g, 0.025f, 0.025f, 1.7f, 0, -0.6f + side * 1.0f, 1.08f, -6.8f + dz, 5, metal); leg.rotation.x = if (dz > 0) -0.2f else 0.2f }
-            cyl(g, 0.03f, 0.03f, 2.1f, 0, -0.6f, 1.9f, -6.8f, 5, metal).rotation.z = P2
-            for (sx in floatArrayOf(-1.0f, -0.2f)) {
-                val pivot = sub(g, sx, 1.9f, -6.8f)
-                for (dx in floatArrayOf(-0.12f, 0.12f)) box(pivot, 0.01f, 1.2f, 0.01f, 0x111111, dx, -0.6f, 0f)
-                box(pivot, 0.32f, 0.03f, 0.14f, 0xdc2626, 0f, -1.2f, 0f)
+            // Properly aligned A-frame swing set: inverted V legs meeting precisely at top bar apex (y = 1.90f, z = -6.8f)
+            cyl(g, 0.028f, 0.028f, 2.2f, 0, -0.6f, 1.90f, -6.8f, 6, metal).rotation.z = P2
+            for (side in intArrayOf(-1, 1)) {
+                val legX = -0.6f + side * 1.0f
+                // Front leg (tilted forward in Z)
+                val fLeg = cyl(g, 0.024f, 0.024f, 1.76f, 0, legX, 1.05f, -6.582f, 5, metal)
+                fLeg.rotation.x = -0.25f
+                // Back leg (tilted backward in Z)
+                val bLeg = cyl(g, 0.024f, 0.024f, 1.76f, 0, legX, 1.05f, -7.018f, 5, metal)
+                bLeg.rotation.x = 0.25f
+                // Horizontal cross-brace connecting front & back legs
+                val brace = cyl(g, 0.018f, 0.018f, 0.48f, 0, legX, 0.95f, -6.8f, 4, metal)
+                brace.rotation.x = P2
+            }
+            // Two swings hung plumb directly below the crossbar
+            for (sx in floatArrayOf(-1.10f, -0.10f)) {
+                val pivot = sub(g, sx, 1.88f, -6.8f)
+                for (dx in floatArrayOf(-0.13f, 0.13f)) box(pivot, 0.012f, 1.25f, 0.012f, 0x111111, dx, -0.625f, 0f)
+                box(pivot, 0.34f, 0.035f, 0.15f, 0xdc2626, 0f, -1.25f, 0f)
                 swings += pivot
             }
             cyl(g, 0.9f, 0.9f, 0.05f, 0x111827, 2.6f, 0.82f, -8.0f, 16); cyl(g, 0.95f, 0.95f, 0.04f, 0x16a34a, 2.6f, 0.84f, -8.0f, 16)

@@ -47,6 +47,8 @@ class Tv(private val room: Room, private val env: Environment) {
     var cityText: () -> String = { "LOCAL AREA" }
     var rawTempC: () -> Double = { 20.0 }
     var tempUnit: () -> String = { "F" }
+    /** Weather view mode: "simple" (high legibility from room view) vs "detailed" (WeatherStar 4000). */
+    var weatherView: () -> String = { "simple" }
     /** The picture (YouTube is pinned over it). */
     lateinit var screenMesh: Mesh
     var bedroomTvChannel = 0; private set
@@ -239,6 +241,19 @@ class Tv(private val room: Room, private val env: Environment) {
         val next = (bedroomTvChannel + 1) % (if (ps1On) TV_CHANNEL_NAMES.size else PS1_TV_CHANNEL)
         if (next == 0) { bedroomTvChannel = 0; toggleBedroomTv(t); return }
         bedroomTvChannel = next
+        room.bedroomTvLight.color.setHex(TV_CHANNEL_COLORS[bedroomTvChannel])
+    }
+    fun stepChannel(delta: Int, t: Float = 0f) {
+        if (!bedroomTvOn) { toggleBedroomTv(t); return }
+        val maxCh = if (ps1On) TV_CHANNEL_NAMES.size else PS1_TV_CHANNEL
+        val next = (bedroomTvChannel + delta + maxCh) % maxCh
+        bedroomTvChannel = next
+        room.bedroomTvLight.color.setHex(TV_CHANNEL_COLORS[bedroomTvChannel])
+    }
+    fun setTvChannelDirect(ch: Int, t: Float = 0f) {
+        if (!bedroomTvOn) toggleBedroomTv(t)
+        val maxCh = if (ps1On) TV_CHANNEL_NAMES.size else PS1_TV_CHANNEL
+        bedroomTvChannel = ch.coerceIn(0, maxCh - 1)
         room.bedroomTvLight.color.setHex(TV_CHANNEL_COLORS[bedroomTvChannel])
     }
     /** The set flickers its glow onto the room while it's on (animate loop). */
@@ -670,6 +685,15 @@ class Tv(private val room: Room, private val env: Environment) {
         }
         val feelsLikeStr = if (tempUnit() == "F") "${(feelsLikeC * 1.8 + 32).roundToInt()}°" else "${feelsLikeC.roundToInt()}°"
 
+        if (weatherView() == "simple") {
+            drawSimpleWeatherView(
+                ctx, w, h, t, dateStr, timeStr,
+                themeHeaderCol, firstHoli, cTemp, feelsLikeStr,
+                windCompass, windSpeedStr, curMonth
+            )
+            return
+        }
+
         // Base screen background: retro CRT deep navy
         ctx.fillStyle = "#070e1c"; ctx.fillRect(0, 0, w, h)
 
@@ -971,5 +995,190 @@ class Tv(private val room: Room, private val env: Environment) {
         ctx.fillText(ticker, scrollX, 93)
         ctx.fillText(ticker, scrollX + tw, 93)
         ctx.restore()
+    }
+
+    /**
+     * High-legibility Weather Channel Simple View:
+     * Specially designed with bold 26px temperature, prominent animated 28px weather icon,
+     * high-contrast condition ribbon, and lower status strips so conditions are immediately
+     * legible from across the bedroom in the default room camera view.
+     */
+    private fun drawSimpleWeatherView(
+        ctx: Canvas2D, w: Int, h: Int, t: Float,
+        dateStr: String, timeStr: String,
+        themeHeaderCol: String, firstHoli: HolidayEvent,
+        cTemp: Double, feelsLikeStr: String,
+        windCompass: String, windSpeedStr: String,
+        curMonth: Int
+    ) {
+        // 1. Background: Deep rich retro CRT indigo-navy
+        ctx.fillStyle = "#060c18"; ctx.fillRect(0, 0, w, h)
+
+        // 2. Header Banner (y = 0..13)
+        ctx.fillStyle = themeHeaderCol; ctx.fillRect(0, 0, w, 13)
+        ctx.fillStyle = "#facc15"; ctx.fillRect(0, 13, w, 1)
+
+        // Left badge
+        ctx.fillStyle = "#003399"; ctx.fillRect(3, 2, 28, 9)
+        ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 0.8f; ctx.strokeRect(3, 2, 28, 9)
+        ctx.fillStyle = "#ffffff"; ctx.font = "bold 6px monospace"; ctx.textAlign = "center"
+        ctx.fillText("WEATHER", 17, 8.5)
+        ctx.textAlign = "left"
+
+        // Right city & time (large and crisp)
+        ctx.textAlign = "right"
+        ctx.fillStyle = "#ffffff"; ctx.font = "bold 6.5px monospace"
+        ctx.fillText("${cityText().take(8)} $timeStr", w - 4, 9)
+        ctx.textAlign = "left"
+
+        // 3. Main Center Display (y = 15..52)
+        // Weather Icon (large 28x28 centered at cx = 26, cy = 34)
+        val iconType = when {
+            env.W.lightning || env.W.rain > 0.7f -> "storm"
+            env.W.rain > 0.2f -> "rain"
+            env.W.snow -> "snow"
+            env.W.fog > 0.4f -> "fog"
+            env.W.cloud > 0.4f -> "cloud"
+            else -> "sun"
+        }
+        drawLargeWeatherIcon(ctx, iconType, 26f, 33f, t)
+
+        // Giant 26px Temperature (bold white, with shadow for CRT pop)
+        ctx.textAlign = "left"
+        ctx.fillStyle = "rgba(0,0,0,0.6)"
+        ctx.font = "bold 25px monospace"
+        ctx.fillText(tempText(), 55, 38) // drop shadow
+        ctx.fillStyle = "#ffffff"
+        ctx.fillText(tempText(), 54, 37)
+
+        // Feels like tag
+        ctx.fillStyle = "#93c5fd"; ctx.font = "bold 6px monospace"
+        ctx.fillText("FEEL $feelsLikeStr", 55, 20)
+
+        // High / Low estimation
+        val hiC = cTemp + 3.0; val loC = cTemp - 4.0
+        val hiStr = if (tempUnit() == "F") "${(hiC * 1.8 + 32).roundToInt()}°" else "${hiC.roundToInt()}°"
+        val loStr = if (tempUnit() == "F") "${(loC * 1.8 + 32).roundToInt()}°" else "${loC.roundToInt()}°"
+        ctx.fillStyle = "#fca5a5"; ctx.font = "bold 6px monospace"
+        ctx.fillText("H $hiStr", 55, 48)
+        ctx.fillStyle = "#7dd3fc"
+        ctx.fillText("L $loStr", 86, 48)
+
+        // 4. Prominent Weather Condition Banner (y = 52..66)
+        ctx.fillStyle = "#1e3a8a"; ctx.fillRect(3, 52, w - 6, 14)
+        ctx.strokeStyle = "#38bdf8"; ctx.lineWidth = 1f; ctx.strokeRect(3, 52, w - 6, 14)
+        ctx.fillStyle = "#fde047"; ctx.font = "bold 8.5px monospace"; ctx.textAlign = "center"
+        ctx.fillText(env.W.label.take(15).uppercase(), w / 2, 62.5)
+        ctx.textAlign = "left"
+
+        // 5. High-Contrast Lower Bars (y = 68..96)
+        // Bar 1: Day/Date & Wind (y = 68..81, height 13)
+        ctx.fillStyle = "#091428"; ctx.fillRect(0, 68, w, 13)
+        ctx.fillStyle = "#1e293b"; ctx.fillRect(0, 68, w, 1)
+        ctx.fillStyle = "#ffffff"; ctx.font = "bold 6px monospace"
+        ctx.fillText(dateStr, 4, 77.5)
+        ctx.textAlign = "right"
+        ctx.fillStyle = "#4ade80"; ctx.font = "bold 6px monospace"
+        ctx.fillText("$windCompass $windSpeedStr", w - 4, 77.5)
+        ctx.textAlign = "left"
+
+        // Bar 2: Moon & Holiday countdown (y = 82..96, height 14)
+        ctx.fillStyle = if (env.W.lightning) "#7f1d1d" else "#0c254c"
+        ctx.fillRect(0, 82, w, 14)
+        ctx.fillStyle = "#38bdf8"; ctx.fillRect(0, 82, w, 1)
+        ctx.fillStyle = "#e2e8f0"; ctx.font = "bold 5.5px monospace"
+        ctx.fillText("MOON ${(env.moonIllum * 100).roundToInt()}%", 4, 91.5)
+        ctx.textAlign = "right"
+        ctx.fillStyle = "#fde047"; ctx.font = "bold 5.5px monospace"
+        val holiText = if (firstHoli.daysUntil == 0) "${firstHoli.icon} TODAY!" else "${firstHoli.icon} ${firstHoli.name.take(6).uppercase()} ${firstHoli.daysUntil}D"
+        ctx.fillText(holiText, w - 4, 91.5)
+        ctx.textAlign = "left"
+    }
+
+    private fun drawLargeWeatherIcon(ctx: Canvas2D, type: String, cx: Float, cy: Float, t: Float) {
+        when (type) {
+            "sun" -> {
+                val isNight = env.daylight < 0.25f
+                if (isNight) {
+                    drawMoonGraphic(ctx, cx, cy, 11f, env.moonPhase)
+                    ctx.fillStyle = "#ffffff"
+                    val starTwinkle = (sin(t * 5f) * 0.5f + 0.5f)
+                    if (starTwinkle > 0.3f) {
+                        ctx.fillRect(cx + 10f, cy - 8f, 1.5f, 1.5f)
+                        ctx.fillRect(cx - 9f, cy + 7f, 1.5f, 1.5f)
+                    }
+                } else {
+                    ctx.fillStyle = "#facc15"
+                    ctx.beginPath(); ctx.arc(cx, cy, 9f, 0, PI * 2); ctx.fill()
+                    ctx.strokeStyle = "#fde047"; ctx.lineWidth = 1.5f
+                    for (i in 0 until 8) {
+                        val a = i * (PI / 4).toFloat() + t * 0.4f
+                        val r1 = 11f; val r2 = 14f + sin(t * 3f + i) * 1.5f
+                        ctx.beginPath()
+                        ctx.moveTo(cx + cos(a) * r1, cy + sin(a) * r1)
+                        ctx.lineTo(cx + cos(a) * r2, cy + sin(a) * r2)
+                        ctx.stroke()
+                    }
+                }
+            }
+            "cloud" -> {
+                ctx.fillStyle = "#64748b"
+                ctx.beginPath(); ctx.arc(cx - 4f, cy + 1f, 8f, 0, PI * 2); ctx.arc(cx + 4f, cy + 1f, 7f, 0, PI * 2); ctx.arc(cx, cy - 4f, 7f, 0, PI * 2); ctx.fill()
+                ctx.fillStyle = "#cbd5e1"
+                ctx.beginPath(); ctx.arc(cx - 3f, cy, 7.5f, 0, PI * 2); ctx.arc(cx + 4f, cy, 6.5f, 0, PI * 2); ctx.arc(cx, cy - 3f, 6.5f, 0, PI * 2); ctx.fill()
+            }
+            "rain" -> {
+                ctx.fillStyle = "#475569"
+                ctx.beginPath(); ctx.arc(cx - 4f, cy - 3f, 8f, 0, PI * 2); ctx.arc(cx + 5f, cy - 3f, 7f, 0, PI * 2); ctx.arc(cx, cy - 7f, 7f, 0, PI * 2); ctx.fill()
+                ctx.strokeStyle = "#38bdf8"; ctx.lineWidth = 1.6f
+                for (i in -1..1) {
+                    val rx = cx + i * 7f
+                    val ry = cy + 4f + ((t * 22f + i * 5f) % 10f)
+                    ctx.beginPath(); ctx.moveTo(rx, ry); ctx.lineTo(rx - 2f, ry + 4f); ctx.stroke()
+                }
+            }
+            "storm" -> {
+                ctx.fillStyle = "#1e1b4b"
+                ctx.beginPath(); ctx.arc(cx - 4f, cy - 3f, 8.5f, 0, PI * 2); ctx.arc(cx + 5f, cy - 3f, 7.5f, 0, PI * 2); ctx.arc(cx, cy - 7f, 7.5f, 0, PI * 2); ctx.fill()
+                val flash = (sin(t * 8f) > 0.2f)
+                if (flash) {
+                    ctx.fillStyle = "#fde047"
+                    ctx.beginPath()
+                    ctx.moveTo(cx, cy - 1f)
+                    ctx.lineTo(cx - 4f, cy + 6f)
+                    ctx.lineTo(cx - 1f, cy + 6f)
+                    ctx.lineTo(cx - 3f, cy + 13f)
+                    ctx.lineTo(cx + 3f, cy + 4f)
+                    ctx.lineTo(cx, cy + 4f)
+                    ctx.closePath()
+                    ctx.fill()
+                } else {
+                    ctx.strokeStyle = "#38bdf8"; ctx.lineWidth = 1.5f
+                    for (i in -1..1) {
+                        val rx = cx + i * 7f
+                        val ry = cy + 5f + ((t * 26f + i * 5f) % 9f)
+                        ctx.beginPath(); ctx.moveTo(rx, ry); ctx.lineTo(rx - 2f, ry + 3.5f); ctx.stroke()
+                    }
+                }
+            }
+            "snow" -> {
+                ctx.fillStyle = "#334155"
+                ctx.beginPath(); ctx.arc(cx - 4f, cy - 3f, 8f, 0, PI * 2); ctx.arc(cx + 5f, cy - 3f, 7f, 0, PI * 2); ctx.arc(cx, cy - 7f, 7f, 0, PI * 2); ctx.fill()
+                ctx.fillStyle = "#ffffff"
+                for (i in -1..1) {
+                    val sx = cx + i * 7f + sin(t * 3f + i) * 2f
+                    val sy = cy + 4f + ((t * 8f + i * 4f) % 10f)
+                    ctx.fillRect(sx - 1f, sy - 1f, 2f, 2f)
+                    ctx.fillRect(sx, sy - 2f, 1f, 4f)
+                    ctx.fillRect(sx - 2f, sy, 4f, 1f)
+                }
+            }
+            "fog" -> {
+                ctx.fillStyle = "rgba(148, 163, 184, 0.85)"
+                ctx.fillRect(cx - 13f, cy - 6f, 26f, 3.5f)
+                ctx.fillRect(cx - 16f, cy, 32f, 3.5f)
+                ctx.fillRect(cx - 11f, cy + 6f, 22f, 3.5f)
+            }
+        }
     }
 }

@@ -126,6 +126,35 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
         if (isStorm || instantThunder) onThunder?.invoke()
     }
 
+    /** Unconditionally triggers a bright lightning flash and loud thunderclap immediately (for debug testing). */
+    fun forceLightningStrike() {
+        lightningFlash = 1.0f
+        lightningCooldown = nextLightningInterval()
+        onThunder?.invoke()
+    }
+
+    /** Spawns a burst of leaves positioned to drift into and strike the window pane (for instant visual testing). */
+    fun spawnLeafFlurry(count: Int = 20) {
+        var spawned = 0
+        for (l in leaves) {
+            if (spawned >= count) break
+            l.state = 0
+            l.wait = 0f
+            l.x = randIn(0.2f, 1.8f)
+            l.y = randIn(2.8f, 4.2f)
+            l.z = randIn(-3.24f, -3.15f)
+            spawned++
+        }
+    }
+
+    /** Live count of leaves currently active in simulation. */
+    val activeParticleCount: Int
+        get() {
+            var c = 0
+            for (l in leaves) if (l.wait <= 0f) c++
+            return c
+        }
+
     private fun nextLightningInterval(): Float = when (lightningFreq) {
         "constant" -> 0.7f + rand() * 0.9f    // 0.7s - 1.6s between strikes
         "frequent" -> 2.0f + rand() * 1.6f    // 2.0s - 3.6s

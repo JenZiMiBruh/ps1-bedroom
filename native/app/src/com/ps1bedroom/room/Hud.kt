@@ -64,8 +64,26 @@ class Hud(private val act: Activity, private val root: FrameLayout, private val 
     private val toastView = TextView(act)
     private val stick = FrameLayout(act)
     private val knob = View(act)
+    private val debugPill = pill("⚡ DEV", PINK).apply {
+        setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f)
+        setPadding(dpi(8f), dpi(5f), dpi(10f), dpi(7f))
+        setOnClickListener { openDebugTool() }
+    }
+    private val remotePill = pill("📺 TV", CYAN).apply {
+        setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f)
+        setPadding(dpi(8f), dpi(5f), dpi(10f), dpi(7f))
+        setOnClickListener { toggleTvRemote() }
+    }
+    private val quickTopBar = LinearLayout(act)
 
     init {
+        quickTopBar.orientation = LinearLayout.HORIZONTAL
+        quickTopBar.addView(debugPill, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginEnd = dpi(6f) })
+        quickTopBar.addView(remotePill, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+        root.addView(quickTopBar, FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.TOP or Gravity.START).apply {
+            topMargin = dpi(10f)
+            leftMargin = dpi(10f)
+        })
         // Bottom dock: Menu | Walk, Sit, Bed, Free | Sound, Sleep, Photo (all thumb-reachable at the bottom)
         dock.orientation = LinearLayout.HORIZONTAL
         dock.setPadding(dpi(6f), dpi(6f), dpi(10f), dpi(10f))
@@ -152,6 +170,8 @@ class Hud(private val act: Activity, private val root: FrameLayout, private val 
     private fun restyle() {
         dock.background = panel(PANEL, LINE, 14f, 4f)
         dockSep.setBackgroundColor(LINE)
+        debugPill.setTextColor(PINK); debugPill.background = panel(PANEL, LINE, 6f, 3f)
+        remotePill.setTextColor(CYAN); remotePill.background = panel(PANEL, LINE, 6f, 3f)
         pullChair.setTextColor(CYAN); pullChair.background = panel(PANEL, LINE, 6f, 3f)
         putBack.setTextColor(GOLD); putBack.background = panel(PANEL, LINE, 6f, 3f)
         toastView.setTextColor(T.toastText); toastView.background = panel(PANEL, T.toastLine, 8f, 4f)
@@ -302,6 +322,7 @@ class Hud(private val act: Activity, private val root: FrameLayout, private val 
         uiHidden = h
         val v = if (h) View.GONE else View.VISIBLE
         dock.visibility = v; menu.setBarsVisible(!h); toastView.visibility = if (h) View.GONE else View.INVISIBLE
+        quickTopBar.visibility = v
         if (h) { crosshair.visibility = View.GONE; stick.visibility = View.GONE; pullChair.visibility = View.GONE; putBack.visibility = View.GONE }
         else postureChanged(currentMode, app.player.pullChairLabel())
     }
@@ -335,6 +356,19 @@ class Hud(private val act: Activity, private val root: FrameLayout, private val 
     @Volatile private var paperToss: PaperToss? = null
     val isPaperTossOpen: Boolean get() = paperToss?.isOpen == true
     fun openPaperToss() = act.runOnUiThread { menu.close(); (paperToss ?: PaperToss(act, root, app).also { paperToss = it }).open() }
+
+    /** Retro CRT TV Remote Control. */
+    @Volatile private var tvRemote: TvRemote? = null
+    val isTvRemoteOpen: Boolean get() = tvRemote?.isOpen == true
+    fun openTvRemote() = act.runOnUiThread { (tvRemote ?: TvRemote(act, root, app).also { tvRemote = it }).open() }
+    fun toggleTvRemote() = act.runOnUiThread { (tvRemote ?: TvRemote(act, root, app).also { tvRemote = it }).toggle() }
+
+    /** In-App Developer Debug Suite. */
+    @Volatile private var debugTool: DebugTool? = null
+    val isDebugToolOpen: Boolean get() = debugTool?.isOpen == true
+    fun openDebugTool() = act.runOnUiThread { (debugTool ?: DebugTool(act, root, app).also { debugTool = it }).open() }
+    fun toggleDebugTool() = act.runOnUiThread { (debugTool ?: DebugTool(act, root, app).also { debugTool = it }).toggle() }
+
     private val POSTURE_ORDER = listOf("walk", "chair", "bed", "orbit")
     fun cyclePosture(dir: Int) {
         val idx = POSTURE_ORDER.indexOf(currentMode).coerceAtLeast(0)
@@ -342,6 +376,8 @@ class Hud(private val act: Activity, private val root: FrameLayout, private val 
         app.post { app.setPlayerMode(next) }
     }
     fun back(): Boolean {
+        debugTool?.let { if (it.isOpen) { it.close(); return true } }
+        tvRemote?.let { if (it.isOpen) { it.close(); return true } }
         paperToss?.let { if (it.isOpen) { it.close(); return true } }
         boombox?.let { if (it.isOpen) { it.close(); return true } }
         if (pcDesktop.isOpen) { pcDesktop.close(); return true }

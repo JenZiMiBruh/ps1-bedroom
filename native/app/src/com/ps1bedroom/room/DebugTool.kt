@@ -535,6 +535,25 @@ class DebugTool(
     // 6. STATS & DIAGNOSTICS TAB
     // =========================================================================
     private fun renderStatsTab() {
+        contentContainer.addView(sectionTitle("RESOLUTION & RENDERING FIDELITY"))
+        val resRow1 = LinearLayout(act).apply { orientation = LinearLayout.HORIZONTAL }
+        resRow1.addView(btn("240p (PS1)") { app.post { app.setResolution(240); app.settings.changed(); app.toast("Resolution: 240p (Authentic PS1)") } })
+        resRow1.addView(btn("480p (SD)") { app.post { app.setResolution(480); app.settings.changed(); app.toast("Resolution: 480p (Standard Def)") } })
+        resRow1.addView(btn("720p (HD)") { app.post { app.setResolution(720); app.settings.changed(); app.toast("Resolution: 720p (High Def)") } })
+        contentContainer.addView(resRow1)
+
+        val resRow2 = LinearLayout(act).apply { orientation = LinearLayout.HORIZONTAL }
+        resRow2.addView(btn("1080p (FHD)") { app.post { app.setResolution(1080); app.settings.changed(); app.toast("Resolution: 1080p (Full HD)") } })
+        resRow2.addView(btn("1440p (2K)") { app.post { app.setResolution(1440); app.settings.changed(); app.toast("Resolution: 1440p (2K Quad HD)") } })
+        resRow2.addView(btn("2160p (4K UHD)", bgCol = "#1e3a8a", textCol = "#facc15", borderCol = "#38bdf8") {
+            app.post {
+                app.setResolution(2160)
+                app.settings.changed()
+                app.toast("✨ Resolution: 4K Ultra HD (2160p) Activated!")
+            }
+        })
+        contentContainer.addView(resRow2)
+
         contentContainer.addView(sectionTitle("REAL-TIME ENGINE DIAGNOSTICS"))
         val tv = TextView(act).apply {
             setTextColor(Color.parseColor("#38bdf8"))
@@ -584,6 +603,7 @@ class DebugTool(
         tv.text = """
             |----------------- ENGINE STATS -----------------
             |● FPS:          ${app.lastFps} fps (${app.effectiveFpsCap} cap)
+            |● RESOLUTION:   ${app.resShort}p (${app.renderer.internalW}×${app.renderer.internalH})
             |● FRAME TIME:   ${String.format("%.1f", app.lastFrameTimeMs)} ms
             |● HEAP MEMORY:  ${usedMb} MB / ${maxMb} MB
             |● ACTIVE LEAVES:${app.weatherFx.activeParticleCount}

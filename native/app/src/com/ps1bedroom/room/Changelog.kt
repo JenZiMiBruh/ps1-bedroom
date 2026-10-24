@@ -24,6 +24,15 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.53.10", "4K Ultra HD Rendering & Resolution Scaling Up to 2160p", listOf(
+            "4K Ultra HD resolution support: internal render target scaling now supports up to 4K (2160p / 3840×2160), delivering ultra-sharp geometry and immaculate fidelity",
+            "Resolution presets & slider: expanded settings slider from 160p up to 2160p with dedicated 1-tap chips for 180p, 240p (PS1), 360p, 480p, 720p (HD), 1080p (FHD), 1440p (2K), and 2160p (4K UHD)",
+            "Quality mode expansion: added 'Ultra (1080p)' and '4K UHD (2160p)' quality presets with enhanced volumetric ray steps and high-resolution shadow mapping",
+            "Supersampling anti-aliasing (SSAA): intelligent post-processing downsampler automatically applies linear filtering when downscaling from 4K to physical 1080p/1440p displays for smooth, jagged-free edges, while retaining nearest-neighbor filtering for retro PS1 pixel modes",
+            "Vertex wobble off toggle: vertex jitter slider can now be set to 0 ('Off - Crisp') for users who want pristine modern clarity at 4K without retro polygon wobbling",
+            "GPU texture safety: queries GL_MAX_TEXTURE_SIZE at runtime to safely handle ultra-wide aspect ratios without exceeding hardware limits",
+            "Debug tool resolution suite: added instant 1-tap resolution switchers and live resolution telemetry to the developer debug panel"
+        )),
         Entry("0.53.9", "Physical Window Rain & Snow, Wind-Driven Precipitation & Leaves, Lightning Arc & Thunder EQ, Weather Channel & Calendar Overhaul", listOf(
             "Physical window glass rain & snow: overhauled window pane particles so raindrops physically strike, streak diagonally with live wind slant, and run down the pane; snowflakes stick to the glass, melt in the warmth, and trickle into dripping water rivulets",
             "Fixed lower pane fog glitch: eliminated duplicate depthWrite glass mesh that caused bottom window pane fog occlusion and gray clipping at glancing angles; upper pane is fixed and lower pane lifts with the sliding sash",

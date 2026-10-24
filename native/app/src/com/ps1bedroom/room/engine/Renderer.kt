@@ -97,7 +97,13 @@ class Renderer {
         @JvmField var lightPenumbraCos = cos(0.66f * 0.88f)
     }
 
+    private var maxTextureDim = 4096
+
     fun init() {
+        val maxTexArr = IntArray(1)
+        glGetIntegerv(GL_MAX_TEXTURE_SIZE, maxTexArr, 0)
+        if (maxTexArr[0] > 0) maxTextureDim = maxTexArr[0]
+
         ps1Prog = program(Shaders.PS1_VERT, Shaders.PS1_FRAG); L = Ps1Loc(ps1Prog)
         depthProg = program(Shaders.DEPTH_VERT, Shaders.DEPTH_FRAG); depthMvp = glGetUniformLocation(depthProg, "mvp")
         postProg = program(Shaders.QUAD_VERT, Shaders.POST_FRAG); P = PostLoc(postProg)
@@ -125,11 +131,29 @@ class Renderer {
         shadowsNeedUpdate = true
     }
 
-    /** The HTML's resizeRenderTargets: the short side = resolution setting, long side follows the screen's shape. */
+    /** The HTML's resizeRenderTargets: the short side = resolution setting (supports up to 4K 2160p), long side follows the screen's shape. */
     fun resize(w: Int, h: Int, resShort: Int, jitterBase: Float) {
         screenW = max(1, w); screenH = max(1, h)
         val aspect = screenW.toFloat() / screenH
-        if (aspect >= 1) { internalH = resShort; internalW = (resShort * aspect).roundToInt() } else { internalW = resShort; internalH = (resShort / aspect).roundToInt() }
+        val rawW: Int
+        val rawH: Int
+        if (aspect >= 1) {
+            rawH = resShort
+            rawW = (resShort * aspect).roundToInt()
+        } else {
+            rawW = resShort
+            rawH = (resShort / aspect).roundToInt()
+        }
+        val maxDim = maxTextureDim
+        if (rawW > maxDim || rawH > maxDim) {
+            val scale = maxDim.toFloat() / max(rawW, rawH)
+            internalW = max(1, (rawW * scale).toInt())
+            internalH = max(1, (rawH * scale).toInt())
+        } else {
+            internalW = max(1, rawW)
+            internalH = max(1, rawH)
+        }
+
         val g = jitterBase * 0.75f
         ps1Uniforms.jitterGrid[0] = if (aspect >= 1) g * aspect else g
         ps1Uniforms.jitterGrid[1] = if (aspect >= 1) g else g / aspect
@@ -147,10 +171,14 @@ class Renderer {
         glGenFramebuffers(1, f, 0); postFbo = f[0]
         glGenTextures(1, t, 0); postColor = t[0]
         glBindTexture(GL_TEXTURE_2D, postColor)
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, internalW, internalH, 0, GL_RGBA, GL_UNSIGNED_BYTE, null); nearest(GL_CLAMP_TO_EDGE)
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, internalW, internalH, 0, GL_RGBA, GL_UNSIGNED_BYTE, null)
+        // If supersampling (rendering above physical display resolution like 4K on a 1080p screen), use linear filtering for smooth SSAA;
+        // if native or upscaled retro (e.g. 240p), use nearest to preserve chunky PS1 pixel art.
+        if (internalH > screenH || internalW > screenW) linear(GL_CLAMP_TO_EDGE) else nearest(GL_CLAMP_TO_EDGE)
         glBindFramebuffer(GL_FRAMEBUFFER, postFbo)
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, postColor, 0)
         glBindFramebuffer(GL_FRAMEBUFFER, 0)
+        shadowTargets.clear()
         shadowsNeedUpdate = true
     }
 
@@ -742,6 +770,10 @@ class Renderer {
     // ---------------------------------------------------------------- GL helpers
     private fun nearest(wrap: Int) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST); glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrap); glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrap)
+    }
+    private fun linear(wrap: Int) {
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrap); glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrap)
     }
     private fun floats(a: FloatArray): FloatBuffer = ByteBuffer.allocateDirect(a.size * 4).order(ByteOrder.nativeOrder()).asFloatBuffer().put(a).also { it.position(0) }

@@ -854,8 +854,27 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
     }
     private fun buildPs1Fx() {
         h4("PS1 effects")
-        slider("Resolution", 160, 720, 20, app.resShort, { "${it}p" }) { v -> post { app.setResolution(v); s.changed() } }
-        slider("Vertex wobble", 45, 300, 5, app.jitterBase.roundToInt(), { "$it" }) { v -> post { app.setJitter(v.toFloat()); s.changed() } }
+        slider("Resolution", 160, 2160, 40, app.resShort, {
+            when {
+                it >= 2160 -> "4K UHD (2160p)"
+                it >= 1440 -> "2K QHD (${it}p)"
+                it >= 1080 -> "Full HD (${it}p)"
+                it >= 720 -> "HD (${it}p)"
+                it == 240 -> "240p (Authentic PS1)"
+                else -> "${it}p"
+            }
+        }) { v -> post { app.setResolution(v); s.changed() } }
+        chips(listOf(
+            180 to "180p",
+            240 to "240p (PS1)",
+            360 to "360p",
+            480 to "480p",
+            720 to "720p HD",
+            1080 to "1080p FHD",
+            1440 to "1440p 2K",
+            2160 to "4K UHD (2160p)"
+        ).map { (r, label) -> Triple(label, app.resShort == r, { post { app.setResolution(r); s.changed(); build() } }) })
+        slider("Vertex wobble", 0, 300, 5, app.jitterBase.roundToInt(), { if (it == 0) "Off (Crisp)" else "$it" }) { v -> post { app.setJitter(v.toFloat()); s.changed() } }
         slider("Texture warp", 0, 100, 5, (app.renderer.ps1Uniforms.affineStrength * 100).roundToInt(), { "$it%" }) { v -> post { app.renderer.ps1Uniforms.affineStrength = v / 100f; s.changed() } }
         slider("Dither & 15-bit colour", 0, 100, 10, (app.renderer.post.ditherStrength * 100).roundToInt(), { "$it%" }) { v -> post { app.renderer.post.ditherStrength = v / 100f; s.changed() } }
         slider("Ambient occlusion", 0, 150, 10, (app.aoBase * 100).roundToInt(), { "$it%" }) { v -> post { app.aoBase = v / 100f; app.renderer.post.aoStrength = app.aoBase; s.changed() } }
@@ -920,7 +939,13 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
     }
     private fun buildPerf() {
         h4("Quality", "${app.renderer.internalW}×${app.renderer.internalH}")
-        seg(listOf("saver" to "Battery saver", "balanced" to "Balanced", "high" to "High"), s.qualityMode) { v -> post { s.setQuality(v) } }
+        chips(listOf(
+            "saver" to "Battery saver (180p)",
+            "balanced" to "Balanced (240p)",
+            "high" to "High (480p)",
+            "ultra" to "Ultra (1080p)",
+            "cinema4k" to "4K UHD (2160p)"
+        ).map { (k, l) -> Triple(l, s.qualityMode == k, { post { s.setQuality(k); build() } }) })
         note(Settings.QUALITY.getValue(s.qualityMode).note)
         h4("Frame rate")
         seg(listOf("auto" to "Auto", "30" to "30", "60" to "60", "120" to "120 Hz"), s.fpsChoice) { v -> post { s.setFps(v) } }

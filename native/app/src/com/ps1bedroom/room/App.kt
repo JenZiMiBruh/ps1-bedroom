@@ -295,7 +295,7 @@ class App : GLSurfaceView.Renderer {
     @Volatile var lastFrameTimeMs = 16.6f; private set
     private var fpsFrames = 0
     private var fpsTimer = 0L
-    fun setResolution(r: Int) { resShort = r; if (surfaceW > 1) renderer.resize(surfaceW, surfaceH, effectiveRes(), jitterBase) }
+    fun setResolution(r: Int) { resShort = r.coerceIn(120, 2160); if (surfaceW > 1) renderer.resize(surfaceW, surfaceH, effectiveRes(), jitterBase) }
     fun setJitter(j: Float) { jitterBase = j; if (surfaceW > 1) renderer.resize(surfaceW, surfaceH, effectiveRes(), jitterBase) }
     var jitterBase = 160f
     var swayAmount = 0.4f

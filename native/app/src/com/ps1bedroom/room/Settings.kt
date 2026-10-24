@@ -87,7 +87,9 @@ class Settings(private val app: App, private val ctx: Context) {
         val QUALITY = linkedMapOf(
             "saver" to Quality(180, 30, 8, 1024, 0f, "Lower resolution and 30 fps. Gentle on battery for leaving it on all night."),
             "balanced" to Quality(240, 60, 14, 1024, 0.8f, "The classic PS1 look at a smooth 60 fps."),
-            "high" to Quality(360, 60, 18, 2048, 1f, "Sharper picture and richer light rays. Uses more battery.")
+            "high" to Quality(480, 60, 18, 1024, 1.0f, "Crisp 480p picture and richer light rays."),
+            "ultra" to Quality(1080, 60, 24, 2048, 1.2f, "Full HD (1080p) clarity with rich volumetric rays and sharp details."),
+            "cinema4k" to Quality(2160, 60, 32, 2048, 1.4f, "Maximum 4K Ultra HD (2160p) fidelity. Crystal-clear room rendering.")
         )
         class Vibe(val label: String, val tint: FloatArray, val sat: Float, val con: Float, val vig: Float)
         val VIBES = linkedMapOf(
@@ -310,6 +312,15 @@ class Settings(private val app: App, private val ctx: Context) {
         app.aoBase = q.ao
         app.setResolution(q.res)
         applyFps()
+        if (!quiet) {
+            when (qualityMode) {
+                "cinema4k" -> app.toast("✨ 4K Ultra HD (2160p) Activated! Maximum Fidelity.")
+                "ultra" -> app.toast("✨ Full HD (1080p) Activated!")
+                "high" -> app.toast("Quality: High (480p)")
+                "balanced" -> app.toast("Quality: Balanced (240p PS1)")
+                "saver" -> app.toast("Quality: Battery Saver (180p)")
+            }
+        }
         changed()
     }
     fun setVibe(v: String) {

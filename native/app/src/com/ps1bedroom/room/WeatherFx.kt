@@ -93,7 +93,7 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
 
     fun onLightningFreqChanged() {
         lightningCooldown = 0f
-        if (lightningFreq != "off" && (env.W.lightning || lightningFreq == "constant" || lightningFreq == "frequent")) {
+        if (lightningFreq != "off") {
             // Immediate lightning flash and acoustic thunderclap so user gets instant response to the setting
             triggerLightningStrike(instantThunder = true)
         }

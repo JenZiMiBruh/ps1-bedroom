@@ -209,7 +209,7 @@ class MainActivity : Activity() {
         if (app.windowWidgets) app.windowShotNow = true
         view.post {
             try {
-                RoomWidgetReceiver.updateAllWidgets(this@MainActivity, if (app.isBuilt) app else null)
+                if (app.isBuilt) RoomWidgetReceiver.updateAllWidgets(this@MainActivity, app)
             } catch (_: Exception) { }
         }
     }

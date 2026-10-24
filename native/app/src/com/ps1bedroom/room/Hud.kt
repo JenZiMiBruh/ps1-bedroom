@@ -289,11 +289,11 @@ class Hud(private val act: Activity, private val root: FrameLayout, private val 
     }
 
     // ---- Top bar + menu sheet (Menu.kt), the sleep overlay ----
-    val menu: Menu by lazy { Menu(act, root, app) }
-    val overlays: Overlays by lazy { Overlays(act, root, app) }
-    val pcDesktop: PcDesktop by lazy { PcDesktop(act, root, app) }
-    val yt: YouTubeTv by lazy { YouTubeTv(act, root, app) }
-    val achPop: AchievementPop by lazy { AchievementPop(act, root) }
+    val menu: Menu = Menu(act, root, app)
+    val overlays: Overlays = Overlays(act, root, app)
+    val pcDesktop: PcDesktop = PcDesktop(act, root, app)
+    val yt: YouTubeTv = YouTubeTv(act, root, app)
+    val achPop: AchievementPop = AchievementPop(act, root)
     fun runUi(fn: () -> Unit) = act.runOnUiThread(fn)
     fun openPc() = act.runOnUiThread { menu.close(); pcDesktop.show() }
     private var uiHidden = false

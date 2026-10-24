@@ -145,11 +145,11 @@ class WindowWidget : AppWidgetProvider() {
         /** Composites live window blinds, weather atmosphere, and wooden casing over the window shot. */
         private fun renderWindow(base: Bitmap, blindsState: Int, showBlinds: Boolean, frame: Boolean, s: org.json.JSONObject): Bitmap? {
             return try {
-                val bw = base.width.coerceIn(120, 640)
-                val bh = base.height.coerceIn(80, 480)
+                val bw = base.width.coerceIn(120, 360)
+                val bh = (bw * 2 / 3).coerceIn(80, 240)
                 val out = Bitmap.createBitmap(bw, bh, Bitmap.Config.ARGB_8888)
                 val c = Canvas(out)
-                c.drawBitmap(base, 0f, 0f, null)
+                c.drawBitmap(base, null, android.graphics.RectF(0f, 0f, bw.toFloat(), bh.toFloat()), null)
 
                 val w = bw.toFloat()
                 val h = bh.toFloat()
@@ -297,7 +297,7 @@ class WindowWidget : AppWidgetProvider() {
                     c.drawRect(t, t, t + t * 0.35f, h - t, shade)
                 }
 
-                if (out.width > 480 || out.height > 320) Bitmap.createScaledBitmap(out, 480, 320, true) else out
+                if (out.width > 360 || out.height > 240) Bitmap.createScaledBitmap(out, 360, 240, true) else out
             } catch (e: Exception) {
                 android.util.Log.e("PS1Bedroom", "renderWindow failed", e)
                 null

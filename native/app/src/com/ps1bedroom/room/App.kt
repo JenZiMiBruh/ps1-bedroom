@@ -112,7 +112,7 @@ class App : GLSurfaceView.Renderer {
     private var lastShotT = -1000f
     private var lastShotKey = ""
     private fun windowShotDue(t: Float): Boolean {
-        if (!windowWidgets || onWindowShot == null || !built) return false
+        if (!windowWidgets || onWindowShot == null || !built || t < 3.0f || surfaceW <= 10 || surfaceH <= 10) return false
         // every N minutes (configured in WindowWidgetConfig), and straight away when the place, the weather or the time of day changes
         val key = sky.outsideEnv + "|" + env.weatherKind + "|" + env.currentTime + "|" + room.blindsOpenState
         if (windowShotNow || key != lastShotKey || t - lastShotT > windowShotIntervalSec) { windowShotNow = false; lastShotKey = key; lastShotT = t; return true }
@@ -120,37 +120,50 @@ class App : GLSurfaceView.Renderer {
     }
     private val shotPos = Vec3()
     /** GL thread, right before the app goes to the background: one fresh snapshot so the Window widget shows the room as you left it. */
-    fun windowShotOnLeave() { if (built && windowWidgets && onWindowShot != null) { lastShotT = lastT; takeWindowShot() } }
+    fun windowShotOnLeave() { if (built && windowWidgets && onWindowShot != null && surfaceW > 10 && surfaceH > 10) { lastShotT = lastT; takeWindowShot() } }
     private fun takeWindowShot() {
-        val px = camera.position.x; val py = camera.position.y; val pz = camera.position.z
-        val rx = camera.rotation.x; val ry = camera.rotation.y; val rz = camera.rotation.z
-        val fov = camera.fov
-        // From just inside the glass, looking out; the field of view is set so a 3:2 crop of the screen spans the window
-        val aspect = surfaceW.toFloat() / maxOf(1, surfaceH)
-        val half = if (aspect < 1.5f) 0.62f / aspect else 0.62f / 1.5f
-        camera.fov = (Math.toDegrees(2 * Math.atan(half.toDouble()))).toFloat()
-        camera.updateProjectionMatrix()
-        camera.position.set(0.8f, 2.62f, -1.75f); camera.lookAtTarget(shotPos.set(0.8f, 2.72f, -8f))   // the camera version (looks down -Z, uses the new position)
-        val withBlinds = shot3x2()
-        for (s in room.blindSlats) s.visible = false
-        val clear = shot3x2()
-        for (s in room.blindSlats) s.visible = true
-        camera.position.set(px, py, pz); camera.rotation.set(rx, ry, rz); camera.fov = fov; camera.updateProjectionMatrix()
-        val st = settings.status()
-        val p = places.envDef()
-        onWindowShot?.invoke(clear, withBlinds, "${st.time.substringBefore(' ')} ${st.temp} ${st.weather}", "${p.icon} ${p.name}")
+        if (surfaceW <= 10 || surfaceH <= 10) return
+        try {
+            val px = camera.position.x; val py = camera.position.y; val pz = camera.position.z
+            val rx = camera.rotation.x; val ry = camera.rotation.y; val rz = camera.rotation.z
+            val fov = camera.fov
+            // From just inside the glass, looking out; the field of view is set so a 3:2 crop of the screen spans the window
+            val aspect = surfaceW.toFloat() / maxOf(1, surfaceH)
+            val half = if (aspect < 1.5f) 0.62f / aspect else 0.62f / 1.5f
+            camera.fov = (Math.toDegrees(2 * Math.atan(half.toDouble()))).toFloat()
+            camera.updateProjectionMatrix()
+            camera.position.set(0.8f, 2.62f, -1.75f); camera.lookAtTarget(shotPos.set(0.8f, 2.72f, -8f))   // the camera version (looks down -Z, uses the new position)
+            val withBlinds = shot3x2() ?: return
+            for (s in room.blindSlats) s.visible = false
+            val clear = shot3x2() ?: return
+            for (s in room.blindSlats) s.visible = true
+            camera.position.set(px, py, pz); camera.rotation.set(rx, ry, rz); camera.fov = fov; camera.updateProjectionMatrix()
+            val st = settings.status()
+            val p = places.envDef()
+            onWindowShot?.invoke(clear, withBlinds, "${st.time.substringBefore(' ')} ${st.temp} ${st.weather}", "${p.icon} ${p.name}")
+        } catch (e: Throwable) {
+            android.util.Log.w("PS1Bedroom", "takeWindowShot failed", e)
+        }
     }
     /** Renders the current camera and keeps the middle 3:2 at 480 x 320. */
-    private fun shot3x2(): android.graphics.Bitmap {
-        renderer.render(scene, camera)
-        val full = readScreen()
-        val w = full.width; val h = full.height
-        val cw = if (w.toFloat() / h > 1.5f) (h * 1.5f).toInt() else w
-        val ch = if (w.toFloat() / h > 1.5f) h else (w / 1.5f).toInt()
-        val crop = android.graphics.Bitmap.createBitmap(full, (w - cw) / 2, (h - ch) / 2, cw, ch)
-        val out = android.graphics.Bitmap.createScaledBitmap(crop, 480, 320, true)
-        if (crop !== full) crop.recycle(); full.recycle()
-        return out
+    private fun shot3x2(): android.graphics.Bitmap? {
+        return try {
+            renderer.render(scene, camera)
+            val full = readScreen() ?: return null
+            val w = full.width; val h = full.height
+            if (w <= 10 || h <= 10) { full.recycle(); return null }
+            val cw = maxOf(1, if (w.toFloat() / h > 1.5f) (h * 1.5f).toInt() else w).coerceAtMost(w)
+            val ch = maxOf(1, if (w.toFloat() / h > 1.5f) h else (w / 1.5f).toInt()).coerceAtMost(h)
+            val cropX = ((w - cw) / 2).coerceIn(0, maxOf(0, w - cw))
+            val cropY = ((h - ch) / 2).coerceIn(0, maxOf(0, h - ch))
+            val crop = android.graphics.Bitmap.createBitmap(full, cropX, cropY, cw, ch)
+            val out = android.graphics.Bitmap.createScaledBitmap(crop, 480, 320, true)
+            if (crop !== full) crop.recycle(); full.recycle()
+            out
+        } catch (e: Throwable) {
+            android.util.Log.w("PS1Bedroom", "shot3x2 failed", e)
+            null
+        }
     }
     /** The YouTube PS1 look (also snaps the overlay to the wobble). */
     val ps1Jitter get() = hud?.yt?.ps1Look ?: true
@@ -256,6 +269,10 @@ class App : GLSurfaceView.Renderer {
         val f = ytFeed ?: YouTubeFeed(640, 480).also { ytFeed = it }
         ready(f.surface)
     }
+    fun releaseYtFeed() = post {
+        ytFeed?.release()
+        ytFeed = null
+    }
     private var lastTvUpdate = 0.05f
     private val SPHERE_TV_C = Vec3(-2.05f, 1.3f, 0.65f)
     /** Set by MainActivity before the GL thread starts (for raw model files). */
@@ -281,111 +298,115 @@ class App : GLSurfaceView.Renderer {
     val isBuilt get() = built
 
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
-        renderer.init()
-        if (!built) {
-            val tex = Textures()
-            room = Room(scene, tex)
-            env = Environment(scene, room, renderer)
-            // Each part is built at its place in the HTML's creation order (that keeps the grime maps 1:1)
-            room.onBuildTv = { tv = Tv(room, env); tv.build() }
-            room.onBuildOutside = {
-                // The outside: painted backdrop, sky dome, sun, moon, clouds, horizon ring, then the 3D city.
-                // All of it moves or redraws, so it never takes part in static batching.
-                val exteriorWorldGroup = com.ps1bedroom.room.engine.Group(); scene.add(exteriorWorldGroup)
-                sky = Sky(scene, env)
-                sky.defaultCamPos = defaultCamPos
-                sky.addTo(exteriorWorldGroup)
-                com.ps1bedroom.room.engine.PS1.syncGrime(37)
-                exterior = Exterior(exteriorWorldGroup, env, room)
-                room.extraDynamicRoots += exteriorWorldGroup; room.extraDynamicRoots += sky.skyBoxGroup
-            }
-            room.onBuildInterior = {
-                library = GameLibrary(room); library.camera = camera
-                desk = Desk(room, tex, library); desk.build()
-                monitor = Monitor(tex.monCanvasObj, desk.monScreenMat, room, desk.pcLedMat, env); monitor.update(0f)
-                ps1 = Ps1(room, tv); ps1.library = library; library.ps1 = ps1
-                ps1.build(desk.matJewelPlastic); tv.ps1 = ps1
-                room.extraDynamicRoots += ps1.ps1Group   // (not batched: the console under the TV can be swapped)
-                library.buildGtaShelf(desk.matJewelPlastic)   // HTML 6242, after the hookups
-                room.extraBatchExcluded.addAll(library.batchExcluded()); room.extraDynamicRoots += ps1.disc
-                room.extraDynamicRoots += ps1.ps1LidPivot
-                bedroom = Bedroom(room); bedroom.build()
-                room.extraDynamicRoots += bedroom.chairGroup
-                player.chairGroup = bedroom.chairGroup
-                fan = Fan(room); fan.build()
-                room.extraDynamicRoots += fan.fanBladesGroup; room.extraDynamicRoots += fan.fanPullChain; room.extraDynamicRoots += fan.lightPullChain
-                com.ps1bedroom.room.engine.PS1.syncGrime(256)   // HTML 8225: weather and season FX
-                weatherFx = WeatherFx(room, env, sky); weatherFx.renderer = renderer; room.extraDynamicRoots.addAll(weatherFx.dynamicRoots())
-                env.envHooks += { weatherFx.updateSettings() }
-                furniture = Furniture(room); furniture.build()
-                decor = Decor(room, res); decor.build()
-                room.extraBatchExcluded.addAll(decor.stringBulbs)
-                jasper = Jasper(room, env); jasper.build()
-                room.extraDynamicRoots += jasper.dogGroup
-                room.extraDynamicRoots += jasper.bowlsGroup
-                extras = Extras(room, env, tv, desk, bedroom); extras.build(); tv.tapes = extras
-                room.extraDynamicRoots.addAll(extras.dynamicRoots())
-                myMusic.buildRoomParts(); room.extraDynamicRoots.addAll(myMusic.dynamicRoots())
-                places = Places(room, env, sky, exterior, weatherFx) { renderer.shadowsNeedUpdate = true }   // HTML 14241: the places outside
-                room.extraDynamicRoots.addAll(places.dynamicRoots())
-                sky.placesPaint = places.paint
-                player.obstacles = listOf(tv.tvStandGroup to 0.7f, bedroom.chairGroup to 0.5f, jasper.dogGroup to 0.45f, extras.heaterGroup to 0.45f)
-                jasper.obstacles = listOf(tv.tvStandGroup to 0.75f, bedroom.chairGroup to 0.55f, extras.heaterGroup to 0.5f)
-                weatherFx.outsideGroundPaint = { c, w, h -> places.paint.outsideGroundPaint(c, w, h) }
-                decor.buildKenney()   // the HTML's GLB models finish loading after everything else
-                room.extraBatchExcluded.addAll(desk.lavaBlobs)
-            }
-            room.build()
-            // Merge everything that never moves into a few big meshes (the HTML's batchStaticMeshes)
-            val r = com.ps1bedroom.room.engine.Batching.batchStaticMeshes(scene, room.dynamicRoots(), emptySet(), room.batchExcluded(), STATIC_TAGS, room.interactables)
-            room.onShadowsChanged = { renderer.shadowsNeedUpdate = true }
-            room.onBlindsChanged = { env.applyEnvironmentSettings() }
-            env.sky = sky; env.eye = defaultCamPos
-            env.applyEnvironmentSettings()
-            android.util.Log.i("PS1Bedroom", "static batching: ${r.removed} meshes -> ${r.added} batches")
-            renderer.post.rayLight = room.moonLight
-            camera.position.copy(defaultCamPos)
-            controls.target.copy(defaultTarget)
-            controls.enableDamping = true
-            controls.dampingFactor = 0.08f
-            controls.maxPolarAngle = (Math.PI * 0.52).toFloat()
-            controls.minDistance = 0.01f
-            controls.maxDistance = 25.0f
-            controls.update()
-            startMs = SystemClock.uptimeMillis()
-            myMusic.onChanged = { hud?.refreshMenu(); hud?.refreshBoombox(); publishMedia() }
-            scene.add(alarm.light)
-            tv.tempText = { settings.formatTemp(settings.currentTempC()) }
-            tv.onPowerChanged = { on ->
-                if (!on) {
-                    ytActive = false
-                    tv.ytShowing = false
-                    tv.useFeed(null)
-                    hud?.runUi { hud?.yt?.stop(true) }
+        try {
+            renderer.init()
+            if (!built) {
+                val tex = Textures()
+                room = Room(scene, tex)
+                env = Environment(scene, room, renderer)
+                // Each part is built at its place in the HTML's creation order (that keeps the grime maps 1:1)
+                room.onBuildTv = { tv = Tv(room, env); tv.build() }
+                room.onBuildOutside = {
+                    // The outside: painted backdrop, sky dome, sun, moon, clouds, horizon ring, then the 3D city.
+                    // All of it moves or redraws, so it never takes part in static batching.
+                    val exteriorWorldGroup = com.ps1bedroom.room.engine.Group(); scene.add(exteriorWorldGroup)
+                    sky = Sky(scene, env)
+                    sky.defaultCamPos = defaultCamPos
+                    sky.addTo(exteriorWorldGroup)
+                    com.ps1bedroom.room.engine.PS1.syncGrime(37)
+                    exterior = Exterior(exteriorWorldGroup, env, room)
+                    room.extraDynamicRoots += exteriorWorldGroup; room.extraDynamicRoots += sky.skyBoxGroup
                 }
-            }
-            exterior.tempReadout = { settings.formatTemp(settings.currentTempC()) }
-            exterior.cityReadout = { if (settings.weatherMode == "live") settings.cityName else "" }
-            exterior.nowPlayingReadout = { if (ps1.ps1On) library.currentGame().title.uppercase() else "PS1 BEDROOM" }
-            surprises = Surprises(this, alarm.context); surprises.build()
-            consoles = Consoles(room, ps1); consoles.build(); ps1.consoles = consoles; consoles.toast = { toast(it) }
-            jasper.onPet = { achievements.petted() }
-            library.onInserted = { achievements.achieve("gamer") }
-            myMusic.load()
-            furniture.photoFor = { posterPhotoFor(it) }; extras.photoFor = { posterPhotoFor(it) }   // (before restore: a saved photo poster needs it)
-            settings.restore()   // the HTML's applySavedSettings, once everything exists
-            exterior.markWeatherDirty()
-            ps1.sfx = { sound.sfx(it) }; ps1.stopBootSound = { sound.stopPs1BootSound() }; library.sfx = { sound.sfx(it) }
-            env.envHooks += { sound.updateLayered() }
-            weatherFx.onThunder = { sound.thunderclap() }
+                room.onBuildInterior = {
+                    library = GameLibrary(room); library.camera = camera
+                    desk = Desk(room, tex, library); desk.build()
+                    monitor = Monitor(tex.monCanvasObj, desk.monScreenMat, room, desk.pcLedMat, env); monitor.update(0f)
+                    ps1 = Ps1(room, tv); ps1.library = library; library.ps1 = ps1
+                    ps1.build(desk.matJewelPlastic); tv.ps1 = ps1
+                    room.extraDynamicRoots += ps1.ps1Group   // (not batched: the console under the TV can be swapped)
+                    library.buildGtaShelf(desk.matJewelPlastic)   // HTML 6242, after the hookups
+                    room.extraBatchExcluded.addAll(library.batchExcluded()); room.extraDynamicRoots += ps1.disc
+                    room.extraDynamicRoots += ps1.ps1LidPivot
+                    bedroom = Bedroom(room); bedroom.build()
+                    room.extraDynamicRoots += bedroom.chairGroup
+                    player.chairGroup = bedroom.chairGroup
+                    fan = Fan(room); fan.build()
+                    room.extraDynamicRoots += fan.fanBladesGroup; room.extraDynamicRoots += fan.fanPullChain; room.extraDynamicRoots += fan.lightPullChain
+                    com.ps1bedroom.room.engine.PS1.syncGrime(256)   // HTML 8225: weather and season FX
+                    weatherFx = WeatherFx(room, env, sky); weatherFx.renderer = renderer; room.extraDynamicRoots.addAll(weatherFx.dynamicRoots())
+                    env.envHooks += { weatherFx.updateSettings() }
+                    furniture = Furniture(room); furniture.build()
+                    decor = Decor(room, res); decor.build()
+                    room.extraBatchExcluded.addAll(decor.stringBulbs)
+                    jasper = Jasper(room, env); jasper.build()
+                    room.extraDynamicRoots += jasper.dogGroup
+                    room.extraDynamicRoots += jasper.bowlsGroup
+                    extras = Extras(room, env, tv, desk, bedroom); extras.build(); tv.tapes = extras
+                    room.extraDynamicRoots.addAll(extras.dynamicRoots())
+                    myMusic.buildRoomParts(); room.extraDynamicRoots.addAll(myMusic.dynamicRoots())
+                    places = Places(room, env, sky, exterior, weatherFx) { renderer.shadowsNeedUpdate = true }   // HTML 14241: the places outside
+                    room.extraDynamicRoots.addAll(places.dynamicRoots())
+                    sky.placesPaint = places.paint
+                    player.obstacles = listOf(tv.tvStandGroup to 0.7f, bedroom.chairGroup to 0.5f, jasper.dogGroup to 0.45f, extras.heaterGroup to 0.45f)
+                    jasper.obstacles = listOf(tv.tvStandGroup to 0.75f, bedroom.chairGroup to 0.55f, extras.heaterGroup to 0.5f)
+                    weatherFx.outsideGroundPaint = { c, w, h -> places.paint.outsideGroundPaint(c, w, h) }
+                    decor.buildKenney()   // the HTML's GLB models finish loading after everything else
+                    room.extraBatchExcluded.addAll(desk.lavaBlobs)
+                }
+                room.build()
+                // Merge everything that never moves into a few big meshes (the HTML's batchStaticMeshes)
+                val r = com.ps1bedroom.room.engine.Batching.batchStaticMeshes(scene, room.dynamicRoots(), emptySet(), room.batchExcluded(), STATIC_TAGS, room.interactables)
+                room.onShadowsChanged = { renderer.shadowsNeedUpdate = true }
+                room.onBlindsChanged = { env.applyEnvironmentSettings() }
+                env.sky = sky; env.eye = defaultCamPos
+                env.applyEnvironmentSettings()
+                android.util.Log.i("PS1Bedroom", "static batching: ${r.removed} meshes -> ${r.added} batches")
+                renderer.post.rayLight = room.moonLight
+                camera.position.copy(defaultCamPos)
+                controls.target.copy(defaultTarget)
+                controls.enableDamping = true
+                controls.dampingFactor = 0.08f
+                controls.maxPolarAngle = (Math.PI * 0.52).toFloat()
+                controls.minDistance = 0.01f
+                controls.maxDistance = 25.0f
+                controls.update()
+                startMs = SystemClock.uptimeMillis()
+                myMusic.onChanged = { hud?.refreshMenu(); hud?.refreshBoombox(); publishMedia() }
+                scene.add(alarm.light)
+                tv.tempText = { settings.formatTemp(settings.currentTempC()) }
+                tv.onPowerChanged = { on ->
+                    if (!on) {
+                        ytActive = false
+                        tv.ytShowing = false
+                        tv.useFeed(null)
+                        hud?.runUi { hud?.yt?.stop(true) }
+                    }
+                }
+                exterior.tempReadout = { settings.formatTemp(settings.currentTempC()) }
+                exterior.cityReadout = { if (settings.weatherMode == "live") settings.cityName else "" }
+                exterior.nowPlayingReadout = { if (ps1.ps1On) library.currentGame().title.uppercase() else "PS1 BEDROOM" }
+                surprises = Surprises(this, alarm.context); surprises.build()
+                consoles = Consoles(room, ps1); consoles.build(); ps1.consoles = consoles; consoles.toast = { toast(it) }
+                jasper.onPet = { achievements.petted() }
+                library.onInserted = { achievements.achieve("gamer") }
+                myMusic.load()
+                furniture.photoFor = { posterPhotoFor(it) }; extras.photoFor = { posterPhotoFor(it) }   // (before restore: a saved photo poster needs it)
+                settings.restore()   // the HTML's applySavedSettings, once everything exists
+                exterior.markWeatherDirty()
+                ps1.sfx = { sound.sfx(it) }; ps1.stopBootSound = { sound.stopPs1BootSound() }; library.sfx = { sound.sfx(it) }
+                env.envHooks += { sound.updateLayered() }
+                weatherFx.onThunder = { sound.thunderclap() }
 
-            exterior.onTrainPass = { sound.trainPass() }
-            player.onStep = { onRug -> sound.sfx(if (onRug) "stepRug" else "step") }
-            player.sfx = { sound.sfx(it) }
-            jasper.onSound = { kind, at -> sound.dogSound(kind, at) }; jasper.toast = { toast(it) }
-            extras.onHeaterHum = { on -> sound.heaterHum(on) }; extras.toast = { toast(it) }; extras.sfx = { sound.sfx(it) }
-            hud?.refreshMenu(); hud?.refreshStatus()
-            built = true
+                exterior.onTrainPass = { sound.trainPass() }
+                player.onStep = { onRug -> sound.sfx(if (onRug) "stepRug" else "step") }
+                player.sfx = { sound.sfx(it) }
+                jasper.onSound = { kind, at -> sound.dogSound(kind, at) }; jasper.toast = { toast(it) }
+                extras.onHeaterHum = { on -> sound.heaterHum(on) }; extras.toast = { toast(it) }; extras.sfx = { sound.sfx(it) }
+                hud?.refreshMenu(); hud?.refreshStatus()
+                built = true
+            }
+        } catch (e: Throwable) {
+            android.util.Log.e("PS1Bedroom", "Fatal error during onSurfaceCreated", e)
         }
     }
 
@@ -398,83 +419,87 @@ class App : GLSurfaceView.Renderer {
     }
 
     override fun onDrawFrame(gl: GL10?) {
-        if (!built) return
-        val t = (SystemClock.uptimeMillis() - startMs) / 1000f
-        val dt = minOf(0.05f, if (lastT < 0f) 0f else t - lastT)
-        lastT = t
-        applyPerfLevel()
-        while (true) { val fn = posted.poll() ?: break; fn() }
-        if (built) settings.heartbeat()
-        if (built) { sound.updateListener(); sound.periodic(lastT.coerceAtLeast(0f)); sound.tick() }
-        applyInput()
-        applyController(dt)
-        handleTaps()
-        env.tick(System.currentTimeMillis())
-        if (debugPresetStep) { debugPresetStep = false; debugPreset = (debugPreset + 1) % env.TIME_PRESETS.size; env.setTimePreset(env.TIME_PRESETS[debugPreset].first) }
-        if (debugPlaceStep) { debugPlaceStep = false; val keys = Places.OUTSIDE_ENVS.keys.toList(); places.setOutsideEnv(keys[(keys.indexOf(sky.outsideEnv) + 1) % keys.size]) }
-        if (debugWeatherStep) { debugWeatherStep = false; val keys = Environment.WEATHER_KINDS.keys.toList(); env.weatherKind = keys[(keys.indexOf(env.weatherKind) + 1) % keys.size]; env.applyEnvironmentSettings() }
-        weatherFx.update(t, dt)
-        exterior.update(t, dt, sky.outsideEnv)
-        places.update(t, dt)
-        desk.update(t)
-        monitor.tick(t)
-        phone.update(t)
-        myMusic.tick()
-        achievements.tick()
-        steadyTextures.tick()
-        alarm.tick(); bedroom.alarmSet = alarm.on
-        // The monitor redraws ~6x a second, only while the PC is on and the screen is in view
-        desk.monScreen.updateMatrixWorld(); SPHERE_MONITOR_C.setFromMatrixPosition(desk.monScreen.matrixWorld)
-        if (monitor.pcPoweredOn && t - lastMonitorUpdate > 0.16f && renderer.sphereInView(SPHERE_MONITOR_C, 0.6f)) { monitor.update(t); lastMonitorUpdate = t }
-        fan.update(dt)
-        decor.update(t)
-        jasper.update(t, dt)
-        extras.update(t, dt, fanLightOn, furniture.lampOn, decor.stringLightsOn)
-        jasper.bedroomTvOn = tv.bedroomTvOn
-        tv.updateLight(t)
-        ps1.update(dt)
-        consoles.update(t, dt)
-        library.update(t, dt)
-        if (library.heldGame != lastHeld) { lastHeld = library.heldGame; hud?.holdingGame(lastHeld != null) }
-        if (player.updateChair(dt)) renderer.shadowsNeedUpdate = true
-        updateGtaTvFeed(t)
-        // The TV redraws ~6x a second (the PlayStation ~16x) and only while it is on and on screen, as in the HTML
-        if (tv.bedroomTvOn && t - lastTvUpdate > (if (tv.bedroomTvChannel == Tv.PS1_TV_CHANNEL) 0.06f else 0.16f) && renderer.sphereInView(SPHERE_TV_C, 0.7f)) { tv.updateBedroomTvScreen(t); lastTvUpdate = t }
-        room.updateAc(t, dt)
-        if (t - lastCalendarCheck > 60f) { lastCalendarCheck = t; furniture.refreshCalendar() }
-        if (t - lastClockDraw > 1f) { lastClockDraw = t; bedroom.drawAlarmClock(env.currentHour()) }
-        room.updateBlinds(dt)
-        weatherFx.updateLightning(dt * 60f)
-        // The backdrop redraws ~3x a second while the window is on screen, every 2.5 s otherwise (as in the HTML)
-        if (t - lastSkylineUpdate > (if (renderer.sphereInView(SPHERE_WINDOW_C, 2.0f)) 0.33f else 2.5f)) {
-            sky.updateCitySkyline(t)
-            lastSkylineUpdate = t
-        }
-        // Camera modes: orbit, first-person walk, sitting in the chair, or lying on the bed
-        if (player.mode == "orbit") {
-            controls.update()
-            // Keep the free camera inside the room (the debug option lifts this)
-            if (!settings.debugFreeCam) {
-            camera.position.x = max(Room.MIN_X + 0.2f, min(Room.MAX_X - 0.2f, camera.position.x))
-            camera.position.y = max(Room.MIN_Y + 0.25f, min(Room.MAX_Y - 0.2f, camera.position.y))
-            camera.position.z = max(Room.MIN_Z + 0.2f, min(Room.MAX_Z - 0.2f, camera.position.z))
+        if (!built || surfaceW <= 10 || surfaceH <= 10) return
+        try {
+            val t = (SystemClock.uptimeMillis() - startMs) / 1000f
+            val dt = minOf(0.05f, if (lastT < 0f) 0f else t - lastT)
+            lastT = t
+            applyPerfLevel()
+            while (true) { val fn = posted.poll() ?: break; fn() }
+            if (built) settings.heartbeat()
+            if (built) { sound.updateListener(); sound.periodic(lastT.coerceAtLeast(0f)); sound.tick() }
+            applyInput()
+            applyController(dt)
+            handleTaps()
+            env.tick(System.currentTimeMillis())
+            if (debugPresetStep) { debugPresetStep = false; debugPreset = (debugPreset + 1) % env.TIME_PRESETS.size; env.setTimePreset(env.TIME_PRESETS[debugPreset].first) }
+            if (debugPlaceStep) { debugPlaceStep = false; val keys = Places.OUTSIDE_ENVS.keys.toList(); places.setOutsideEnv(keys[(keys.indexOf(sky.outsideEnv) + 1) % keys.size]) }
+            if (debugWeatherStep) { debugWeatherStep = false; val keys = Environment.WEATHER_KINDS.keys.toList(); env.weatherKind = keys[(keys.indexOf(env.weatherKind) + 1) % keys.size]; env.applyEnvironmentSettings() }
+            weatherFx.update(t, dt)
+            exterior.update(t, dt, sky.outsideEnv)
+            places.update(t, dt)
+            desk.update(t)
+            monitor.tick(t)
+            phone.update(t)
+            myMusic.tick()
+            achievements.tick()
+            steadyTextures.tick()
+            alarm.tick(); bedroom.alarmSet = alarm.on
+            // The monitor redraws ~6x a second, only while the PC is on and the screen is in view
+            desk.monScreen.updateMatrixWorld(); SPHERE_MONITOR_C.setFromMatrixPosition(desk.monScreen.matrixWorld)
+            if (monitor.pcPoweredOn && t - lastMonitorUpdate > 0.16f && renderer.sphereInView(SPHERE_MONITOR_C, 0.6f)) { monitor.update(t); lastMonitorUpdate = t }
+            fan.update(dt)
+            decor.update(t)
+            jasper.update(t, dt)
+            extras.update(t, dt, fanLightOn, furniture.lampOn, decor.stringLightsOn)
+            jasper.bedroomTvOn = tv.bedroomTvOn
+            tv.updateLight(t)
+            ps1.update(dt)
+            consoles.update(t, dt)
+            library.update(t, dt)
+            if (library.heldGame != lastHeld) { lastHeld = library.heldGame; hud?.holdingGame(lastHeld != null) }
+            if (player.updateChair(dt)) renderer.shadowsNeedUpdate = true
+            updateGtaTvFeed(t)
+            // The TV redraws ~6x a second (the PlayStation ~16x) and only while it is on and on screen, as in the HTML
+            if (tv.bedroomTvOn && t - lastTvUpdate > (if (tv.bedroomTvChannel == Tv.PS1_TV_CHANNEL) 0.06f else 0.16f) && renderer.sphereInView(SPHERE_TV_C, 0.7f)) { tv.updateBedroomTvScreen(t); lastTvUpdate = t }
+            room.updateAc(t, dt)
+            if (t - lastCalendarCheck > 60f) { lastCalendarCheck = t; furniture.refreshCalendar() }
+            if (t - lastClockDraw > 1f) { lastClockDraw = t; bedroom.drawAlarmClock(env.currentHour()) }
+            room.updateBlinds(dt)
+            weatherFx.updateLightning(dt * 60f)
+            // The backdrop redraws ~3x a second while the window is on screen, every 2.5 s otherwise (as in the HTML)
+            if (t - lastSkylineUpdate > (if (renderer.sphereInView(SPHERE_WINDOW_C, 2.0f)) 0.33f else 2.5f)) {
+                sky.updateCitySkyline(t)
+                lastSkylineUpdate = t
             }
-            basePos.copy(camera.position)
-            // Camera breathing (the HTML's orbit sway)
-            if (swayAmount > 0.001f) {
-                camera.position.x += sin(t * 0.55f) * 0.035f * swayAmount
-                camera.position.y += cos(t * 0.42f) * 0.025f * swayAmount
+            // Camera modes: orbit, first-person walk, sitting in the chair, or lying on the bed
+            if (player.mode == "orbit") {
+                controls.update()
+                // Keep the free camera inside the room (the debug option lifts this)
+                if (!settings.debugFreeCam) {
+                    camera.position.x = max(Room.MIN_X + 0.2f, min(Room.MAX_X - 0.2f, camera.position.x))
+                    camera.position.y = max(Room.MIN_Y + 0.25f, min(Room.MAX_Y - 0.2f, camera.position.y))
+                    camera.position.z = max(Room.MIN_Z + 0.2f, min(Room.MAX_Z - 0.2f, camera.position.z))
+                }
+                basePos.copy(camera.position)
+                // Camera breathing (the HTML's orbit sway)
+                if (swayAmount > 0.001f) {
+                    camera.position.x += sin(t * 0.55f) * 0.035f * swayAmount
+                    camera.position.y += cos(t * 0.42f) * 0.025f * swayAmount
+                }
+            } else {
+                player.updateCamera(t, dt, swayAmount)
+                basePos.copy(camera.position)
             }
-        } else {
-            player.updateCamera(t, dt, swayAmount)
-            basePos.copy(camera.position)
+            renderer.post.time = t
+            if (windowShotDue(t)) takeWindowShot()
+            renderer.render(scene, camera)
+            if (ytActive) placeYouTube()
+            photoCallback?.let { cb -> photoCallback = null; readScreen()?.let { b -> cb(b) } }
+            camera.position.copy(basePos)
+        } catch (e: Throwable) {
+            android.util.Log.e("PS1Bedroom", "Error in onDrawFrame", e)
         }
-        renderer.post.time = t
-        if (windowShotDue(t)) takeWindowShot()
-        renderer.render(scene, camera)
-        if (ytActive) placeYouTube()
-        photoCallback?.let { cb -> photoCallback = null; cb(readScreen()) }
-        camera.position.copy(basePos)
     }
 
     // ---- Automatic quality (the HTML's setPerfLevel), driven here by Android's real thermal status ----
@@ -610,18 +635,24 @@ class App : GLSurfaceView.Renderer {
     // ---- Photo mode: the next frame is read back from the screen ----
     @Volatile private var photoCallback: ((android.graphics.Bitmap) -> Unit)? = null
     fun requestPhoto(cb: (android.graphics.Bitmap) -> Unit) { photoCallback = cb }
-    private fun readScreen(): android.graphics.Bitmap {
+    private fun readScreen(): android.graphics.Bitmap? {
         val w = surfaceW; val h = surfaceH
-        val buf = java.nio.ByteBuffer.allocateDirect(w * h * 4).order(java.nio.ByteOrder.nativeOrder())
-        android.opengl.GLES30.glBindFramebuffer(android.opengl.GLES30.GL_FRAMEBUFFER, 0)
-        android.opengl.GLES30.glReadPixels(0, 0, w, h, android.opengl.GLES30.GL_RGBA, android.opengl.GLES30.GL_UNSIGNED_BYTE, buf)
-        val src = android.graphics.Bitmap.createBitmap(w, h, android.graphics.Bitmap.Config.ARGB_8888)
-        buf.rewind(); src.copyPixelsFromBuffer(buf)
-        // GL rows run bottom-up: flip
-        val m = android.graphics.Matrix().apply { preScale(1f, -1f) }
-        val out = android.graphics.Bitmap.createBitmap(src, 0, 0, w, h, m, false)
-        src.recycle()
-        return out
+        if (w <= 10 || h <= 10) return null
+        return try {
+            val buf = java.nio.ByteBuffer.allocateDirect(w * h * 4).order(java.nio.ByteOrder.nativeOrder())
+            android.opengl.GLES30.glBindFramebuffer(android.opengl.GLES30.GL_FRAMEBUFFER, 0)
+            android.opengl.GLES30.glReadPixels(0, 0, w, h, android.opengl.GLES30.GL_RGBA, android.opengl.GLES30.GL_UNSIGNED_BYTE, buf)
+            val src = android.graphics.Bitmap.createBitmap(w, h, android.graphics.Bitmap.Config.ARGB_8888)
+            buf.rewind(); src.copyPixelsFromBuffer(buf)
+            // GL rows run bottom-up: flip
+            val m = android.graphics.Matrix().apply { preScale(1f, -1f) }
+            val out = android.graphics.Bitmap.createBitmap(src, 0, 0, w, h, m, false)
+            src.recycle()
+            out
+        } catch (e: Throwable) {
+            android.util.Log.w("PS1Bedroom", "readScreen failed", e)
+            null
+        }
     }
     fun toggleFanLight() {
         fanLightOn = !fanLightOn

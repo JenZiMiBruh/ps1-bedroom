@@ -24,6 +24,17 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.53.9", "Physical Window Rain & Snow, Wind-Driven Precipitation & Leaves, Lightning Arc & Thunder EQ, Weather Channel & Calendar Overhaul", listOf(
+            "Physical window glass rain & snow: overhauled window pane particles so raindrops physically strike, streak diagonally with live wind slant, and run down the pane; snowflakes stick to the glass, melt in the warmth, and trickle into dripping water rivulets",
+            "Fixed lower pane fog glitch: eliminated duplicate depthWrite glass mesh that caused bottom window pane fog occlusion and gray clipping at glancing angles; upper pane is fixed and lower pane lifts with the sliding sash",
+            "Wind-driven weather simulation: rain, snow flurries, and leaves now calculate lateral and depth drift directly from live wind direction and speed across all outdoor scenes",
+            "Indoor leaf drift: when the window is raised open, occasional leaves fluttering near the open aperture are sucked inside by gusts, drift across the bedroom, and settle onto the desk or floor",
+            "Lightning electric arc & thunder EQ: instant supersonic ionization whip (0.20s razor-sharp crackle) synced to the exact frame of the lightning flash, paired with configurable Thunder EQ modes (Full Spectrum 30Hz-16kHz, Low Bass Rumble sub-80Hz, and High Crackle shockwave)",
+            "Weather Channel Simple View overhaul: ultra-bold 28px temperature with CRT drop shadow, animated 28x28 wind-slanted icon, prominent condition banner, high/low badges, wind vector compass & speed, and status deck clearly legible from default room view",
+            "Weather Channel Advanced View (Local on the 8s): expanded 4-slide broadcast cycle featuring Doppler 4000 radar scope with drifting rain/snow cells, 5-day extended regional outlook, celestial moon & sun almanac, and regional holidays & climate normals",
+            "Wall calendar active week highlight: amber highlight band frames the entire active week row across all 7 days in both 2001 nostalgia and live 2026 calendar modes",
+            "Debug tool expansion: added 1-tap Thunder EQ controls (Full / Low / High), wind direction degree buttons, bedroom window sash toggle, and live weather refresh interval selectors"
+        )),
         Entry("0.53.8", "Self-Sufficient Background Window Widget Refresh & Live Outdoor Engine", listOf(
             "Self-sufficient background Window Widget engine: home-screen Window Widget refreshes and updates dynamically even when the app is completely closed or terminated (no PiP mode required)",
             "Periodic background alarm scheduler: sets Android AlarmManager setAndAllowWhileIdle ticks matching the chosen widget refresh interval (1m - 60m), waking up to update without opening the activity",

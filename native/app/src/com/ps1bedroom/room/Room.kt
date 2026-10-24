@@ -279,7 +279,6 @@ class Room(val scene: Scene, val tex: Textures) {
         val matBlind = PS1.material(color = 0x8a9cc2)
         val matWindowFrame = PS1.material(color = 0x5c6b8a)
         val matSash = PS1.material(color = 0x4e5b78)
-        val matGlassPane = PS1.material(color = 0x82a5c4, transparent = true, opacity = 0.22f)
 
         // Frame jambs and centre mullion (cast the window-frame shadow into the room)
         fun part(m: Mesh, x: Float, y: Float, z: Float): Mesh { m.position.set(x, y, z); m.castShadow = true; blindGroup.add(m); return m }
@@ -307,9 +306,6 @@ class Room(val scene: Scene, val tex: Textures) {
         sashPart(Mesh(Geo.box(0.035f, 1.05f, 0.04f), matSash), 0.8f, 2.105f, -3.11f)   // centre mullion stile
         // Sash lock / finger lift hardware in center of meeting rail
         sashPart(Mesh(Geo.box(0.12f, 0.022f, 0.03f), PS1.material(color = 0x242a38)), 0.8f, 2.655f, -3.095f)
-        // Lower glass pane that moves with sash
-        val lowerGlass = sashPart(Mesh(Geo.plane(2.68f, 1.01f), matGlassPane), 0.8f, 2.105f, -3.11f)
-        lowerGlass.castShadow = false
 
         scene.add(windowSashGroup)
 

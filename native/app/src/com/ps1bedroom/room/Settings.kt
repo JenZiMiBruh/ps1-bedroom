@@ -36,6 +36,12 @@ class Settings(private val app: App, private val ctx: Context) {
     @JvmField var windowHitRate = 0.50f
     // Lightning frequency ("off" | "rare" | "normal" | "frequent" | "constant")
     @JvmField var lightningFreq = "normal"
+    // Thunder acoustic frequency profile ("full" = balanced crack+sub · "low" = deep sub rumble · "high" = sharp electric snap)
+    @JvmField var thunderFreqMode = "full"
+    fun setThunderFreqMode(mode: String) {
+        thunderFreqMode = if (mode in listOf("full", "low", "high")) mode else "full"
+        changed()
+    }
     // Live weather (Open-Meteo)
     var weatherMode = "manual"; private set   // manual · auto · live
     var cityName = ""
@@ -486,6 +492,7 @@ class Settings(private val app: App, private val ctx: Context) {
         put("tvWeatherView", weatherChannelView)
         put("calendarYear", calendarYear)
         put("windowOpen", app.room.windowOpen)
+        put("thunderFreqMode", thunderFreqMode)
     }
     fun saveNow() {
         lastSaved = System.currentTimeMillis()
@@ -547,6 +554,7 @@ class Settings(private val app: App, private val ctx: Context) {
             app.weatherFx.setDebrisParams(debrisAmount, debrisSpeed, debrisFreq, windowHitRate)
             lightningFreq = s.optString("lightningFreq", "normal").let { if (it in listOf("off", "rare", "normal", "frequent", "constant")) it else "normal" }
             app.weatherFx.lightningFreq = lightningFreq
+            thunderFreqMode = s.optString("thunderFreqMode", "full").let { if (it in listOf("full", "low", "high")) it else "full" }
             env.lightsOut = s.optString("lightsOut", "gradual").let { if (it in listOf("gradual", "early", "never")) it else "gradual" }
             app.places.carsMode = s.optString("carsMode", "random").let { if (it in listOf("random", "classic", "none")) it else "random" }
             app.places.carsDensity = s.optDouble("carsDensity", 0.7).toFloat().coerceIn(0.25f, 1.0f)

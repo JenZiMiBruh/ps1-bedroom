@@ -110,6 +110,8 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
     private var stormIntroTimer = 0f
     private var lightningCooldown = 0f
 
+    var onThunder: (() -> Unit)? = null
+
     fun onLightningFreqChanged() {
         lightningCooldown = 0f
         if (lightningFreq != "off") {
@@ -123,7 +125,9 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
         val isStorm = env.W.base == "storm"
         lightningFlash = if (isStorm || instantThunder) 1.0f else 0.7f
         lightningCooldown = nextLightningInterval()
-        if (isStorm || instantThunder) onThunder?.invoke()
+        if (isStorm || instantThunder) {
+            onThunder?.invoke()
+        }
     }
 
     /** Unconditionally triggers a bright lightning flash and loud thunderclap immediately (for debug testing). */
@@ -181,10 +185,17 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
     private val fireflyMesh: InstancedMesh
     private val fireflies: List<Firefly>
 
-    // Window pane, ground, glow
-    private class GlassDrop(var x: Float, var y: Float, var r: Float, var v: Float, var age: Float = 0f)
-    private val glassCanvasObj: CanvasTex
-    private val glassDrops = ArrayList<GlassDrop>()
+    // Window panes: Upper fixed glass pane and Lower sliding sash glass pane
+    private class GlassParticle(
+        var x: Float, var y: Float, var r: Float, var v: Float,
+        var age: Float = 0f,
+        var isSnow: Boolean = false,
+        var meltTime: Float = 0f
+    )
+    private val upperGlassCanvasObj: CanvasTex
+    private val lowerGlassCanvasObj: CanvasTex
+    private val upperGlassParticles = ArrayList<GlassParticle>()
+    private val lowerGlassParticles = ArrayList<GlassParticle>()
     private var glassAccum = 0f
     private var glassKey = ""
     private val groundCanvasObj: CanvasTex
@@ -194,8 +205,6 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
 
     /** The whole-sky flash; the sky reads it, the room lights spike with it. */
     var lightningFlash = 0f; private set
-    /** Fired on a storm's flash (the thunderclap comes with the audio phase). */
-    var onThunder: (() -> Unit)? = null
 
     init {
         scene.add(dustGroup)
@@ -239,11 +248,18 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
         fireflyMesh = makeInstanced(fireflyGroup, Geo.sphere(0.028f, 5, 4), PS1.basic(color = 0xd9f99d), FIREFLY_COUNT)
         fireflies = List(FIREFLY_COUNT) { Firefly(randIn(-1.6f, 3.3f), randIn(0.7f, 3.2f), randIn(-3.6f, -5.8f), randIn(0f, 6.28f), randIn(0.3f, 0.8f)) }
 
-        // Window pane: beads of rain that run down the glass, frost from the corners, condensation in fog
-        glassCanvasObj = createCanvasTex(128, 100) { _, _, _ -> }
-        val windowGlass = Mesh(Geo.plane(2.74f, 2.14f), PS1.basic(map = glassCanvasObj.tex, transparent = true, depthWrite = false))
-        windowGlass.position.set(0.8f, 2.65f, -3.13f)
-        scene.add(windowGlass)
+        // Window panes: Upper fixed glass pane and Lower sliding sash glass pane
+        upperGlassCanvasObj = createCanvasTex(128, 64) { _, _, _ -> }
+        lowerGlassCanvasObj = createCanvasTex(128, 64) { _, _, _ -> }
+
+        val upperGlass = Mesh(Geo.plane(2.70f, 1.04f), PS1.basic(map = upperGlassCanvasObj.tex, transparent = true, depthWrite = false, fog = false))
+        upperGlass.position.set(0.8f, 3.19f, -3.125f)
+        scene.add(upperGlass)
+
+        val lowerGlass = Mesh(Geo.plane(2.68f, 1.01f), PS1.basic(map = lowerGlassCanvasObj.tex, transparent = true, depthWrite = false, fog = false))
+        lowerGlass.position.set(0.8f, 2.105f, -3.115f)
+        room.windowSashGroup.add(lowerGlass)
+        room.registerInteractable(lowerGlass, "window")
 
         // Seasonal ground below the window (grass, flowering grass, fallen leaves, snow; darker when wet)
         groundCanvasObj = createCanvasTex(128, 128, 7f, 5f) { _, _, _ -> }
@@ -285,95 +301,144 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
         leafMesh.needsUpdate()
     }
 
+    private fun drawPane(canvasObj: CanvasTex, drops: ArrayList<GlassParticle>, isUpper: Boolean, dt: Float) {
+        val raining = env.isRainingNow()
+        val snowing = env.isSnowingNow()
+        val winter = env.currentSeason == "winter"
+        val ctx = canvasObj.ctx
+        val w = 128; val h = 64
+        ctx.clearRect(0, 0, w, h)
+
+        // Base glass reflection
+        ctx.fillStyle = "rgba(175, 195, 230, 0.04)"
+        ctx.fillRect(0, 0, w, h)
+
+        // Condensation
+        if (env.currentWeather == "foggy" || raining || snowing) {
+            val condCol = if (env.currentWeather == "foggy") "rgba(215, 226, 240, 0.22)" else if (snowing) "rgba(225, 236, 252, 0.12)" else "rgba(200, 215, 235, 0.09)"
+            ctx.fillStyle = condCol; ctx.fillRect(0, 0, w, h)
+        }
+
+        // Heatwave sun shimmer
+        if (env.W.base == "heat") {
+            val heat = ctx.createRadialGradient(w / 2, h / 2, 12, w / 2, h / 2, 50)
+            heat.addColorStop(0, "rgba(255, 200, 110, 0)")
+            heat.addColorStop(1, "rgba(255, 190, 95, 0.20)")
+            ctx.fillStyle = heat; ctx.fillRect(0, 0, w, h)
+        }
+
+        // Frost in winter or snow
+        if (winter || snowing) {
+            val frost = ctx.createRadialGradient(w / 2, h / 2, 16, w / 2, h / 2, 48)
+            frost.addColorStop(0, "rgba(230, 240, 255, 0)")
+            frost.addColorStop(1, if (env.weatherKind == "blizzard") "rgba(235, 245, 255, 0.70)" else "rgba(230, 240, 255, 0.50)")
+            ctx.fillStyle = frost; ctx.fillRect(0, 0, w, h)
+            ctx.fillStyle = "rgba(255, 255, 255, 0.40)"
+            for (i in 0 until 80) {
+                val a = (i * 2.399) % 6.283
+                val r = 0.42 + ((i * 37) % 23) / 60.0
+                ctx.fillRect((w / 2 + cos(a) * r * w * 0.55).toInt(), (h / 2 + sin(a) * r * h * 0.65).toInt(), 1, 1)
+            }
+        }
+
+        // Snow accumulation along bottom sash frame
+        if (snowing) {
+            ctx.fillStyle = "rgba(244, 248, 252, 0.85)"
+            for (x in 0 until w) {
+                val corner = min(1.0, kotlin.math.abs(x - w / 2.0) / (w * 0.48))
+                val sh = (1.5 + corner * 4.0 + sin(x * 0.28) * 1.2).toInt()
+                ctx.fillRect(x, h - sh, 1, sh)
+            }
+        }
+
+        // Wind direction & facing vector
+        val windDeg = if (env.liveWindDirDeg >= 0f) env.liveWindDirDeg else 225f
+        val windRad = Math.toRadians(windDeg.toDouble())
+        val blowDirX = -sin(windRad).toFloat()
+        val blowDirZ = cos(windRad).toFloat()
+        val windSpeedNorm = (if (env.liveWindSpeedKmH >= 0f) env.liveWindSpeedKmH / 32.0f else env.W.wind).coerceIn(0.08f, 2.0f)
+        val windSlant = blowDirX * (0.12f + windSpeedNorm * 0.35f)
+        val windFacingMult = max(0.2f, 0.6f + blowDirZ * 0.75f)
+
+        // Spawning:
+        if (snowing) {
+            val maxSnow = (20 + env.W.rain * 25).roundToInt()
+            val spawnSnow = (1 + (env.W.rain * 2 * windFacingMult).roundToInt())
+            for (i in 0 until spawnSnow) if (drops.count { it.isSnow } < maxSnow) {
+                drops += GlassParticle(rand() * w, rand() * (h - 4), 1.2f + rand() * 1.4f, 0f, 0f, isSnow = true, meltTime = randIn(3.0f, 6.5f))
+            }
+        }
+        if (raining) {
+            val maxRain = (35 + env.W.rain * 45).roundToInt()
+            val spawn = (1 + (env.W.rain * 4 * windFacingMult).roundToInt())
+            for (i in 0 until spawn) if (drops.count { !it.isSnow } < maxRain) {
+                drops += GlassParticle(rand() * w, rand() * (h - 4), 0.75f + rand() * 1.35f, 0f, 0f, isSnow = false)
+            }
+        }
+
+        // Updating particles:
+        var i = drops.size - 1
+        while (i >= 0) {
+            val d = drops[i]
+            d.age += dt
+
+            if (d.isSnow) {
+                d.meltTime -= dt
+                if (d.meltTime <= 0f) {
+                    d.isSnow = false
+                    d.v = 8f + rand() * 14f + env.W.rain * 12f
+                }
+                // Draw snowflake
+                ctx.fillStyle = "rgba(248, 252, 255, 0.92)"
+                ctx.beginPath(); ctx.arc(d.x, d.y, d.r, 0, PI * 2); ctx.fill()
+                ctx.fillStyle = "rgba(230, 240, 255, 0.45)"
+                ctx.beginPath(); ctx.arc(d.x, d.y, d.r * 1.5f, 0, PI * 2); ctx.fill()
+            } else {
+                if (raining && d.v == 0f) {
+                    d.r += dt * (0.24f + env.W.rain * 0.38f) * (0.5f + rand())
+                    if (d.r > 1.5f || (d.age > 3.0f && rand() < 0.28f)) {
+                        d.v = 11f + rand() * 20f + env.W.rain * 14f
+                    }
+                } else if (!raining && d.v > 0f) {
+                    d.v *= max(0f, 1f - dt * 0.8f)
+                }
+
+                if (d.v > 0f) {
+                    val streakLen = min(8f, 3.0f + d.v * 0.20f)
+                    ctx.strokeStyle = "rgba(220, 235, 255, 0.22)"
+                    ctx.beginPath(); ctx.moveTo(d.x, d.y); ctx.lineTo(d.x - windSlant * streakLen, d.y - streakLen); ctx.stroke()
+                    d.y += d.v * dt
+                    d.x += (windSlant * d.v + (rand() - 0.5f) * 1.8f) * dt
+                }
+                if (!raining && rand() < 0.08f) d.r -= 0.25f
+
+                if (d.y > h + 3 || d.x < -3 || d.x > w + 3 || d.r <= 0.2f) {
+                    drops.removeAt(i); i--; continue
+                }
+
+                // Draw raindrop
+                ctx.fillStyle = "rgba(15, 23, 42, 0.26)"
+                ctx.beginPath(); ctx.arc(d.x, d.y + 0.4f, d.r, 0, PI * 2); ctx.fill()
+                ctx.fillStyle = "rgba(225, 238, 255, 0.62)"
+                ctx.beginPath(); ctx.arc(d.x, d.y, d.r * 0.82f, 0, PI * 2); ctx.fill()
+                ctx.fillStyle = "rgba(255, 255, 255, 0.92)"
+                ctx.fillRect((d.x - d.r * 0.3f).toInt(), (d.y - d.r * 0.4f).toInt(), 1, 1)
+            }
+            i--
+        }
+        canvasObj.tex.needsUpdate()
+    }
+
     private fun drawWindowGlass(dt: Float) {
         val raining = env.isRainingNow()
         val snowing = env.isSnowingNow()
         val winter = env.currentSeason == "winter"
-        val key = "${env.currentWeather}|${env.weatherKind}|$raining|$snowing|$winter|${env.currentSeason}"
-        // Nothing on the glass changes between draws unless drops are moving or the weather changed
-        if (glassDrops.isEmpty() && !raining && key == glassKey) return
+        val key = "${env.currentWeather}|${env.weatherKind}|$raining|$snowing|$winter|${env.currentSeason}|${env.liveWindDirDeg}|${room.windowOpen}"
+        if (upperGlassParticles.isEmpty() && lowerGlassParticles.isEmpty() && !raining && !snowing && key == glassKey) return
         glassKey = key
-        val ctx = glassCanvasObj.ctx
-        val w = 128; val h = 100
-        ctx.clearRect(0, 0, w, h)
-        ctx.fillStyle = "rgba(170, 190, 225, 0.05)"
-        ctx.fillRect(0, 0, w, h)
-        // Condensation in fog / rain / cold snow
-        if (env.currentWeather == "foggy" || raining || snowing) {
-            ctx.fillStyle = if (env.currentWeather == "foggy") "rgba(210, 220, 235, 0.22)" else if (snowing) "rgba(220, 232, 250, 0.10)" else "rgba(200, 210, 230, 0.08)"
-            ctx.fillRect(0, 0, w, h)
-        }
-        // Heatwave warm sun-shimmer haze along the window edges
-        if (env.W.base == "heat") {
-            val heat = ctx.createRadialGradient(w / 2, h / 2, min(w, h) * 0.2, w / 2, h / 2, max(w, h) * 0.72)
-            heat.addColorStop(0, "rgba(255, 200, 110, 0)")
-            heat.addColorStop(1, "rgba(255, 190, 95, 0.22)")
-            ctx.fillStyle = heat; ctx.fillRect(0, 0, w, h)
-        }
-        // Frost creeping in from the edges in winter or snow
-        if (winter || snowing) {
-            val frost = ctx.createRadialGradient(w / 2, h / 2, min(w, h) * 0.25, w / 2, h / 2, max(w, h) * 0.7)
-            frost.addColorStop(0, "rgba(230, 240, 255, 0)")
-            frost.addColorStop(1, if (env.weatherKind == "blizzard") "rgba(235, 245, 255, 0.72)" else "rgba(230, 240, 255, 0.55)")
-            ctx.fillStyle = frost
-            ctx.fillRect(0, 0, w, h)
-            ctx.fillStyle = "rgba(255, 255, 255, 0.42)"
-            for (i in 0 until 140) {
-                val a = (i * 2.399) % 6.283
-                val r = 0.40 + ((i * 37) % 23) / 60.0
-                ctx.fillRect((w / 2 + cos(a) * r * w * 0.7).toInt(), (h / 2 + sin(a) * r * h * 0.7).toInt(), 1, 1)
-            }
-            if (snowing) {
-                // Snow build-up along the bottom window sill and corners
-                ctx.fillStyle = "rgba(241, 245, 249, 0.78)"
-                for (x in 0 until w) {
-                    val corner = min(1.0, kotlin.math.abs(x - w / 2.0) / (w * 0.48))
-                    val sh = (2.5 + corner * 5.5 + sin(x * 0.22) * 1.4).toInt()
-                    ctx.fillRect(x, h - sh, 1, sh)
-                }
-            }
-        }
-        // Raindrops beading on the glass; every drop grows in the rain and eventually streaks down so they never stall
-        if (raining) {
-            val maxDrops = (45 + env.W.rain * 55).roundToInt()
-            val spawn = (1 + env.W.rain * 5).roundToInt()
-            for (i in 0 until spawn) if (glassDrops.size < maxDrops) {
-                glassDrops += GlassDrop(rand() * w, rand() * (h - 6), 0.75f + rand() * 1.35f, 0f, 0f)
-            }
-        }
-        val windSlant = 0.08f + env.W.wind * 0.30f
-        var i = glassDrops.size - 1
-        while (i >= 0) {
-            val d = glassDrops[i]
-            d.age += dt
-            if (raining && d.v == 0f) {
-                // Static beads collect more water and grow until gravity pulls them down
-                d.r += dt * (0.24f + env.W.rain * 0.38f) * (0.5f + rand())
-                if (d.r > 1.5f || (d.age > 3.2f && rand() < 0.25f)) {
-                    d.v = 11f + rand() * 20f + env.W.rain * 14f
-                }
-            } else if (!raining && d.v > 0f) {
-                d.v *= max(0f, 1f - dt * 0.8f)
-            }
-            if (d.v > 0f) {
-                val streakLen = min(10f, 3.5f + d.v * 0.25f)
-                ctx.strokeStyle = "rgba(220, 235, 255, 0.22)"
-                // Trail extends up (+X, -Y) behind the drop as the drop streaks down-left (-X, +Y), matching 3D rain & leaves
-                ctx.beginPath(); ctx.moveTo(d.x, d.y); ctx.lineTo(d.x + windSlant * streakLen, d.y - streakLen); ctx.stroke()
-                d.y += d.v * dt
-                d.x -= (windSlant * d.v + (rand() - 0.5f) * 2.2f) * dt
-            }
-            if (!raining && rand() < 0.08f) d.r -= 0.25f // dries up when the rain stops
-            if (d.y > h + 3 || d.x < -3 || d.x > w + 3 || d.r <= 0.2f) { glassDrops.removeAt(i); i--; continue }
-            ctx.fillStyle = "rgba(15, 23, 42, 0.25)"
-            ctx.beginPath(); ctx.arc(d.x, d.y + 0.4f, d.r, 0, PI * 2); ctx.fill()
-            ctx.fillStyle = "rgba(225, 238, 255, 0.58)"
-            ctx.beginPath(); ctx.arc(d.x, d.y, d.r * 0.8f, 0, PI * 2); ctx.fill()
-            ctx.fillStyle = "rgba(255, 255, 255, 0.9)"
-            ctx.fillRect((d.x - d.r * 0.3f).toInt(), (d.y - d.r * 0.4f).toInt(), 1, 1)
-            i--
-        }
-        glassCanvasObj.tex.needsUpdate()
+
+        drawPane(upperGlassCanvasObj, upperGlassParticles, isUpper = true, dt = dt)
+        drawPane(lowerGlassCanvasObj, lowerGlassParticles, isUpper = false, dt = dt)
     }
 
     /** Paints the ground for anywhere but the city; returns false to use the seasonal city ground (the places phase sets it). */
@@ -498,18 +563,28 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
         }
 
         val W = env.W
+        val windDeg = if (env.liveWindDirDeg >= 0f) env.liveWindDirDeg else 225f
+        val windRad = Math.toRadians(windDeg.toDouble())
+        val blowDirX = -sin(windRad).toFloat() // East (90°) blows left (-X), West (270°) blows right (+X)
+        val blowDirZ = cos(windRad).toFloat()  // North (0°) blows into window (+Z), South (180°) blows away (-Z)
+        val windSpeedNorm = (if (env.liveWindSpeedKmH >= 0f) env.liveWindSpeedKmH / 32.0f else W.wind).coerceIn(0.08f, 2.0f)
+
         if (rainMesh.visible) {
             val active = (RAIN_COUNT * (0.15f + 0.85f * W.rain)).roundToInt()
-            val slant = 0.08f + W.wind * 0.3f
+            val speedX = blowDirX * (0.35f + windSpeedNorm * 2.8f)
+            val speedZ = blowDirZ * (0.25f + windSpeedNorm * 1.8f)
+            val slantZ = -blowDirX * (0.08f + windSpeedNorm * 0.30f)
+            val slantX = blowDirZ * (0.06f + windSpeedNorm * 0.22f)
             for (i in 0 until RAIN_COUNT) {
                 val d = rainDrops[i]
                 if (i >= active) { rainMesh.setInstance(i, 0f, -50f, 0f, 0f, 0f, 0f, 0f); continue }
                 d.y -= d.v * (0.9f + W.rain * 0.45f) * dt
-                d.x -= d.v * slant * dt
+                d.x += speedX * dt
+                d.z += speedZ * dt
                 val overLedge = d.x > -0.6f && d.x < 2.2f && d.z > -3.42f
                 val floorY = if (overLedge) OUT.ledgeY else OUT.y0
-                if (d.y < floorY) {
-                    if (rand() < 0.6f) {
+                if (d.y < floorY || d.z > -2.95f || d.z < OUT.z1 - 1f || d.x < OUT.x0 - 1.5f || d.x > OUT.x1 + 1.5f) {
+                    if (d.y < floorY && rand() < 0.6f) {
                         val s = splashes[splashNext]
                         splashNext = (splashNext + 1) % SPLASH_COUNT
                         s.life = 0.25f; s.x = d.x; s.y = floorY; s.z = d.z
@@ -518,7 +593,7 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
                     d.x = randIn(OUT.x0, OUT.x1 + 1.2f)
                     d.z = randIn(OUT.z0, OUT.z1)
                 }
-                rainMesh.setInstance(i, d.x, d.y, d.z, 0f, 0f, -slant, 1f)
+                rainMesh.setInstance(i, d.x, d.y, d.z, slantX, 0f, slantZ, 1f)
             }
             rainMesh.needsUpdate()
             for (i in 0 until SPLASH_COUNT) {
@@ -530,16 +605,19 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
             splashMesh.needsUpdate()
         }
         if (snowMesh.visible) {
-            val blow = 0.1f + W.wind * 1.6f
             val activeSnow = (SNOW_COUNT * (0.2f + 0.8f * W.rain)).roundToInt()
+            val speedX = blowDirX * (0.22f + windSpeedNorm * 1.8f)
+            val speedZ = blowDirZ * (0.18f + windSpeedNorm * 1.4f)
             for (i in 0 until SNOW_COUNT) {
                 val f = snowFlakes[i]
                 if (i >= activeSnow) { snowMesh.setInstance(i, 0f, -50f, 0f, 0f, 0f, 0f, 0f); continue }
-                f.y -= f.v * (0.8f + W.wind * 0.9f) * dt
-                f.x += (sin(t * 1.7f + f.ph) * 0.35f - blow) * dt
-                if (f.y < OUT.y0 || f.x < OUT.x0 - 0.5f) {
+                f.y -= f.v * (0.75f + windSpeedNorm * 0.6f) * dt
+                f.x += (speedX + sin(t * 1.6f + f.ph) * 0.35f) * dt
+                f.z += (speedZ + cos(t * 1.3f + f.ph) * 0.25f) * dt
+                if (f.y < OUT.y0 || f.z > -2.95f || f.z < OUT.z1 - 1f || f.x < OUT.x0 - 1f || f.x > OUT.x1 + 1.5f) {
                     f.y = OUT.y1 + rand() * 0.4f
-                    f.x = randIn(OUT.x0, OUT.x1 + W.wind * 2.5f)
+                    f.x = randIn(OUT.x0, OUT.x1 + 1.5f)
+                    f.z = randIn(OUT.z0, OUT.z1)
                 }
                 snowMesh.setInstance(i, f.x, f.y, f.z, t * f.v, t * f.v * 0.7f, 0f, 1f)
             }
@@ -559,8 +637,6 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
                 seasonBase + W.wind * 0.55f + rainBoost + stormBoost
             }
             val activeCount = (LEAF_COUNT * (weatherFactor * (debrisAmount / 1.35f)).coerceIn(0.05f, 1f)).roundToInt()
-            val gust = (0.65f + W.wind * 1.75f + (if (env.isRainingNow()) W.rain * 0.35f else 0f)) * debrisSpeed
-            val windSlantX = (0.12f + W.wind * 1.45f) * debrisSpeed
             val freqBoost = max(0.2f, debrisFreq * (0.7f + W.wind * 0.9f))
             val scale = when {
                 sky.outsideEnv in setOf("desert", "canyon", "pyramid", "redrock", "oasis", "beach", "arizona") -> 0.48f
@@ -591,28 +667,40 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
                     0 -> {
                         // Real-life leaf terminal falling speed: gentle realistic glide (0.42 - 0.72 m/s)
                         val fallSpeed = (0.42f + l.vy * 0.30f) * debrisSpeed
-                        val windDrift = (0.22f + W.wind * 0.75f) * debrisSpeed
+                        val driftX = blowDirX * (0.35f + windSpeedNorm * 1.6f) * debrisSpeed
+                        val driftZ = blowDirZ * (0.25f + windSpeedNorm * 1.4f) * debrisSpeed
                         val sway = sin(t * (1.6f + l.rs * 0.3f) + l.ph) * 0.28f
                         l.y -= fallSpeed * dt
-                        l.x -= (windDrift + sway) * dt
-                        l.z += cos(t * 1.2f + l.ph) * 0.04f * dt
+                        l.x += (driftX + sway) * dt
+                        l.z += (driftZ + cos(t * 1.2f + l.ph) * 0.04f) * dt
 
-                        // Smooth organic aerial tumble
-                        l.rotX = t * l.rs * 0.7f * debrisSpeed
+                        // Smooth organic aerial tumble aligned with wind direction
+                        l.rotX = -blowDirZ * 0.30f + sin(t * 1.8f + l.ph) * 0.35f + t * l.rs * 0.5f * debrisSpeed
                         l.rotY = t * l.rs * 0.5f * debrisSpeed
-                        l.rotZ = -0.22f - W.wind * 0.32f + sin(t * 2.0f + l.ph) * 0.45f
+                        l.rotZ = blowDirX * 0.35f + sin(t * 2.0f + l.ph) * 0.45f
 
-                        // Collision with window glass or exterior sill:
-                        // Window pane: X in [-0.55f, 2.15f], Y in [1.58f, 3.75f], Z near glass [-3.26f, -3.13f]
+                        // Collision with window glass or aperture:
                         val inWindowX = l.x in -0.55f..2.15f
-                        val inWindowY = l.y in 1.58f..3.75f
-                        val hitGlassZ = l.z in -3.26f..-3.13f
-                        if (inWindowX && inWindowY && hitGlassZ && (windowHitRate > 0.01f && (rand() < windowHitRate * 1.4f || windowHitRate >= 0.95f))) {
-                            // HIT THE WINDOW!
-                            l.state = 1
-                            l.contactTimer = randIn(3.0f, 7.5f) / max(0.5f, debrisFreq)
-                            l.rollSpeed = randIn(0.18f, 0.40f) * (0.8f + W.wind * 0.6f) * debrisSpeed
-                            l.z = if (l.y > 1.62f) -3.15f else -3.18f
+                        val hitGlassZ = l.z in -3.26f..-3.12f
+                        if (inWindowX && hitGlassZ && (windowHitRate > 0.01f)) {
+                            val windowRaised = room.windowOpen && room.windowRaise > 0.30f
+                            val inOpeningY = l.y in 1.58f..(1.58f + room.windowRaise)
+                            if (windowRaised && inOpeningY && (blowDirZ >= -0.15f && rand() < 0.28f)) {
+                                // BLOW IN THE WINDOW! Occasional leaf drifts into bedroom through open sash
+                                l.state = 3
+                                l.vxOff = blowDirX * 0.40f + randIn(-0.12f, 0.12f)
+                                l.vyOff = -0.30f
+                                l.vzOff = 0.60f + max(0f, blowDirZ) * 0.55f
+                                l.contactTimer = 0f
+                            } else if (l.y in 1.58f..3.75f) {
+                                // Hit window glass or sill
+                                l.state = 1
+                                l.contactTimer = randIn(3.0f, 7.5f) / max(0.5f, debrisFreq)
+                                l.rollSpeed = randIn(0.18f, 0.40f) * (0.8f + windSpeedNorm * 0.6f) * debrisSpeed
+                                l.z = if (l.y > 1.62f) -3.14f else -3.18f
+                            } else if (l.y < OUT.y0 + 0.1f || l.x < OUT.x0 - 0.8f || l.x > OUT.x1 + 1.8f) {
+                                l.wait = randIn(0.1f, 1.5f) / freqBoost
+                            }
                         } else if (l.y < OUT.y0 + 0.1f || l.x < OUT.x0 - 0.8f || l.x > OUT.x1 + 1.8f) {
                             l.wait = randIn(0.1f, 1.5f) / freqBoost
                         }
@@ -622,9 +710,9 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
                         l.contactTimer -= dt
                         if (l.y > 1.61f) {
                             // Sliding down and rolling sideways along the window glass pane
-                            l.x -= (l.rollSpeed + W.wind * 0.28f) * dt
+                            l.x += blowDirX * (l.rollSpeed + windSpeedNorm * 0.28f) * dt
                             l.y -= (0.10f + if (env.isRainingNow()) 0.30f else 0.05f) * dt
-                            l.z = -3.15f
+                            l.z = -3.14f
                             l.rollAngle += l.rollSpeed * 5.0f * dt
                             l.rotX = sin(t * 6f + l.ph) * 0.10f
                             l.rotY = cos(t * 3f + l.ph) * 0.08f
@@ -633,7 +721,7 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
                             // Reached the exterior window sill: rolls along the ledge
                             l.y = OUT.ledgeY // 1.60f
                             l.z = -3.18f
-                            l.x -= (l.rollSpeed * 0.8f + W.wind * 0.32f) * dt
+                            l.x += blowDirX * (l.rollSpeed * 0.8f + windSpeedNorm * 0.32f) * dt
                             l.rollAngle += l.rollSpeed * 4.0f * dt
                             l.rotX = (-PI / 2).toFloat() + sin(t * 7f + l.ph) * (0.04f + W.wind * 0.12f)
                             l.rotY = sin(t * 4f + l.ph) * 0.08f
@@ -641,11 +729,11 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
                         }
 
                         // Wind catches it and it takes flight off the window!
-                        if (l.contactTimer <= 0f || l.x < -0.55f || (W.wind >= 0.75f && rand() < 0.02f)) {
+                        if (l.contactTimer <= 0f || l.x < -0.55f || l.x > 2.15f || (W.wind >= 0.75f && rand() < 0.02f)) {
                             l.state = 2 // FLY OFF!
-                            l.vxOff = -(0.75f + W.wind * 1.55f) * debrisSpeed
-                            l.vyOff = (0.35f + W.wind * 0.60f) * debrisSpeed // updraft lift away from sill
-                            l.vzOff = -(0.30f + rand() * 0.45f) // blown backward into open street air
+                            l.vxOff = blowDirX * (0.75f + windSpeedNorm * 1.55f) * debrisSpeed
+                            l.vyOff = (0.35f + windSpeedNorm * 0.60f) * debrisSpeed
+                            l.vzOff = -(0.30f + rand() * 0.45f)
                         }
                     }
                     2 -> {
@@ -658,8 +746,31 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
                         l.rotY += (5f + l.rs) * dt
                         l.rotZ += (6f + l.rs) * dt
 
-                        if (l.x < OUT.x0 - 0.8f || l.y < OUT.y0 || l.z < OUT.z1) {
+                        if (l.x < OUT.x0 - 0.8f || l.x > OUT.x1 + 1.8f || l.y < OUT.y0 || l.z < OUT.z1) {
                             l.wait = randIn(0.1f, 1.2f) / freqBoost
+                        }
+                    }
+                    3 -> {
+                        // IN_ROOM: drifted inside the bedroom through the open window!
+                        l.x += l.vxOff * dt
+                        l.y += l.vyOff * dt
+                        l.z += l.vzOff * dt
+                        l.rotX += 2.2f * dt
+                        l.rotY += 3.0f * dt
+                        l.rotZ += 1.8f * dt
+
+                        // Check collision with desk surface or bedroom floor
+                        val onDesk = l.x in 1.7f..3.1f && l.z in -2.6f..-1.4f && l.y <= 1.38f
+                        val onFloor = l.y <= 0.12f
+                        if (onDesk || onFloor) {
+                            l.y = if (onDesk) 1.38f else 0.12f
+                            l.vxOff = 0f; l.vyOff = 0f; l.vzOff = 0f
+                            l.rotX = (-PI / 2).toFloat()
+                            l.contactTimer += dt
+                            if (l.contactTimer > 18.0f) {
+                                l.wait = randIn(1.0f, 5.0f)
+                                l.state = 0
+                            }
                         }
                     }
                 }

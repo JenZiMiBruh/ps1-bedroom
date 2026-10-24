@@ -111,6 +111,10 @@ class Sound(private val app: App) {
     private lateinit var ps1Drive: Spot; private lateinit var ps1Seek: NoiseSynth
     private lateinit var rain: Gain; private lateinit var glassSpot: Spot; private lateinit var rainGlass: Gain; private lateinit var rainHeavy: Gain
     private lateinit var wind: Gain; private lateinit var windFilter: Filter
+    private lateinit var lightningArcBuf: AudioBuffer
+    private lateinit var thunderFullBufs: List<AudioBuffer>
+    private lateinit var thunderLowBufs: List<AudioBuffer>
+    private lateinit var thunderHighBufs: List<AudioBuffer>
     private lateinit var thunderBufs: List<AudioBuffer>; private lateinit var thunderFilter: Filter
     private lateinit var crickets: Gain; private lateinit var leaves: Gain; private lateinit var breeze: Gain
     private lateinit var howl: Gain; private lateinit var howlFilter: Filter; private lateinit var city: Gain
@@ -271,9 +275,13 @@ class Sound(private val app: App) {
         val windGust = gain(0.6)
         lfos += Lfo(ctx, windGust.gain, 0.045, 0.25, 1.0)
         Noise(ctx, "brown").start().chain(windFilter, windGust, gain(1.5), wind)
-        thunderBufs = listOf(Buffers.thunder(ctx), Buffers.thunder(ctx), Buffers.thunder(ctx))
-        thunderFilter = filt(4200.0, "lowpass", 0.7)
-        val thunderBoost = gain(1.65)
+        lightningArcBuf = Buffers.lightningArc(ctx)
+        thunderFullBufs = listOf(Buffers.thunder(ctx, "full"), Buffers.thunder(ctx, "full"))
+        thunderLowBufs = listOf(Buffers.thunder(ctx, "low"), Buffers.thunder(ctx, "low"))
+        thunderHighBufs = listOf(Buffers.thunder(ctx, "high"), Buffers.thunder(ctx, "high"))
+        thunderBufs = thunderFullBufs
+        thunderFilter = filt(4800.0, "lowpass", 0.7)
+        val thunderBoost = gain(1.75)
         thunderFilter.connect(thunderBoost)
         thunderBoost.connect(weatherBus)
         // Deep low-end room resonance so lightning crack and thunder rumble are tangibly felt inside the bedroom
@@ -472,29 +480,52 @@ class Sound(private val app: App) {
         }
     }
 
-    /** Thunderclap: visceral acoustic lightning strike: crisp immediate supersonic crack decaying into deep rolling sub-bass rumble. */
-    fun thunderclap() {
+    /**
+     * Visceral acoustic lightning strike: instantaneous electric arc snap / sizzle on the exact frame of the flash,
+     * accompanied by synchronized thunderclap (full spectrum, low sub-bass rumble, or high-frequency electric crack).
+     */
+    fun lightningStrike(mode: String = "full") {
         if (!ready || !playing) return
         ctx.sync {
-            val distance = rnd.nextDouble()
-            // Immediate onset: 0.02s to 0.38s so thunder hits right when the flash is seen
-            val t = ctx.currentTime + 0.02 + distance * 0.36
-            val p = Player(ctx, pick(thunderBufs))
-            p.playbackRate = rand(0.82, 1.06)
-            p.volume.value = 3.5 - distance * 4.0
-            // Dynamic low-pass per strike: starts open (up to 3.2 kHz) for the electric shockwave crack, then sweeps into rolling bass rumble
-            val startCutoff = 3200.0 - distance * 1400.0
-            val endCutoff = 180.0 - distance * 35.0
-            val lp = filt(startCutoff, "lowpass", 0.8)
-            lp.frequency.cancelScheduledValues(t)
-            lp.frequency.setValueAtTime(startCutoff, t)
-            lp.frequency.exponentialRampToValueAtTime(endCutoff.coerceAtLeast(110.0), t + 3.8)
+            val now = ctx.currentTime
+            // 1. Instant supersonic electric ionization whip on the exact moment of the flash
+            if (mode != "low") {
+                val arc = Player(ctx, lightningArcBuf)
+                arc.playbackRate = rand(0.96, 1.05)
+                arc.volume.value = 5.0
+                arc.connect(thunderFilter)
+                arc.start(now)
+                pendingDispose += (now + 0.3) to { arc.dispose() }
+            }
+            // 2. Synchronized thunderclap boom
+            val bufs = when (mode) {
+                "low" -> thunderLowBufs
+                "high" -> thunderHighBufs
+                else -> thunderFullBufs
+            }
+            val p = Player(ctx, pick(bufs))
+            p.playbackRate = rand(0.92, 1.04)
+            p.volume.value = 4.8
+            val tThunder = now + 0.02
+            val lp = when (mode) {
+                "low" -> filt(360.0, "lowpass", 0.9)
+                "high" -> filt(6500.0, "lowpass", 0.7)
+                else -> {
+                    val f = filt(4500.0, "lowpass", 0.8)
+                    f.frequency.setValueAtTime(4500.0, tThunder)
+                    f.frequency.exponentialRampToValueAtTime(140.0, tThunder + 3.8)
+                    f
+                }
+            }
             p.connect(lp)
             lp.connect(thunderFilter)
-            p.start(t)
-            pendingDispose += (t + 7.5) to { p.dispose(); lp.dispose() }
+            p.start(tThunder)
+            pendingDispose += (tThunder + 7.5) to { p.dispose(); lp.dispose() }
         }
     }
+
+    /** Legacy / debug thunderclap fallback. */
+    fun thunderclap() = lightningStrike(app.settings.thunderFreqMode)
 
     // ---- Every ~0.18 s: fan dynamics, slow sweeps, random one-shots ----
     private var lastPeriodic = 0f

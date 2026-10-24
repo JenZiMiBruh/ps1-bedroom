@@ -412,7 +412,7 @@ class App : GLSurfaceView.Renderer {
                 exterior.markWeatherDirty()
                 ps1.sfx = { sound.sfx(it) }; ps1.stopBootSound = { sound.stopPs1BootSound() }; library.sfx = { sound.sfx(it) }
                 env.envHooks += { sound.updateLayered() }
-                weatherFx.onThunder = { sound.thunderclap() }
+                weatherFx.onThunder = { sound.lightningStrike(settings.thunderFreqMode) }
 
                 exterior.onTrainPass = { sound.trainPass() }
                 player.onStep = { onRug -> sound.sfx(if (onRug) "stepRug" else "step") }

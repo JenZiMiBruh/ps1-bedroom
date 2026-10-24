@@ -418,6 +418,14 @@ class Furniture(private val room: Room, private val env: Environment) {
             ctx.fillStyle = if (c == activeDow) "#dc2626" else "#374151"
             ctx.fillText(l.toString(), gx + c * cw + cw / 2, gy + chh / 2)
         }
+
+        // Highlight the entire current week row
+        val activeWeekRow = (day + first - 1) / 7 + 1
+        ctx.fillStyle = "rgba(254, 240, 138, 0.45)"
+        ctx.fillRect(gx, gy + activeWeekRow * chh, cw * 7, chh)
+        ctx.strokeStyle = "rgba(217, 119, 6, 0.55)"; ctx.lineWidth = 1f
+        ctx.strokeRect(gx + 0.5, gy + activeWeekRow * chh + 0.5, cw * 7 - 1, chh - 1)
+
         ctx.font = "bold 9px monospace"
         for (i in 0 until 42) {
             val r = i / 7 + 1; val c = i % 7; val x = gx + c * cw; val y = gy + r * chh; val dn = i - first + 1

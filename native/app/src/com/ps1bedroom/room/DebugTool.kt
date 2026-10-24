@@ -221,6 +221,28 @@ class DebugTool(
         strikeRow.addView(strikeBtn)
         contentContainer.addView(strikeRow)
 
+        contentContainer.addView(sectionTitle("THUNDER ACOUSTIC EQ"))
+        val eqRow = LinearLayout(act).apply { orientation = LinearLayout.HORIZONTAL }
+        eqRow.addView(btn("⚡ FULL SPECTRUM") {
+            app.post {
+                app.settings.setThunderFreqMode("full")
+                app.toast("⚡ Thunder EQ: Full Spectrum (30Hz - 16kHz)")
+            }
+        })
+        eqRow.addView(btn("🔊 LOW BASS (Sub 80Hz)") {
+            app.post {
+                app.settings.setThunderFreqMode("low")
+                app.toast("🔊 Thunder EQ: Low Bass Rumble (<80Hz sub-bass)")
+            }
+        })
+        eqRow.addView(btn("💥 HIGH CRACKLE") {
+            app.post {
+                app.settings.setThunderFreqMode("high")
+                app.toast("💥 Thunder EQ: High Crackle (Supersonic shockwave)")
+            }
+        })
+        contentContainer.addView(eqRow)
+
         contentContainer.addView(sectionTitle("WEATHER KIND PRESETS"))
         val wRow1 = LinearLayout(act).apply { orientation = LinearLayout.HORIZONTAL }
         wRow1.addView(btn("☀️ CLEAR", bgCol = "#065f46", textCol = "#a7f3d0") { app.post { app.settings.pickWeather("clear"); app.toast("Weather: Clear") } })
@@ -250,16 +272,28 @@ class DebugTool(
 
         contentContainer.addView(sectionTitle("WIND DIRECTION"))
         val dirRow = LinearLayout(act).apply { orientation = LinearLayout.HORIZONTAL }
-        for (d in arrayOf("N" to 0f, "NE" to 45f, "E" to 90f, "SE" to 135f, "S" to 180f, "SW" to 225f, "W" to 270f, "NW" to 315f)) {
-            dirRow.addView(btn(d.first, textSizeSp = 9.5f) {
+        for (d in arrayOf("N 0°" to 0f, "NE 45°" to 45f, "E 90°" to 90f, "SE 135°" to 135f, "S 180°" to 180f, "SW 225°" to 225f, "W 270°" to 270f, "NW 315°" to 315f)) {
+            dirRow.addView(btn(d.first, textSizeSp = 8.5f) {
                 app.post {
                     app.env.liveWindDirDeg = d.second
                     app.env.applyEnvironmentSettings()
-                    app.toast("Wind Direction: ${d.first} (${d.second.toInt()}°)")
+                    app.toast("Wind Direction: ${d.first}")
                 }
             })
         }
         contentContainer.addView(dirRow)
+
+        contentContainer.addView(sectionTitle("BEDROOM WINDOW SASH & OUTDOOR SOUND"))
+        val winRow = LinearLayout(act).apply { orientation = LinearLayout.HORIZONTAL }
+        winRow.addView(btn("🪟 TOGGLE WINDOW (Open / Closed)", bgCol = "#065f46", textCol = "#a7f3d0", borderCol = "#10b981", heightDp = 38f) {
+            app.post {
+                val nowOpen = app.room.toggleWindow()
+                app.sound.updateLayered()
+                app.settings.changed()
+                app.toast("🪟 Window: ${if (nowOpen) "OPEN (Loud outdoor audio, leaves drift inside)" else "CLOSED (Muffled glass)"}")
+            }
+        })
+        contentContainer.addView(winRow)
 
         contentContainer.addView(sectionTitle("LEAF PHYSICS & WINDOW HITS"))
         val leafRow = LinearLayout(act).apply { orientation = LinearLayout.HORIZONTAL }
@@ -276,6 +310,14 @@ class DebugTool(
         hitRow.addView(btn("Hits: 50%") { app.post { app.settings.setWindowHitRate(0.50f); app.toast("Window Leaf Hit Rate: 50%") } })
         hitRow.addView(btn("Hits: 100% (ALL)") { app.post { app.settings.setWindowHitRate(1.00f); app.toast("Window Leaf Hit Rate: 100% (Always Hit)") } })
         contentContainer.addView(hitRow)
+
+        contentContainer.addView(sectionTitle("LIVE WEATHER REFRESH INTERVAL"))
+        val refRow = LinearLayout(act).apply { orientation = LinearLayout.HORIZONTAL }
+        refRow.addView(btn("5 MIN") { app.post { app.settings.setLiveWeatherRefreshMinutes(5) } })
+        refRow.addView(btn("15 MIN") { app.post { app.settings.setLiveWeatherRefreshMinutes(15) } })
+        refRow.addView(btn("30 MIN") { app.post { app.settings.setLiveWeatherRefreshMinutes(30) } })
+        refRow.addView(btn("60 MIN") { app.post { app.settings.setLiveWeatherRefreshMinutes(60) } })
+        contentContainer.addView(refRow)
 
         contentContainer.addView(sectionTitle("SEASONS"))
         val sRow = LinearLayout(act).apply { orientation = LinearLayout.HORIZONTAL }

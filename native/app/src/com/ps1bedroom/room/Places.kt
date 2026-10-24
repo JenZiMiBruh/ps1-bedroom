@@ -7,6 +7,7 @@ import com.ps1bedroom.room.engine.Geo
 import com.ps1bedroom.room.engine.GeoCurves
 import com.ps1bedroom.room.engine.Geometry
 import com.ps1bedroom.room.engine.Group
+import com.ps1bedroom.room.engine.Mat4
 import com.ps1bedroom.room.engine.Material
 import com.ps1bedroom.room.engine.Mesh
 import com.ps1bedroom.room.engine.Object3D
@@ -196,6 +197,7 @@ class Places(
     private fun parkedCar(group: Group, kind: String, x: Float, z: Float, rotY: Float = 0f): Group {
         val v = exterior.parkedVehicle(kind)
         v.scale.set(2.3f, 2.3f, 2.3f); v.position.set(x, 0.32f - 0.04f * 2.3f, z); v.rotation.y = rotY
+        addCarLeaves(v)
         group.add(v)
         return v
     }
@@ -399,6 +401,90 @@ class Places(
         }
         chimneyEmitters += ChimneyEmitter(g, puffs, mats, chimneyEmitters.size * 0.37f)
     }
+
+    class PlaceLeaf(
+        val mesh: Mesh,
+        val mat: Material,
+        val homeX: Float, val homeY: Float, val homeZ: Float,
+        val slopeDirX: Float, val slopeDirZ: Float,
+        val flutterPhase: Float,
+        val kind: String = "broadleaf" // "broadleaf", "straw", "desert", "pine"
+    ) {
+        var blowTimer: Float = 0f
+    }
+    private val placeLeaves = ArrayList<PlaceLeaf>()
+    private var barnWeatherVane: Mesh? = null
+
+    private val leafClusterGeo by lazy {
+        val q1 = Geo.plane(0.12f, 0.08f)
+        val q2 = Geo.plane(0.10f, 0.07f).rotateZ(0.35f).translate(0.06f, 0.008f, 0.04f)
+        val q3 = Geo.plane(0.09f, 0.06f).rotateZ(-0.30f).translate(-0.05f, 0.008f, -0.03f)
+        GeoCurves.merge(listOf(q1, q2, q3))
+    }
+
+    private fun addRoofLeaves(g: Group, w: Float, h: Float, d: Float, flat: Boolean, roofKind: String) {
+        val kind = when {
+            roofKind == "tiles" -> "desert"
+            else -> "broadleaf"
+        }
+        val defCol = when (kind) {
+            "desert" -> 0xc28448
+            else -> 0xea580c
+        }
+        if (!flat) {
+            // Front slope
+            val m1 = PS1.material(color = defCol)
+            val l1 = Mesh(leafClusterGeo, m1)
+            l1.position.set(w * 0.16f, h + 0.36f, d * 0.24f)
+            l1.rotation.x = -0.55f; l1.rotation.y = 0.12f
+            g.add(l1)
+            placeLeaves += PlaceLeaf(l1, m1, l1.position.x, l1.position.y, l1.position.z, 0.4f, 0.8f, placeLeaves.size * 1.3f, kind)
+
+            // Hip / Valley
+            val m2 = PS1.material(color = if (kind == "desert") 0xa76d39 else 0xd97706)
+            val l2 = Mesh(leafClusterGeo, m2)
+            l2.position.set(-w * 0.24f, h + 0.32f, d * 0.18f)
+            l2.rotation.x = -0.45f; l2.rotation.y = -0.35f
+            g.add(l2)
+            placeLeaves += PlaceLeaf(l2, m2, l2.position.x, l2.position.y, l2.position.z, -0.6f, 0.6f, placeLeaves.size * 1.3f, kind)
+
+            // Gutter edge
+            val m3 = PS1.material(color = if (kind == "desert") 0xd4a373 else 0xdc2626)
+            val l3 = Mesh(leafClusterGeo, m3)
+            l3.position.set(w * 0.28f, h + 0.08f, d * 0.44f)
+            l3.rotation.x = -0.15f
+            g.add(l3)
+            placeLeaves += PlaceLeaf(l3, m3, l3.position.x, l3.position.y, l3.position.z, 0.2f, 0.9f, placeLeaves.size * 1.3f, kind)
+        } else {
+            // Flat roof parapet leaves / sand drift
+            val m1 = PS1.material(color = defCol)
+            val l1 = Mesh(leafClusterGeo, m1)
+            l1.position.set(-w * 0.2f, h + 0.15f, d * 0.2f)
+            l1.rotation.x = -P2
+            g.add(l1)
+            placeLeaves += PlaceLeaf(l1, m1, l1.position.x, l1.position.y, l1.position.z, -0.5f, 0.5f, placeLeaves.size * 1.3f, kind)
+        }
+    }
+
+    private fun addCarLeaves(v: Group) {
+        val defCol = 0xea580c
+        // Leaf cluster on car hood
+        val m1 = PS1.material(color = defCol)
+        val l1 = Mesh(leafClusterGeo, m1)
+        l1.position.set(0.24f, 0.22f, 0.04f)
+        l1.rotation.x = 0.06f; l1.rotation.y = 0.2f
+        v.add(l1)
+        placeLeaves += PlaceLeaf(l1, m1, l1.position.x, l1.position.y, l1.position.z, 0.8f, 0.2f, placeLeaves.size * 1.3f, "broadleaf")
+
+        // Leaf cluster at windshield wiper cowl
+        val m2 = PS1.material(color = 0xd97706)
+        val l2 = Mesh(leafClusterGeo, m2)
+        l2.position.set(0.06f, 0.32f, -0.03f)
+        l2.rotation.x = -0.25f; l2.rotation.z = -0.1f
+        v.add(l2)
+        placeLeaves += PlaceLeaf(l2, m2, l2.position.x, l2.position.y, l2.position.z, 0.5f, -0.3f, placeLeaves.size * 1.3f, "broadleaf")
+    }
+
     // Gable-roofed house with siding, shingle roof, windows that light up, a door, porch light and a chimney
     private fun house3D(group: Group, x: Float, z: Float, w: Float = 2.4f, h: Float = 1.3f, d: Float = 1.7f, wall: String = "#d6c7a1", roof: String = "#5b3a32",
                         rotY: Float = 0f, garage: Boolean = false, flat: Boolean = false, roofKind: String = "shingles", wallKind: String = "siding"): Group {
@@ -418,6 +504,7 @@ class Places(
         val pl = PS1.material(color = 0xfff3c4, emissive = 0xffc977, emissiveIntensity = 0f); nightGlowMats += pl
         add(g, Geo.box(0.06f, 0.08f, 0.04f), pl, doorX + 0.26f, 0.6f, front + 0.02f)
         add(g, Geo.box(0.6f, 0.08f, 0.3f), kitMat("concrete", "#b8b4ac"), doorX, 0.04f, front + 0.15f)
+        addRoofLeaves(g, w, h, d, flat, roofKind)
         return g
     }
     /** A wireframe icosahedron (the tumbleweed) as thin merged struts: the engine has no line mode. */
@@ -637,6 +724,11 @@ class Places(
                 cyl(t, 0.05f, 0.05f, 0.36f, 0x6b7280, -0.85f, 1.66f, -0.25f, 6)
                 cyl(t, 0.08f, 0.08f, 0.03f, 0x4b5563, -0.85f, 1.85f, -0.25f, 6)
                 addChimneySmoke(t, -0.85f, 1.88f, -0.25f, -rotY)
+                val trLeafMat = PS1.material(color = 0xd97706)
+                val tl = Mesh(leafClusterGeo, trLeafMat)
+                tl.position.set(-0.6f, 1.48f, 0.25f); tl.rotation.y = 0.3f
+                t.add(tl)
+                placeLeaves += PlaceLeaf(tl, trLeafMat, tl.position.x, tl.position.y, tl.position.z, 0.3f, 0.6f, placeLeaves.size * 1.3f, "pine")
                 val winMat = PS1.material(color = 0x1f2937, emissive = 0xffc977, emissiveIntensity = 0f, polygonOffset = true, polygonOffsetFactor = -2f, polygonOffsetUnits = -2f)
                 windowMats += winMat to floatArrayOf(0.5f, 0.8f, 0.3f)[trailerNo++ % 3]
                 for (wx in floatArrayOf(-1.2f, 0.6f)) add(t, Geo.plane(0.5f, 0.35f), winMat, wx, 1.08f, 0.73f)
@@ -899,6 +991,23 @@ class Places(
             val barn = sub(g, 2.8f, 0.32f, -12.5f, -0.3f)
             add(barn, boxG(3.2f, 2.0f, 2.6f), kitMat("wood", "#a8322a", 4f, 2f), 0f, 1.0f, 0f)
             add(barn, Geo.cylinder(0.01f, 1.0f, 1.0f, 4).rotateY(P4), kitMat("corrugated", "#5b5f66", 4f, 2f), 0f, 2.55f, 0f).scale.set(2.4f, 1.1f, 2.0f)
+            // Straw & autumn foliage on barn roof
+            val blMat1 = PS1.material(color = 0xd4b04a)
+            val bl1 = Mesh(leafClusterGeo, blMat1)
+            bl1.position.set(0.6f, 2.68f, 0.6f); bl1.rotation.x = -0.65f
+            barn.add(bl1)
+            placeLeaves += PlaceLeaf(bl1, blMat1, bl1.position.x, bl1.position.y, bl1.position.z, 0.5f, 0.7f, placeLeaves.size * 1.3f, "straw")
+
+            val blMat2 = PS1.material(color = 0xea580c)
+            val bl2 = Mesh(leafClusterGeo, blMat2)
+            bl2.position.set(-0.8f, 2.52f, 0.7f); bl2.rotation.x = -0.55f
+            barn.add(bl2)
+            placeLeaves += PlaceLeaf(bl2, blMat2, bl2.position.x, bl2.position.y, bl2.position.z, -0.6f, 0.8f, placeLeaves.size * 1.3f, "broadleaf")
+
+            // Rooftop rooster weather vane on barn that spins into live wind
+            add(barn, Geo.cylinder(0.02f, 0.02f, 0.32f, 4), mat(0x111111), 0f, 3.16f, 0f)
+            val vane = add(barn, Geo.box(0.36f, 0.12f, 0.02f), mat(0x111111), 0f, 3.32f, 0f)
+            barnWeatherVane = vane
             add(barn, Geo.plane(1.2f, 1.4f), kitMat("wood", "#8f2a24", 2f, 1f), 0f, 0.7f, 1.31f)
             for (rz in floatArrayOf(0.8f, -0.8f)) add(barn, Geo.box(1.7f, 0.08f, 0.02f), mat(0xf1f1ea), 0f, 0.7f, 1.32f).rotation.z = rz
             add(g, Geo.cylinder(0.6f, 0.6f, 3.2f, 10), kitMat("corrugated", "#c9cdd2", 4f, 3f), 5.0f, 1.92f, -12.0f)
@@ -1194,38 +1303,115 @@ class Places(
                 m.opacity = sin(age * PF) * (if (sky.isNight()) 0.36f else 0.46f)
             }
         }
+
+        // Location fallen leaves & debris on roofs, cars, and decks
+        val isWinter = env.currentSeason == "winter" || env.isSnowingNow()
+        val seasonCols = when (env.currentSeason) {
+            "fall" -> intArrayOf(0xea580c, 0xdc2626, 0xd97706, 0xf59e0b)
+            "spring" -> intArrayOf(0xf472b6, 0x16a34a, 0xfbcfe8, 0x22c55e)
+            "summer" -> intArrayOf(0x15803d, 0x166534, 0x1b4332, 0x22c55e)
+            else -> intArrayOf(0x78716c, 0x57534e, 0x44403c, 0x78716c)
+        }
+        val windSpd = 1.2f + W.wind * 3.2f
+        val windGust = W.wind * 0.22f
+
+        for ((idx, pl) in placeLeaves.withIndex()) {
+            if (pl.mesh.parent?.visible != true) continue
+
+            // Color updates by season
+            when (pl.kind) {
+                "straw" -> pl.mat.color.setHex(0xd4b04a)
+                "desert" -> pl.mat.color.setHex(if (idx % 2 == 0) 0xc28448 else 0xa76d39)
+                "pine" -> pl.mat.color.setHex(if (isWinter) 0x57534e else 0x854d0e)
+                else -> {
+                    if (isWinter && !envDef().noSnow) pl.mat.color.setHex(0xf1f5f9) // snow dusted
+                    else pl.mat.color.setHex(seasonCols[idx % seasonCols.size])
+                }
+            }
+
+            // Wind flutter & blow-off animation
+            if (pl.blowTimer > 0f) {
+                pl.blowTimer -= dt
+                val blowK = 1f - (pl.blowTimer / 4f)
+                pl.mesh.position.x = pl.homeX + pl.slopeDirX * blowK * 1.4f
+                pl.mesh.position.y = pl.homeY - blowK * 0.45f + sin(blowK * PI.toFloat()) * 0.22f
+                pl.mesh.position.z = pl.homeZ + pl.slopeDirZ * blowK * 0.8f
+                pl.mesh.rotation.z += dt * 6f
+                if (pl.blowTimer <= 0f) {
+                    pl.mesh.position.set(pl.homeX, pl.homeY, pl.homeZ)
+                }
+            } else {
+                val flutter = sin(t * windSpd * 3.5f + pl.flutterPhase) * (0.02f + windGust)
+                pl.mesh.rotation.z = flutter
+                pl.mesh.rotation.x = cos(t * windSpd * 2.8f + pl.flutterPhase) * (0.015f + windGust * 0.6f)
+                if (W.wind > 0.4f && rnd.nextFloat() < dt * 0.05f * W.wind) {
+                    pl.blowTimer = 4f
+                }
+            }
+        }
+
         when (e) {
             "beach" -> {
-                beachSea.tex.offsetY = (t * (0.03f + W.wind * 0.03f)) % 1
-                val surge = sin(t * (0.8f + W.wind * 0.7f))
-                foam.position.z = -9.0f + surge * (0.35f + W.wind * 0.2f)
-                foam.material.opacity = 0.35f + 0.25f * max(0f, surge)
+                beachSea.tex.offsetY = (t * (0.03f + W.wind * 0.035f)) % 1
+                val stormSurge = if (env.W.base == "storm" || env.isRainingNow()) 1.6f else 1.0f
+                val surge = sin(t * (0.8f + W.wind * 0.7f) * stormSurge)
+                foam.position.z = -9.0f + surge * (0.35f + W.wind * 0.35f * stormSurge)
+                foam.material.opacity = (0.35f + 0.35f * max(0f, surge)).coerceIn(0.2f, 0.95f)
             }
             "island" -> {
-                islandSea.tex.offsetY = (t * (0.02f + W.wind * 0.02f)) % 1
-                tikiFlames.forEachIndexed { i, f -> f.material.emissiveIntensity = if (sky.isNight() && !env.isRainingNow()) 1.1f + sin(t * 13 + i * 2) * 0.25f else 0f; f.scale.y = 1 + sin(t * 11 + i) * 0.15f }
+                val stormBoost = if (env.W.base == "storm" || env.isRainingNow()) 1.8f else 1.0f
+                islandSea.tex.offsetY = (t * (0.02f + W.wind * 0.035f) * stormBoost) % 1
+                val inRain = env.isRainingNow()
+                tikiFlames.forEachIndexed { i, f ->
+                    f.material.emissiveIntensity = if (sky.isNight() && !inRain) 1.1f + sin(t * 13 + i * 2) * 0.25f
+                        else if (sky.isNight()) 0.45f + sin(t * 24 + i * 3) * 0.2f
+                        else 0f
+                    f.scale.y = if (inRain) 0.65f + sin(t * 24 + i) * 0.15f else 1f + sin(t * 11 + i) * 0.15f
+                }
             }
-            "lake" -> lakeWater.tex.offsetX = (t * (0.004f + W.wind * 0.008f)) % 1
+            "lake" -> {
+                val lakeSpeed = 0.004f + W.wind * 0.012f + (if (env.isRainingNow()) 0.006f else 0f)
+                lakeWater.tex.offsetX = (t * lakeSpeed) % 1
+                if (env.isRainingNow()) {
+                    lakeWater.tex.offsetY = (t * 0.008f) % 1
+                    lakeWater.mat.opacity = 0.88f + sin(t * 9f) * 0.06f
+                }
+            }
             "house" -> {
-                swings.forEachIndexed { i, s -> s.rotation.x = sin(t * 1.6f + i * 1.3f) * (0.05f + W.wind * 0.25f) }
-                chimeRods.forEachIndexed { i, r -> r.rotation.x = sin(t * 2.3f + i) * (0.05f + W.wind * 0.35f); r.rotation.z = cos(t * 1.9f + i * 2) * (0.04f + W.wind * 0.3f) }
+                val windBoost = if (env.liveWindSpeedKmH >= 0f) env.liveWindSpeedKmH / 30f else W.wind
+                swings.forEachIndexed { i, s -> s.rotation.x = sin(t * (1.6f + windBoost * 1.2f) + i * 1.3f) * (0.05f + windBoost * 0.35f) }
+                chimeRods.forEachIndexed { i, r -> r.rotation.x = sin(t * (2.3f + windBoost * 2.5f) + i) * (0.05f + windBoost * 0.45f); r.rotation.z = cos(t * (1.9f + windBoost * 2.2f) + i * 2) * (0.04f + windBoost * 0.4f) }
             }
             "trailer" -> {
+                val windBoost = if (env.liveWindSpeedKmH >= 0f) env.liveWindSpeedKmH / 30f else W.wind
                 laundryItems.forEachIndexed { i, l ->
-                    l.rotation.x = sin(t * (2.2f + W.wind * 3.5f) + i * 1.1f) * (0.06f + W.wind * 0.42f)
+                    l.rotation.x = sin(t * (2.2f + windBoost * 4.2f) + i * 1.1f) * (0.06f + windBoost * 0.52f)
                 }
             }
             "desert" -> {
-                tumbleweed.position.x += dt * (0.4f + W.wind * 1.6f)
-                tumbleweed.rotation.z -= dt * (1.5f + W.wind * 6)
-                tumbleweed.position.y = 0.57f + abs(sin(t * 3)) * 0.15f
+                val tumbleSpeed = 0.4f + W.wind * 2.2f + (if (env.liveWindSpeedKmH >= 0f) env.liveWindSpeedKmH / 18f else 0f)
+                tumbleweed.position.x += dt * tumbleSpeed
+                tumbleweed.rotation.z -= dt * (1.5f + tumbleSpeed * 4f)
+                tumbleweed.position.y = 0.57f + abs(sin(t * (3f + W.wind * 3.5f))) * (0.15f + W.wind * 0.16f)
                 if (tumbleweed.position.x > 7) tumbleweed.position.x = -7 - rnd.nextFloat() * 10
+            }
+            "countryside" -> {
+                val vaneTarget = (Math.toRadians(if (env.liveWindDirDeg >= 0f) env.liveWindDirDeg.toDouble() else 225.0)).toFloat()
+                barnWeatherVane?.rotation?.y = vaneTarget + sin(t * 3.5f) * (0.05f + W.wind * 0.25f)
+            }
+            "neon" -> {
+                if (env.isRainingNow() || env.W.rain > 0.05f) {
+                    neonShops.material.emissiveIntensity = 0.18f + sin(t * 5f) * 0.05f
+                } else {
+                    neonShops.material.emissiveIntensity = 0f
+                }
             }
             "skyscraper" -> {
                 val now = SystemClock.uptimeMillis()
                 if (now > skyAd.next) { exterior.drawNextPlacesAd(skyAd.ctx); skyAd.tex.needsUpdate(); skyAd.next = now + 25000 }
                 skyAd.mat.emissiveIntensity = (0.3 + 0.6 * (1 - env.daylight)).toFloat()
-                skyAd.beacon.emissiveIntensity = if (sin(t * 3) > 0.3f) 1f else 0.1f
+                val stormBeacon = if (env.W.base == "storm" || env.W.lightning) 2.5f else 1.0f
+                skyAd.beacon.emissiveIntensity = if (sin(t * (3f * stormBeacon)) > 0.2f) 1f else 0.1f
             }
         }
     }

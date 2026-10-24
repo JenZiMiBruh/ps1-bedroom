@@ -24,6 +24,14 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.53.5", "Location weather dynamics: freeway traffic rain spray & leaves landing on roofs & cars", listOf(
+            "Freeway traffic tire spray: cars driving on the elevated highway kick up realistic tire spray rooster tails that scale with vehicle speed and rain intensity",
+            "Taillight spray glow & snow powder: rain spray catches glowing red taillight reflections at night, and switches to a billowing snow powder wake in winter",
+            "Leaves on houses and roofs: fallen leaf clusters settle on sloped shingle roofs, hips, valleys, gutters, and flat roofs across suburbs, neighborhood, backyard, and countryside",
+            "Leaves on cars: parked cars along curbs and in driveways collect fallen leaves on hoods and windshield wiper cowls, trembling in the wind and sliding down in gusts",
+            "Barn weather vane & countryside straw: red barn rooftop rooster weather vane spins and points directly into live wind direction; straw and leaves scatter on barn roof",
+            "Bespoke weather in every location: storm surf surges and foam crash on beach; tropical tiki torch flames sputter in rain; lake ripples expand with raindrops; desert tumbleweeds bounce with live wind; wet neon asphalt reflections deepen"
+        )),
         Entry("0.53.4", "Window leaf hit slider & complete 90s WeatherStar 4000 weather channel overhaul", listOf(
             "Leaves hitting window slider: new 0% to 100% collision chance slider under Weather & Sky Debris settings modulating how many airborne leaves strike the window glass and sill",
             "Overhauled TV Weather Channel: transformed Channel 12 into an authentic nostalgic 1990s WeatherStar 4000 'Local on the 8s' broadcast with rotating multi-page local forecast slides",

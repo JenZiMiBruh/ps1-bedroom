@@ -89,7 +89,7 @@ class Exterior(private val group: Group, private val env: Environment, private v
     private fun pickVehicleType(): VehicleType { var r = rnd.nextDouble() * vehicleWeightTotal; for (v in VEHICLE_TYPES) { r -= v.w; if (r <= 0) return v }; return VEHICLE_TYPES[0] }
     private class Lane(val z: Float, val dir: Int)
     private val LANES = listOf(Lane(-5.65f, 1), Lane(-6.65f, -1))
-    private class Vehicle(val g: Group, val type: VehicleType, val dir: Int, val cruise: Double, val beam: Mesh, val snow: Mesh, val len: Float) {
+    private class Vehicle(val g: Group, val type: VehicleType, val dir: Int, val cruise: Double, val beam: Mesh, val snow: Mesh, val len: Float, val spray: Mesh, val sprayMat: Material) {
         var speed = 0.0; var active = false; lateinit var lane: Lane
     }
     private val trafficCars3D = ArrayList<Vehicle>()
@@ -396,7 +396,15 @@ class Exterior(private val group: Group, private val env: Environment, private v
         wetFront.rotation.x = (-PI / 2).toFloat(); wetFront.position.set(front + (if (dir > 0) 0.5f else -0.5f), 0.012f, 0f); g.add(wetFront)
         val wetBack = Mesh(Geo.plane(0.6f, 0.08f), wetRedMat)
         wetBack.rotation.x = (-PI / 2).toFloat(); wetBack.position.set(if (dir > 0) -type.len / 2 - 0.35f else type.len / 2 + 0.35f, 0.012f, 0f); g.add(wetBack)
-        return Vehicle(g, type, dir, 1.7 + rnd.nextDouble() * 0.9, beam, snow, type.len + (if (type.box) 0.3f else 0f))
+        // Tire spray plume shooting backward behind the rear axle when roads are wet or snowy
+        val rear = if (dir > 0) -type.len / 2 - 0.04f else type.len / 2 + 0.04f
+        val sprayMat = PS1.basic(color = 0xbfdbfe, transparent = true, opacity = 0f, depthWrite = false)
+        val spray = Mesh(Geo.cone(0.14f, 0.48f, 6), sprayMat)
+        spray.rotation.z = if (dir > 0) (-PI / 2).toFloat() - 0.2f else (PI / 2).toFloat() + 0.2f
+        spray.position.set(rear + (if (dir > 0) -0.22f else 0.22f), 0.10f, 0f)
+        spray.visible = false
+        g.add(spray)
+        return Vehicle(g, type, dir, 1.7 + rnd.nextDouble() * 0.9, beam, snow, type.len + (if (type.box) 0.3f else 0f), spray, sprayMat)
     }
 
 
@@ -404,7 +412,7 @@ class Exterior(private val group: Group, private val env: Environment, private v
     val buildingTextures get() = listOf(bldgTex1, bldgTex2, bldgTex3)
     fun parkedVehicle(kind: String): Group {
         val v = buildVehicle(VEHICLE_TYPES.firstOrNull { it.kind == kind } ?: VEHICLE_TYPES[0], 1)
-        v.beam.visible = false; v.snow.visible = false
+        v.beam.visible = false; v.snow.visible = false; v.spray.visible = false
         return v.g
     }
     private var placesAd: Ad? = null
@@ -444,9 +452,10 @@ class Exterior(private val group: Group, private val env: Environment, private v
         val jam = if (density > 0.7) 0.6 else 1.0 // rush-hour crawl
         val night = 1 - env.daylight
         val lightsOn = night > 0.35 || env.isPrecipNow() || W.fog > 0.3f
-        val wet = env.isRainingNow() && night > 0.3
-        wetGlowMat.opacity = if (wet) 0.35f else 0f
-        wetRedMat.opacity = if (wet) 0.3f else 0f
+        val isRaining = env.isRainingNow() || env.W.rain > 0.06f
+        val isSnowing = env.isSnowingNow()
+        wetGlowMat.opacity = if (isRaining) (if (night > 0.35) 0.45f else 0.22f) else 0f
+        wetRedMat.opacity = if (isRaining) (if (night > 0.35) 0.38f else 0.18f) else 0f
         val flash = sin(t * 14) > 0
         policeRed.emissiveIntensity = if (policeChase > 0 && flash) 1.2f else 0.1f
         policeBlue.emissiveIntensity = if (policeChase > 0 && !flash) 1.2f else 0.1f
@@ -476,6 +485,27 @@ class Exterior(private val group: Group, private val env: Environment, private v
             v.g.position.x += (v.dir * v.speed * dt).toFloat()
             v.beam.visible = lightsOn
             v.snow.visible = env.isSnowingNow() || (env.currentSeason == "winter" && env.daylight < 0.6)
+            // Tire spray plumes kicked up by traffic on wet or snowy highway lanes
+            if (v.active && (isRaining || isSnowing) && v.speed > 0.25) {
+                v.spray.visible = true
+                val speedK = (v.speed / 2.0).coerceIn(0.2, 1.4).toFloat()
+                val rainK = if (isRaining) (0.35f + env.W.rain * 0.65f) else 0.55f
+                if (isRaining) {
+                    val sprayCol = if (night > 0.38) 0xfca5a5 else 0xbfdbfe
+                    v.sprayMat.color.setHex(sprayCol)
+                    v.sprayMat.opacity = (0.32f * speedK * rainK).coerceIn(0.08f, 0.45f)
+                } else {
+                    v.sprayMat.color.setHex(0xf8fafc)
+                    v.sprayMat.opacity = (0.24f * speedK).coerceIn(0.06f, 0.35f)
+                }
+                val flutter = 1.0f + sin(t * 22f + v.g.position.x * 2.5f) * 0.15f
+                val lenScale = (0.55f + speedK * 0.75f * rainK) * flutter
+                val widthScale = (0.65f + speedK * 0.45f) * flutter
+                v.spray.scale.set(lenScale, widthScale, widthScale)
+            } else {
+                v.spray.visible = false
+                v.sprayMat.opacity = 0f
+            }
             if ((v.dir > 0 && v.g.position.x > 10.5f) || (v.dir < 0 && v.g.position.x < -10.5f) || active > wantActive + 2) {
                 v.active = false; v.g.visible = false; v.g.position.x = -30f; active--
             }

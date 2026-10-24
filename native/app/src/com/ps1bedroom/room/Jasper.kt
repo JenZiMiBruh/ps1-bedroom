@@ -686,22 +686,31 @@ class Jasper(private val room: Room, private val env: Environment) {
             }
         }
     }
+    /** How far the head is turned toward lookAt (0..1), eased in and out; the idle head pose is rebuilt every frame. */
+    private var lookK = 0f; private var lookYaw = 0f; private var lookPitch = 0f; private var lookLastT = -1f
     /** Head turn toward whatever caught his attention (and you, now and then, when you're close). Returns false if nothing. */
     private fun reactHead(t: Float): Boolean {
+        val dt = if (lookLastT < 0f) 0f else (t - lookLastT).coerceIn(0f, 0.1f); lookLastT = t
         val pp = playerPos
         if (t > lookUntil && pp != null && awake && t > nextPlayerLook) {
             nextPlayerLook = t + 6f + rnd.nextFloat() * 8f
             val d = kotlin.math.hypot(pp.x - pos.x, pp.z - pos.z)
             if (d < 1.8f) { lookFor(pp, t, 2.5f); if (d < 1.1f) wagUntil = t + 2f }
         }
-        val at = lookAt ?: return false
-        if (t > lookUntil) { lookAt = null; return false }
-        val want = atan2(at.x - pos.x, at.z - pos.z)
-        val yaw = shortAngle(heading, want).coerceIn(-1.0f, 1.0f)
-        dogHead.rotation.y += (yaw - dogHead.rotation.y) * 0.25f
-        val dist = kotlin.math.hypot(at.x - pos.x, at.z - pos.z).coerceAtLeast(0.3f)
-        val pitch = -kotlin.math.atan((at.y - (y + 0.75f)) / dist).coerceIn(-0.5f, 0.3f)
-        dogHead.rotation.x += (pitch - dogHead.rotation.x) * 0.25f
+        val at = lookAt
+        if (at != null && t > lookUntil) lookAt = null
+        val looking = lookAt != null
+        if (at != null && looking) {
+            val want = atan2(at.x - pos.x, at.z - pos.z)
+            lookYaw = shortAngle(heading, want).coerceIn(-1.0f, 1.0f)
+            val dist = kotlin.math.hypot(at.x - pos.x, at.z - pos.z).coerceAtLeast(0.3f)
+            lookPitch = -kotlin.math.atan((at.y - (y + 0.75f)) / dist).coerceIn(-0.5f, 0.3f)
+        }
+        lookK = (lookK + (if (looking) dt * 5f else -dt * 3f)).coerceIn(0f, 1f)
+        if (lookK <= 0f) return false
+        val k = lookK * lookK * (3 - 2 * lookK)
+        dogHead.rotation.y += (lookYaw - dogHead.rotation.y) * k
+        dogHead.rotation.x += (lookPitch - dogHead.rotation.x) * k
         return true
     }
     /** Sound hook (Sound.dogSound) and toasts, set by the app. */

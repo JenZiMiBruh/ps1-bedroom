@@ -34,6 +34,7 @@ class Settings(private val app: App, private val ctx: Context) {
     @JvmField var debrisSpeed = 1.0f
     @JvmField var debrisFreq = 1.0f
     @JvmField var windowHitRate = 0.50f
+    @JvmField var indoorLeavesStay = false
     // Lightning frequency ("off" | "rare" | "normal" | "frequent" | "constant")
     @JvmField var lightningFreq = "normal"
     // Thunder acoustic frequency profile ("full" = balanced crack+sub · "low" = deep sub rumble · "high" = sharp electric snap)
@@ -88,8 +89,8 @@ class Settings(private val app: App, private val ctx: Context) {
             "saver" to Quality(180, 30, 8, 1024, 0f, "Lower resolution and 30 fps. Gentle on battery for leaving it on all night."),
             "balanced" to Quality(240, 60, 14, 1024, 0.8f, "The classic PS1 look at a smooth 60 fps."),
             "high" to Quality(480, 60, 18, 1024, 1.0f, "Crisp 480p picture and richer light rays."),
-            "ultra" to Quality(1080, 60, 24, 2048, 1.2f, "Full HD (1080p) clarity with rich volumetric rays and sharp details."),
-            "cinema4k" to Quality(2160, 60, 32, 2048, 1.4f, "Maximum 4K Ultra HD (2160p) fidelity. Crystal-clear room rendering.")
+            "ultra" to Quality(1080, 60, 24, 2048, 1.2f, "Up to 1080p (never above your screen) with richer light rays. Uses more battery."),
+            "cinema4k" to Quality(2160, 60, 32, 2048, 1.4f, "Your screen's full resolution (up to 4K) with the richest light rays. Heaviest on battery and heat.")
         )
         class Vibe(val label: String, val tint: FloatArray, val sat: Float, val con: Float, val vig: Float)
         val VIBES = linkedMapOf(
@@ -195,6 +196,7 @@ class Settings(private val app: App, private val ctx: Context) {
     fun setDebrisSpeed(v: Float) { debrisSpeed = v.coerceIn(0.2f, 2.5f); app.weatherFx.setDebrisParams(debrisAmount, debrisSpeed, debrisFreq, windowHitRate); changed() }
     fun setDebrisFreq(v: Float) { debrisFreq = v.coerceIn(0.2f, 2.5f); app.weatherFx.setDebrisParams(debrisAmount, debrisSpeed, debrisFreq, windowHitRate); changed() }
     fun setWindowHitRate(v: Float) { windowHitRate = v.coerceIn(0f, 1f); app.weatherFx.setWindowHitRate(windowHitRate); changed() }
+    fun setIndoorLeavesStay(v: Boolean) { indoorLeavesStay = v; app.weatherFx.indoorLeavesStay = v; changed() }
     fun setLightningFreq(mode: String) {
         lightningFreq = if (mode in listOf("off", "rare", "normal", "frequent", "constant")) mode else "normal"
         app.weatherFx.lightningFreq = lightningFreq
@@ -314,8 +316,8 @@ class Settings(private val app: App, private val ctx: Context) {
         applyFps()
         if (!quiet) {
             when (qualityMode) {
-                "cinema4k" -> app.toast("✨ 4K Ultra HD (2160p) Activated! Maximum Fidelity.")
-                "ultra" -> app.toast("✨ Full HD (1080p) Activated!")
+                "cinema4k" -> app.toast("Quality: Max (your screen's full resolution)")
+                "ultra" -> app.toast("Quality: Ultra (up to 1080p)")
                 "high" -> app.toast("Quality: High (480p)")
                 "balanced" -> app.toast("Quality: Balanced (240p PS1)")
                 "saver" -> app.toast("Quality: Battery Saver (180p)")
@@ -491,7 +493,7 @@ class Settings(private val app: App, private val ctx: Context) {
         put("jitter", app.jitterBase.toDouble()); put("affine", app.renderer.ps1Uniforms.affineStrength.toDouble()); put("dither", app.renderer.post.ditherStrength.toDouble())
         put("volumetric", env.userVolumetricSetting.toDouble()); put("sway", app.swayAmount.toDouble()); put("ao", app.aoBase.toDouble())
         put("tempUnit", tempUnit); put("fpsChoice", fpsChoice); put("ecoIdle", ecoIdle)
-        put("debrisMode", debrisMode); put("debrisAmount", debrisAmount.toDouble()); put("debrisSpeed", debrisSpeed.toDouble()); put("debrisFreq", debrisFreq.toDouble()); put("windowHitRate", windowHitRate.toDouble())
+        put("debrisMode", debrisMode); put("debrisAmount", debrisAmount.toDouble()); put("debrisSpeed", debrisSpeed.toDouble()); put("debrisFreq", debrisFreq.toDouble()); put("windowHitRate", windowHitRate.toDouble()); put("indoorLeavesStay", indoorLeavesStay); put("phoneMode", app.phone.mode)
         put("lightningFreq", lightningFreq)
         put("lightsOut", env.lightsOut)
         put("carsMode", app.places.carsMode); put("carsDensity", app.places.carsDensity.toDouble()); put("carsStayMin", app.places.carsStayMinutes.roundToInt())
@@ -562,6 +564,8 @@ class Settings(private val app: App, private val ctx: Context) {
             debrisSpeed = s.optDouble("debrisSpeed", 1.0).toFloat().coerceIn(0.2f, 2.5f)
             debrisFreq = s.optDouble("debrisFreq", 1.0).toFloat().coerceIn(0.2f, 2.5f)
             windowHitRate = s.optDouble("windowHitRate", 0.5).toFloat().coerceIn(0f, 1f)
+            indoorLeavesStay = s.optBoolean("indoorLeavesStay", false); app.weatherFx.indoorLeavesStay = indoorLeavesStay
+            app.phone.mode = s.optString("phoneMode", "ring").let { if (it in listOf("ring", "silent", "off")) it else "ring" }
             app.weatherFx.setDebrisParams(debrisAmount, debrisSpeed, debrisFreq, windowHitRate)
             lightningFreq = s.optString("lightningFreq", "normal").let { if (it in listOf("off", "rare", "normal", "frequent", "constant")) it else "normal" }
             app.weatherFx.lightningFreq = lightningFreq

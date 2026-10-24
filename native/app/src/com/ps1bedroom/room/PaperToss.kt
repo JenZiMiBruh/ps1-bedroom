@@ -77,9 +77,10 @@ class PaperToss(private val act: Activity, private val root: FrameLayout, privat
         private var bg: Bitmap? = null
         private var bgAge = 99f
         private val p = Paint().apply { isAntiAlias = false }
-        private val txt = Paint().apply { isAntiAlias = false; typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD); color = Color.WHITE }
+        private val txt = Paint().apply { isAntiAlias = true; isSubpixelText = true; typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD); color = Color.WHITE }
         private val blit = Paint().apply { isFilterBitmap = false }
-        private val dstR = RectF(); private val srcR = Rect()
+        private val dstR = RectF(); private val srcR = Rect(); private val bgDst = RectF()
+        private val RS = 3
 
         // ---- world ----
         private val camH = 1.0f; private val zc = 1.2f
@@ -183,8 +184,9 @@ class PaperToss(private val act: Activity, private val root: FrameLayout, privat
             if (w <= 0 || h <= 0) return
             W = 240; H = max(140, (240f * h / w).toInt())
             frame?.recycle(); bg?.recycle()
-            frame = Bitmap.createBitmap(W, H, Bitmap.Config.ARGB_8888); fc = Canvas(frame!!)
-            bg = Bitmap.createBitmap(W, H, Bitmap.Config.ARGB_8888); bgAge = 99f
+            // Drawn in a 240-wide layout but rendered at 3x so text stays sharp and readable (scenery keeps its chunky look)
+            frame = Bitmap.createBitmap(W * RS, H * RS, Bitmap.Config.ARGB_8888); fc = Canvas(frame!!).apply { scale(RS.toFloat(), RS.toFloat()) }
+            bg = Bitmap.createBitmap(W * RS, H * RS, Bitmap.Config.ARGB_8888); bgAge = 99f
             horizon = H * 0.36f
             k = (H * 0.93f - horizon) * zc / camH
         }
@@ -342,10 +344,10 @@ class PaperToss(private val act: Activity, private val root: FrameLayout, privat
             step(dt)
             val g = fc ?: return
             bgAge += dt
-            if (bgAge > 5f) { bgAge = 0f; drawRoom(Canvas(bg!!)) }
+            if (bgAge > 5f) { bgAge = 0f; drawRoom(Canvas(bg!!).apply { scale(RS.toFloat(), RS.toFloat()) }) }
             g.save()
             if (shake > 0f) g.translate((rnd.nextFloat() - 0.5f) * shake * 8f, (rnd.nextFloat() - 0.5f) * shake * 6f)
-            g.drawBitmap(bg!!, 0f, 0f, null)
+            bgDst.set(0f, 0f, W.toFloat(), H.toFloat()); g.drawBitmap(bg!!, null, bgDst, null)
             if (screen == 1 || screen == 3) drawWorld(g)
             drawParticles(g)
             g.restore()
@@ -359,7 +361,7 @@ class PaperToss(private val act: Activity, private val root: FrameLayout, privat
             }
             drawClose(g)
             // blow it up, pixel-sharp
-            srcR.set(0, 0, W, H); dstR.set(0f, 0f, width.toFloat(), height.toFloat())
+            srcR.set(0, 0, W * RS, H * RS); dstR.set(0f, 0f, width.toFloat(), height.toFloat())
             c.drawColor(Color.BLACK)
             c.drawBitmap(frame!!, srcR, dstR, blit)
             // scanlines
@@ -606,7 +608,7 @@ class PaperToss(private val act: Activity, private val root: FrameLayout, privat
             button(g, "PLAY", bx0, H * 0.6f, bw, 26f, Color.rgb(0xcc, 0x22, 0x77)) { startRun() }
             button(g, "UPGRADES", bx0, H * 0.6f + 34, bw, 22f, Color.rgb(0x1d, 0x4e, 0xd8)) { screen = 2; app.sfx("ui") }
             button(g, "STATS", bx0, H * 0.6f + 64, bw, 22f, Color.rgb(0x33, 0x41, 0x55)) { screen = 4; app.sfx("ui") }
-            t(g, "flick up to throw · mind the wind", W / 2f, H - 12f, Color.rgb(0xb9, 0xb4, 0xe6), 8f, Paint.Align.CENTER)
+            t(g, "flick up to throw · mind the wind", W / 2f, H - 12f, Color.rgb(0xb9, 0xb4, 0xe6), 9f, Paint.Align.CENTER)
         }
 
         private fun drawShop(g: Canvas) {
@@ -619,7 +621,7 @@ class PaperToss(private val act: Activity, private val root: FrameLayout, privat
                 val l = lvl(u.id); val maxed = l >= u.max; val cost = u.cost(l)
                 panel(g, 6f, y, W - 12f, rowH - 4)
                 t(g, u.name, 12f, y + 12, Color.WHITE, 9.5f)
-                t(g, u.desc, 12f, y + 23, Color.rgb(0xb9, 0xb4, 0xe6), 7.5f)
+                t(g, u.desc, 12f, y + 23, Color.rgb(0xb9, 0xb4, 0xe6), 8.5f)
                 for (i in 0 until u.max) { p.color = if (i < l) Color.rgb(0x7c, 0xff, 0x6b) else Color.rgb(0x3a, 0x3a, 0x4a); g.drawRect(12f + i * 8, y + rowH - 12, 18f + i * 8, y + rowH - 8, p) }
                 val label = if (maxed) "MAX" else "$cost"; val rowY = y
                 button(g, label, W - 64f, y + (rowH - 4) / 2 - 9, 52f, 18f, Color.rgb(0x0f, 0x76, 0x6e), !maxed && coins >= cost) {
@@ -657,7 +659,7 @@ class PaperToss(private val act: Activity, private val root: FrameLayout, privat
             t(g, "GAME OVER", W / 2f, H * 0.2f + 26, Color.rgb(0xff, 0x4d, 0x6d), 20f, Paint.Align.CENTER)
             t(g, "SCORE $score", W / 2f, H * 0.2f + 52, Color.WHITE, 14f, Paint.Align.CENTER)
             if (newBest && sin(clock * 8f) > -0.3f) t(g, "NEW BEST!", W / 2f, H * 0.2f + 68, Color.rgb(0xff, 0xd2, 0x3f), 11f, Paint.Align.CENTER)
-            t(g, "STAGE $stage  ·  $baskets IN  ·  $runSwishes SWISH", W / 2f, H * 0.2f + 86, Color.rgb(0xb9, 0xb4, 0xe6), 8f, Paint.Align.CENTER)
+            t(g, "STAGE $stage  ·  $baskets IN  ·  $runSwishes SWISH", W / 2f, H * 0.2f + 86, Color.rgb(0xb9, 0xb4, 0xe6), 9f, Paint.Align.CENTER)
             t(g, "+$coinsEarned COINS", W / 2f, H * 0.2f + 104, Color.rgb(0xff, 0xd2, 0x3f), 12f, Paint.Align.CENTER)
             if (stateT > 0.6f) {
                 button(g, "AGAIN", 34f, H * 0.2f + 120, W - 68f, 24f, Color.rgb(0xcc, 0x22, 0x77)) { startRun() }
@@ -680,7 +682,7 @@ class PaperToss(private val act: Activity, private val root: FrameLayout, privat
                 val m = multiplier() * (if (onFire()) 2 else 1)
                 t(g, "x$m  STREAK $streak", 86f, 26f, if (onFire()) Color.rgb(0xff, 0x9f, 0x1c) else Color.rgb(0x7d, 0xd3, 0xfc), 8.5f)
             }
-            t(g, "BEST $best", W - 30f, 26f, Color.rgb(0xb9, 0xb4, 0xe6), 8f, Paint.Align.RIGHT)
+            t(g, "BEST $best", W - 30f, 26f, Color.rgb(0xb9, 0xb4, 0xe6), 9f, Paint.Align.RIGHT)
             if (screen != 1) return
             // wind: arrow + number
             val wy = 44f

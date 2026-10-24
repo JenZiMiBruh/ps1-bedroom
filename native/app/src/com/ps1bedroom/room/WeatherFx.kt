@@ -104,6 +104,9 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
     var debrisFreq = 1.0f; private set
     /** Controls the percentage (0..1) of leaves that drift toward and hit the window glass & sill. */
     var windowHitRate = 0.50f; private set
+    /** Leaves that blew in through the window: false = they fade away after INDOOR_LEAF_LIFE s on the floor, true = they stay. */
+    var indoorLeavesStay = false
+    private val INDOOR_LEAF_LIFE = 45f
     /** User-configurable lightning frequency ("off", "rare", "normal", "frequent", "constant"). */
     var lightningFreq = "normal"
     private var lastWeatherKind = ""
@@ -648,7 +651,7 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
             }
             for (i in 0 until LEAF_COUNT) {
                 val l = leaves[i]
-                if (i >= activeCount) {
+                if (i >= activeCount && l.state != 3) {
                     leafMesh.setInstance(i, 0f, -50f, 0f, 0f, 0f, 0f, 0f)
                     continue
                 }
@@ -755,10 +758,21 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
                         }
                     }
                     3 -> {
-                        // IN_ROOM: drifted inside the bedroom through the open window!
-                        l.x += l.vxOff * dt
+                        // IN_ROOM: drifted inside the bedroom through the open window. contactTimer > 0 = landed.
+                        if (l.contactTimer > 0f) {
+                            // Resting flat where it landed; fades (shrinks) away after a while unless leaves are set to stay
+                            if (!indoorLeavesStay) {
+                                l.contactTimer += dt
+                                if (l.contactTimer > INDOOR_LEAF_LIFE) { l.wait = randIn(1.0f, 5.0f); l.state = 0; l.contactTimer = 0f }
+                            }
+                            val fade = if (indoorLeavesStay) 1f else ((INDOOR_LEAF_LIFE - l.contactTimer) / 2.5f).coerceIn(0f, 1f)
+                            leafMesh.setInstance(i, l.x, l.y, l.z, l.rotX, l.rotY, l.rotZ, scale * fade)
+                            continue
+                        }
+                        l.x += (l.vxOff + sin(t * 2.1f + l.ph) * 0.12f) * dt
                         l.y += l.vyOff * dt
                         l.z += l.vzOff * dt
+                        l.vzOff = max(0.08f, l.vzOff - 0.18f * dt) // air drag: it slows as it crosses the room
                         l.rotX += 2.2f * dt
                         l.rotY += 3.0f * dt
                         l.rotZ += 1.8f * dt
@@ -770,18 +784,14 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
                             if (l.z > Room.MAX_Z - 0.05f) { l.z = Room.MAX_Z - 0.05f; l.vzOff = 0f }
                         }
 
-                        // Check collision with desk surface or bedroom floor
-                        val onDesk = l.x in 1.7f..3.1f && l.z in -2.6f..-1.4f && l.y <= 1.38f
-                        val onFloor = l.y <= 0.12f
+                        // Lands on the desk top or the floor and stays put
+                        val onDesk = l.x in 1.7f..3.1f && l.z in -2.6f..-1.4f && l.y <= 1.38f && l.y > 1.2f
+                        val onFloor = l.y <= 0.045f
                         if (onDesk || onFloor) {
-                            l.y = if (onDesk) 1.38f else 0.12f
+                            l.y = if (onDesk) 1.385f else 0.045f
                             l.vxOff = 0f; l.vyOff = 0f; l.vzOff = 0f
-                            l.rotX = (-PI / 2).toFloat()
-                            l.contactTimer += dt
-                            if (l.contactTimer > 18.0f) {
-                                l.wait = randIn(1.0f, 5.0f)
-                                l.state = 0
-                            }
+                            l.rotX = (-PI / 2).toFloat(); l.rotZ = 0f
+                            l.contactTimer = 0.001f
                         }
                     }
                 }

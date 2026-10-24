@@ -25,6 +25,9 @@ class LavaWax {
         boundingCenter.set(0f, 0.53f, 0f); boundingRadius = 0.32f
     }
     private val field = FloatArray((NX + 1) * (NY + 1) * (NZ + 1))
+    // The field's gradient at every grid corner (central differences): vertex normals come from these instead of
+    // re-evaluating the whole field 24 times per triangle
+    private val gradX = FloatArray(field.size); private val gradY = FloatArray(field.size); private val gradZ = FloatArray(field.size)
 
     /** One blob: where it is in its rise-and-fall, how fast its wax heats, how big it is. */
     private class Blob(val r: Float, val period: Float, var phase: Float, val wobble: Float, val ox: Float, val oz: Float) {
@@ -96,18 +99,26 @@ class LavaWax {
     // Six tetrahedra per cube around the 0-7 diagonal (corner index = x + 2y + 4z)
     private val TET = intArrayOf(0, 7, 1, 3, 0, 7, 3, 2, 0, 7, 2, 6, 0, 7, 6, 4, 0, 7, 4, 5, 0, 7, 5, 1)
     private val cx = FloatArray(8); private val cy = FloatArray(8); private val cz = FloatArray(8); private val cv = FloatArray(8)
+    private val cgx = FloatArray(8); private val cgy = FloatArray(8); private val cgz = FloatArray(8)
     private var nTri = 0
 
     /** Rebuilds the mesh from the current blobs. */
     fun mesh() {
         val sx = NX + 1; val sxy = (NX + 1) * (NY + 1)
         for (k in 0..NZ) for (j in 0..NY) for (i in 0..NX) field[i + j * sx + k * sxy] = f(X0 + i * dx, Y0 + j * dy, Z0 + k * dz)
+        for (k in 0..NZ) for (j in 0..NY) for (i in 0..NX) {
+            val n = i + j * sx + k * sxy
+            gradX[n] = (field[min(NX, i + 1) + j * sx + k * sxy] - field[max(0, i - 1) + j * sx + k * sxy]) / ((min(NX, i + 1) - max(0, i - 1)) * dx)
+            gradY[n] = (field[i + min(NY, j + 1) * sx + k * sxy] - field[i + max(0, j - 1) * sx + k * sxy]) / ((min(NY, j + 1) - max(0, j - 1)) * dy)
+            gradZ[n] = (field[i + j * sx + min(NZ, k + 1) * sxy] - field[i + j * sx + max(0, k - 1) * sxy]) / ((min(NZ, k + 1) - max(0, k - 1)) * dz)
+        }
         nTri = 0
         for (k in 0 until NZ) for (j in 0 until NY) for (i in 0 until NX) {
             var anyIn = false; var anyOut = false
             for (c in 0..7) {
                 val ci = i + (c and 1); val cj = j + ((c shr 1) and 1); val ck = k + ((c shr 2) and 1)
                 val v = field[ci + cj * sx + ck * sxy]
+                val n = ci + cj * sx + ck * sxy; cgx[c] = gradX[n]; cgy[c] = gradY[n]; cgz[c] = gradZ[n]
                 cv[c] = v; cx[c] = X0 + ci * dx; cy[c] = Y0 + cj * dy; cz[c] = Z0 + ck * dz
                 if (v > 0f) anyIn = true else anyOut = true
             }
@@ -138,10 +149,15 @@ class LavaWax {
     }
     /** The point where the surface crosses the edge between two corners, packed into a scratch slot. */
     private val ptX = FloatArray(4); private val ptY = FloatArray(4); private val ptZ = FloatArray(4); private var ptN = 0
+    private val pnX = FloatArray(4); private val pnY = FloatArray(4); private val pnZ = FloatArray(4)
     private fun edge(p: Int, q: Int): Int {
         val t = (cv[p] / (cv[p] - cv[q])).coerceIn(0f, 1f)
         val s = ptN; ptN = (ptN + 1) and 3
         ptX[s] = cx[p] + (cx[q] - cx[p]) * t; ptY[s] = cy[p] + (cy[q] - cy[p]) * t; ptZ[s] = cz[p] + (cz[q] - cz[p]) * t
+        // outward normal = down the gradient
+        var nx = -(cgx[p] + (cgx[q] - cgx[p]) * t); var ny = -(cgy[p] + (cgy[q] - cgy[p]) * t); var nz = -(cgz[p] + (cgz[q] - cgz[p]) * t)
+        val l = sqrt(nx * nx + ny * ny + nz * nz).takeIf { it > 1e-6f } ?: 1f
+        pnX[s] = nx / l; pnY[s] = ny / l; pnZ[s] = nz / l
         return s
     }
     private fun tri(a: Int, b: Int, c: Int) {
@@ -152,19 +168,11 @@ class LavaWax {
         val ux = ptX[b] - ptX[a]; val uy = ptY[b] - ptY[a]; val uz = ptZ[b] - ptZ[a]
         val vx = ptX[c] - ptX[a]; val vy = ptY[c] - ptY[a]; val vz = ptZ[c] - ptZ[a]
         val fnx = uy * vz - uz * vy; val fny = uz * vx - ux * vz; val fnz = ux * vy - uy * vx
-        val mx = (ptX[a] + ptX[b] + ptX[c]) / 3; val my = (ptY[a] + ptY[b] + ptY[c]) / 3; val mz = (ptZ[a] + ptZ[b] + ptZ[c]) / 3
-        val e = 0.004f
-        val gx = f(mx + e, my, mz) - f(mx - e, my, mz); val gy = f(mx, my + e, mz) - f(mx, my - e, mz); val gz = f(mx, my, mz + e) - f(mx, my, mz - e)
-        val flip = fnx * -gx + fny * -gy + fnz * -gz < 0f
+        val flip = fnx * (pnX[a] + pnX[b] + pnX[c]) + fny * (pnY[a] + pnY[b] + pnY[c]) + fnz * (pnZ[a] + pnZ[b] + pnZ[c]) < 0f
         for (n in 0..2) {
             val p = when (n) { 0 -> a; 1 -> if (flip) c else b; else -> if (flip) b else c }
             pos[o] = ptX[p]; pos[o + 1] = ptY[p]; pos[o + 2] = ptZ[p]
-            // smooth shading: the field's gradient at the vertex
-            val px = ptX[p]; val py = ptY[p]; val pz = ptZ[p]
-            var nx = f(px - e, py, pz) - f(px + e, py, pz); var ny = f(px, py - e, pz) - f(px, py + e, pz); var nz = f(px, py, pz - e) - f(px, py, pz + e)
-            val l = sqrt(nx * nx + ny * ny + nz * nz).takeIf { it > 1e-6f } ?: 1f
-            nx /= l; ny /= l; nz /= l
-            nor[o] = nx; nor[o + 1] = ny; nor[o + 2] = nz
+            nor[o] = pnX[p]; nor[o + 1] = pnY[p]; nor[o + 2] = pnZ[p] // smooth shading from the grid gradient
             o += 3
         }
         nTri++

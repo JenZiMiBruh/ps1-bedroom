@@ -131,33 +131,36 @@ class Renderer {
         shadowsNeedUpdate = true
     }
 
-    /** The HTML's resizeRenderTargets: the short side = resolution setting (supports up to 4K 2160p), long side follows the screen's shape. */
+    /**
+     * The HTML's resizeRenderTargets: the short side = resolution setting, long side follows the screen's shape.
+     * v0.55 fixes: the short side is capped at the screen's own (rendering a 4K target on a 1080p phone multiplied the
+     * GPU work ~4x and could stall or kill the app), shadow maps are kept instead of leaked on every resize, and if
+     * the GPU refuses a target size we step down until it accepts one.
+     */
     fun resize(w: Int, h: Int, resShort: Int, jitterBase: Float) {
         screenW = max(1, w); screenH = max(1, h)
         val aspect = screenW.toFloat() / screenH
-        val rawW: Int
-        val rawH: Int
-        if (aspect >= 1) {
-            rawH = resShort
-            rawW = (resShort * aspect).roundToInt()
-        } else {
-            rawW = resShort
-            rawH = (resShort / aspect).roundToInt()
-        }
-        val maxDim = maxTextureDim
-        if (rawW > maxDim || rawH > maxDim) {
-            val scale = maxDim.toFloat() / max(rawW, rawH)
-            internalW = max(1, (rawW * scale).toInt())
-            internalH = max(1, (rawH * scale).toInt())
-        } else {
-            internalW = max(1, rawW)
-            internalH = max(1, rawH)
-        }
-
+        var short = minOf(resShort, minOf(screenW, screenH)).coerceAtLeast(120)
         val g = jitterBase * 0.75f
         ps1Uniforms.jitterGrid[0] = if (aspect >= 1) g * aspect else g
         ps1Uniforms.jitterGrid[1] = if (aspect >= 1) g else g / aspect
+        while (true) {
+            if (aspect >= 1) { internalH = short; internalW = (short * aspect).roundToInt() } else { internalW = short; internalH = (short / aspect).roundToInt() }
+            val maxDim = maxTextureDim
+            if (internalW > maxDim || internalH > maxDim) {
+                val scale = maxDim.toFloat() / max(internalW, internalH)
+                internalW = max(1, (internalW * scale).toInt()); internalH = max(1, (internalH * scale).toInt())
+            }
+            if (buildTargets() || short <= 120) break
+            short = max(120, short * 2 / 3)
+        }
+        shadowsNeedUpdate = true
+    }
+
+    /** (Re)creates the scene and post targets at internalW x internalH; false if the GPU can't make them. */
+    private fun buildTargets(): Boolean {
         deleteTargets()
+        while (glGetError() != GL_NO_ERROR) { /* clear stale errors */ }
         val f = IntArray(1); val t = IntArray(2)
         glGenFramebuffers(1, f, 0); sceneFbo = f[0]
         glGenTextures(2, t, 0); sceneColor = t[0]; sceneDepth = t[1]
@@ -168,18 +171,16 @@ class Renderer {
         glBindFramebuffer(GL_FRAMEBUFFER, sceneFbo)
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, sceneColor, 0)
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, sceneDepth, 0)
+        val sceneOk = glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE
         glGenFramebuffers(1, f, 0); postFbo = f[0]
         glGenTextures(1, t, 0); postColor = t[0]
         glBindTexture(GL_TEXTURE_2D, postColor)
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, internalW, internalH, 0, GL_RGBA, GL_UNSIGNED_BYTE, null)
-        // If supersampling (rendering above physical display resolution like 4K on a 1080p screen), use linear filtering for smooth SSAA;
-        // if native or upscaled retro (e.g. 240p), use nearest to preserve chunky PS1 pixel art.
-        if (internalH > screenH || internalW > screenW) linear(GL_CLAMP_TO_EDGE) else nearest(GL_CLAMP_TO_EDGE)
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, internalW, internalH, 0, GL_RGBA, GL_UNSIGNED_BYTE, null); nearest(GL_CLAMP_TO_EDGE)
         glBindFramebuffer(GL_FRAMEBUFFER, postFbo)
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, postColor, 0)
+        val postOk = glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE
         glBindFramebuffer(GL_FRAMEBUFFER, 0)
-        shadowTargets.clear()
-        shadowsNeedUpdate = true
+        return sceneOk && postOk && glGetError() == GL_NO_ERROR
     }
 
     private fun deleteTargets() {

@@ -25,7 +25,13 @@ class Phone(private val app: App) {
     private val messages get() = app.extras.messages
     private val rnd = Random.Default
 
+    /** "ring" = normal · "silent" = calls go straight to the answering machine, no ringing · "off" = nobody calls */
+    var mode = "ring"
+        set(v) { field = v; if (v != "ring" && ringing) stopRing() }
+
     private fun ring(t: Float) {
+        if (mode == "off") return
+        if (mode == "silent") { caller = CALLS[rnd.nextInt(CALLS.size)]; messages += caller; return }
         if (!app.sound.ready || !app.sound.playing || ringing) return
         if (!app.sound.ringPhone()) return
         ringing = true

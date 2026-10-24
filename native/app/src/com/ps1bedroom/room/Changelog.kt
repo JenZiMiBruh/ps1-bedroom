@@ -24,6 +24,14 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.56", "Quality preset crash fix, resting leaves, sharp Paper Toss, desk phone mute", listOf(
+            "Fixed: picking a quality or resolution preset could break the app. Each change leaked the shadow maps, and the 4K / 1080p presets rendered far above the phone's own screen. Resolution now tops out at your screen's real resolution, nothing leaks, and if the GPU can't handle a size it steps down instead of failing. The 4K preset is now called Max (full screen res)",
+            "Leaves that blow in through the window drift down, land flat on the floor or desk and stay still, then fade away after about 45 seconds. Turn on World › Weather / Sky › \"Leaves blown inside stay on the floor\" to keep them for good",
+            "Paper Toss is drawn at 3x the resolution with smooth text, so every score, label and button is easy to read. The scenery keeps its chunky look",
+            "Desk phone: Sound › Desk phone › Rings, Silent (calls go straight to the answering machine) or No calls",
+            "Jasper now actually turns his head all the way toward thunder, the TV, the boombox and you. Before, it only got about a quarter of the way there",
+            "Lava lamp wax rebuilds its surface much faster (normals come from the grid instead of re-sampling the wax 24 times per triangle), so it uses less CPU"
+        )),
         Entry("0.55", "Paper Toss Deluxe, new weather card, seamless walls, leaves stay outside", listOf(
             "Paper Toss is a full game now: runs with strikes, stages that add wind, a sliding basket, a box in the way and gusts, combo multipliers and ON FIRE streaks, golden wads worth triple, coins, an upgrade shop (bigger basket, aim guide, steady hand, extra strike, lucky rim, golden touch, coin magnet) and lifetime stats",
             "Paper Toss looks better too: shaded basket and box, a window that follows the time of day, ball trails, confetti, screen shake and score pop-ups",

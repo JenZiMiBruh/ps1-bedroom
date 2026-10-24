@@ -41,6 +41,7 @@ class Settings(private val app: App, private val ctx: Context) {
     var liveTempC: Double? = null
     @Volatile var liveWindSpeedKmH = -1f
     @Volatile var liveWindDirDeg = -1f
+    var liveWeatherRefreshMinutes = 15; private set
     @Volatile var liveStatus = "Tap Live or type a city to sync the weather, temperature, wind, and sun with the real world."
     private var autoNextAt = 0L
     private var liveNextAt = 0L
@@ -104,6 +105,12 @@ class Settings(private val app: App, private val ctx: Context) {
     fun setPresetDayOfWeek(day: Int) {
         env.setPresetDayOfWeek(day)
         app.toast("📅 ${env.dayOfWeekName.uppercase()}")
+        changed()
+    }
+    fun setLiveWeatherRefreshMinutes(mins: Int) {
+        liveWeatherRefreshMinutes = mins.coerceIn(1, 180)
+        liveNextAt = System.currentTimeMillis() + liveWeatherRefreshMinutes * 60000L
+        app.toast("⏱ WEATHER REFRESH: Every $liveWeatherRefreshMinutes min")
         changed()
     }
     fun setTimePreset(name: String) {
@@ -190,7 +197,7 @@ class Settings(private val app: App, private val ctx: Context) {
     fun fetchLiveWeather(city: String, quiet: Boolean) {
         val q = city.trim()
         liveStatus = if (q.isNotEmpty()) "Looking up $q…" else "Finding your local weather…"; changed()
-        liveNextAt = System.currentTimeMillis() + 15 * 60000L
+        liveNextAt = System.currentTimeMillis() + liveWeatherRefreshMinutes * 60000L
         Thread {
             try {
                 var lat = env.lat; var lon = env.lon; var name = q; var admin = ""
@@ -445,6 +452,7 @@ class Settings(private val app: App, private val ctx: Context) {
         put("jasper", JSONObject().put("preset", app.jasper.colorPreset).put("coat", app.jasper.colors.coat).put("dark", app.jasper.colors.dark).put("light", app.jasper.colors.light).put("care", app.jasper.careEnabled).put("hunger", app.jasper.hunger.toDouble()).put("thirst", app.jasper.thirst.toDouble()).put("energy", app.jasper.energy.toDouble()).put("fun", app.jasper.funLevel.toDouble()))
         put("heater", app.extras.heaterMode)
         put("outside", app.sky.outsideEnv); put("startScreen", startScreenEnabled); put("tutorialSeen", tutorialSeen); put("sleepDim", sleepDim)
+        put("liveRefreshMin", liveWeatherRefreshMinutes)
     }
     fun saveNow() {
         lastSaved = System.currentTimeMillis()
@@ -466,6 +474,7 @@ class Settings(private val app: App, private val ctx: Context) {
             env.timeMode = s.optString("timeMode", "live"); env.presetHour = s.optDouble("presetHour", 0.0); env.cycleMinutes = s.optDouble("cycleMinutes", 20.0)
             env.seasonMode = s.optString("seasonMode", "live")
             weatherMode = s.optString("weatherMode", "manual")
+            liveWeatherRefreshMinutes = s.optInt("liveRefreshMin", 15).coerceIn(1, 180)
             env.skyStyle = s.optString("skyStyle", "natural").let { if (SKY_STYLES.containsKey(it)) it else "natural" }
             env.realisticMoon = s.optBoolean("realisticMoon", false)
             cityName = s.optString("city", ""); env.lat = s.optDouble("lat", 40.0); env.lon = s.optDouble("lon", 0.0); env.lonKnown = s.optBoolean("lonKnown", false)

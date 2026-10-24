@@ -68,8 +68,24 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
     private val snowMesh: InstancedMesh
     private val snowFlakes: List<Drop>
 
-    // Falling autumn leaves / spring blossoms / seasonal & windy outdoor debris (per-instance colour)
-    private class Leaf(var x: Float, var y: Float, var z: Float, val vy: Float, val vx: Float, val ph: Float, val rs: Float, var wait: Float = 0f)
+    // Falling autumn leaves / spring blossoms / seasonal & windy outdoor debris (per-instance colour).
+    // The leaves on the window ARE the exact same leaves that fall in the wind: they fall, hit the window,
+    // roll across the glass pane or sill, and get caught by the wind to fly off into the sky (no fake leaves).
+    private class Leaf(
+        var x: Float, var y: Float, var z: Float,
+        val vy: Float, val vx: Float, val ph: Float, val rs: Float,
+        var wait: Float = 0f,
+        var state: Int = 0,         // 0 = falling in air, 1 = hit window & rolling on glass or ledge, 2 = flying off window
+        var contactTimer: Float = 0f,
+        var rollAngle: Float = 0f,
+        var rollSpeed: Float = 0f,
+        var vxOff: Float = 0f,
+        var vyOff: Float = 0f,
+        var vzOff: Float = 0f,
+        var rotX: Float = 0f,
+        var rotY: Float = 0f,
+        var rotZ: Float = 0f
+    )
     private val foliage3DGroup = Group()
     private val LEAF_COUNT = 160
     private val leafMesh: InstancedMesh
@@ -120,34 +136,8 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
         debrisFreq = freq.coerceIn(0.2f, 2.5f)
         updateSettings()
     }
-    // Exterior window ledge weather accumulation (snow bank & fallen autumn leaves that move & fly off)
+    // Exterior window ledge weather accumulation (puffy snow bank in winter)
     private val ledgeSnowGroup = Group()
-    private val ledgeLeavesGroup = Group()
-    private class LedgeLeaf(
-        val mesh: Mesh,
-        val baseX: Float,
-        val baseY: Float,
-        val baseZ: Float,
-        val baseRotX: Float,
-        val baseRotZ: Float,
-        val phase: Float,
-        var state: Int = 0,         // 0 = resting, 1 = flying off into wind, 2 = respawn waiting, 3 = drifting down onto ledge
-        var x: Float = 0f,
-        var y: Float = 0f,
-        var z: Float = 0f,
-        var vx: Float = 0f,
-        var vy: Float = 0f,
-        var vz: Float = 0f,
-        var rx: Float = 0f,
-        var ry: Float = 0f,
-        var rz: Float = 0f,
-        var vrx: Float = 0f,
-        var vry: Float = 0f,
-        var vrz: Float = 0f,
-        var timer: Float = 0f
-    )
-    private val ledgeLeaves = ArrayList<LedgeLeaf>()
-    private var nextLedgeFlyTime = 0f
 
     // Fireflies blinking around the trees on clear summer nights
     private class Firefly(val x: Float, val y: Float, val z: Float, val ph: Float, val sp: Float)
@@ -158,11 +148,6 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
 
     // Window pane, ground, glow
     private class GlassDrop(var x: Float, var y: Float, var r: Float, var v: Float, var age: Float = 0f)
-    private class GlassLeaf(
-        var x: Float, var y: Float, var rot: Float, val col: String,
-        var vx: Float = 0f, var vy: Float = 0f, var age: Float = 0f, var peeling: Boolean = false
-    )
-    private val glassLeaves = ArrayList<GlassLeaf>()
     private val glassCanvasObj: CanvasTex
     private val glassDrops = ArrayList<GlassDrop>()
     private var glassAccum = 0f
@@ -193,7 +178,26 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
 
         scene.add(foliage3DGroup)
         leafMesh = makeInstanced(foliage3DGroup, Geo.plane(0.085f, 0.065f), PS1.basic(color = 0xffffff, side = DOUBLE_SIDE), LEAF_COUNT)
-        leaves = List(LEAF_COUNT) { Leaf(randIn(OUT.x0, OUT.x1), randIn(OUT.y0 + 0.6f, OUT.y1), randIn(OUT.z0, OUT.z1), randIn(0.4f, 0.95f), randIn(0.2f, 0.6f), randIn(0f, 6.28f), randIn(1.5f, 4f)) }
+        leaves = List(LEAF_COUNT) { idx ->
+            val nearWindow = idx < 45
+            val z = if (nearWindow) randIn(-3.24f, -3.15f) else randIn(OUT.z0, OUT.z1)
+            val preHit = idx < 4
+            val leaf = Leaf(
+                if (preHit) randIn(-0.2f, 1.8f) else randIn(OUT.x0, OUT.x1),
+                if (preHit) randIn(1.60f, 2.2f) else randIn(OUT.y0 + 0.6f, OUT.y1),
+                if (preHit) -3.15f else z,
+                randIn(0.4f, 0.95f),
+                randIn(0.2f, 0.6f),
+                randIn(0f, 6.28f),
+                randIn(1.5f, 4f)
+            )
+            if (preHit) {
+                leaf.state = 1
+                leaf.contactTimer = randIn(3.0f, 6.5f)
+                leaf.rollSpeed = randIn(0.20f, 0.40f)
+            }
+            leaf
+        }
         recolorLeaves(FALL_LEAF_COLS)
 
         scene.add(fireflyGroup)
@@ -225,7 +229,7 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
         windowGlow.position.set(0.8f, 2.75f, -3.45f)
         scene.add(windowGlow)
 
-        // Exterior window ledge accumulation: puffy snow drift in winter/snow & scattered leaves in fall
+        // Exterior window ledge accumulation: puffy snow drift in winter/snow
         weather3DGroup.add(ledgeSnowGroup)
         val snowDriftMat = PS1.basic(color = 0xf1f5f9)
         for ((dx, dw, dh) in arrayOf(Triple(-0.15f, 0.95f, 0.055f), Triple(0.78f, 1.15f, 0.068f), Triple(1.68f, 0.88f, 0.052f))) {
@@ -234,23 +238,6 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
             ledgeSnowGroup.add(bank)
         }
         ledgeSnowGroup.visible = false
-
-        weather3DGroup.add(ledgeLeavesGroup)
-        for (i in 0 until 14) {
-            val col = FALL_LEAF_COLS[i % FALL_LEAF_COLS.size]
-            val leaf = Mesh(Geo.plane(0.085f, 0.065f), PS1.basic(color = col, side = DOUBLE_SIDE))
-            val rx = (-PI / 2).toFloat() + (rand() - 0.5f) * 0.25f
-            val rz = rand() * 6.28f
-            val bx = -0.45f + (i / 13f) * 2.5f + (rand() - 0.5f) * 0.12f
-            val by = OUT.ledgeY - 0.012f + (i % 3) * 0.003f
-            val bz = -3.19f - (i % 2) * 0.03f
-            leaf.rotation.x = rx
-            leaf.rotation.z = rz
-            leaf.position.set(bx, by, bz)
-            ledgeLeavesGroup.add(leaf)
-            ledgeLeaves += LedgeLeaf(leaf, bx, by, bz, rx, rz, rand() * 6.28f)
-        }
-        ledgeLeavesGroup.visible = false
     }
 
     /** Everything here moves every frame: none of it takes part in static batching. */
@@ -351,58 +338,6 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
             ctx.fillRect((d.x - d.r * 0.3f).toInt(), (d.y - d.r * 0.4f).toInt(), 1, 1)
             i--
         }
-        // Wet leaves or spring petals stuck to the glass in rain or windy weather (they slide, flutter, and peel off in gusts)
-        val showGlassLeaves = (env.currentSeason == "fall" || env.currentSeason == "spring") && (raining || env.W.wind >= 0.30f || debrisMode == "always")
-        if (showGlassLeaves) {
-            val isFall = env.currentSeason == "fall"
-            val palette = if (isFall) listOf("#c2410c", "#b45309", "#a16207", "#dc2626") else listOf("#f9a8d4", "#fbcfe8", "#f472b6")
-            if (glassLeaves.isEmpty()) {
-                val seedCoords = listOf(Triple(18f, 80f, 0.6f), Triple(96f, 22f, -0.4f), Triple(70f, 88f, 0.8f), Triple(112f, 76f, -0.7f))
-                seedCoords.forEachIndexed { idx, (gx, gy, gr) ->
-                    glassLeaves += GlassLeaf(gx, gy, gr, palette[idx % palette.size])
-                }
-            }
-            var glIdx = glassLeaves.size - 1
-            while (glIdx >= 0) {
-                val gl = glassLeaves[glIdx]
-                gl.age += dt
-                // Rainwater slides stuck leaves down and slightly with wind slant
-                if (raining) {
-                    gl.y += (0.8f + env.W.rain * 2.2f) * dt
-                    gl.x -= windSlant * 0.9f * dt
-                }
-                // When gusty wind blows or after sticking for a while, leaf peels off the glass and flies away!
-                if (!gl.peeling && (env.W.wind >= 0.45f && gl.age > 2.8f && rand() < 0.04f)) {
-                    gl.peeling = true
-                    gl.vx = -(26f + env.W.wind * 45f)
-                    gl.vy = -6f + (rand() - 0.5f) * 14f
-                }
-                if (gl.peeling) {
-                    gl.x += gl.vx * dt
-                    gl.y += gl.vy * dt
-                    gl.rot += 12f * dt
-                }
-                if (gl.x < -10f || gl.y > h + 10f || gl.y < -10f) {
-                    glassLeaves.removeAt(glIdx)
-                    glIdx--
-                    continue
-                }
-                val flutter = gl.rot + sin(gl.age * 9f) * (0.02f + env.W.wind * 0.12f)
-                ctx.fillStyle = gl.col
-                ctx.beginPath()
-                val rx = if (isFall) 4.0 else 3.0
-                val ry = if (isFall) 2.6 else 2.0
-                ctx.ellipse(gl.x.toDouble(), gl.y.toDouble(), rx, ry, flutter.toDouble(), 0.0, PI * 2)
-                ctx.fill()
-                glIdx--
-            }
-            // Occasionally slap a new flying leaf onto the wet glass
-            if (glassLeaves.size < 4 && (env.W.wind >= 0.35f || raining) && rand() < 0.025f) {
-                glassLeaves += GlassLeaf(randIn(15f, (w - 15).toFloat()), randIn(15f, (h - 30).toFloat()), randIn(-1f, 1f), palette[rnd.nextInt(palette.size)])
-            }
-        } else {
-            glassLeaves.clear()
-        }
         glassCanvasObj.tex.needsUpdate()
     }
 
@@ -445,7 +380,6 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
         snowMesh.visible = snowing
         ledgeSnowGroup.visible = env.currentSeason == "winter" || snowing
         val hasTrees = Places.OUTSIDE_ENVS[sky.outsideEnv]?.trees == true || sky.outsideEnv in setOf("suburbs", "house", "forest", "lake", "mountains", "countryside", "neighborhood", "city")
-        ledgeLeavesGroup.visible = (env.currentSeason == "fall" || debrisMode == "always" || (debrisMode != "off" && env.W.wind >= 0.40f && hasTrees)) && !snowing && sky.outsideEnv !in setOf("space", "ocean", "underwater")
         if (env.weatherKind != lastWeatherKind) {
             if (env.weatherKind == "storm" || env.W.base == "storm") stormIntroTimer = 0.65f
             lastWeatherKind = env.weatherKind
@@ -612,24 +546,90 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
                     if (l.wait <= 0f) {
                         l.y = OUT.y1 + rand() * 0.35f
                         l.x = randIn(OUT.x0, OUT.x1 + 1.2f + W.wind * 1.2f)
-                        l.z = randIn(OUT.z0, OUT.z1)
+                        l.z = if (i < 45 || rand() < 0.35f) randIn(-3.24f, -3.15f) else randIn(OUT.z0, OUT.z1)
+                        l.state = 0
                     }
                     continue
                 }
-                l.y -= l.vy * gust * dt
-                val swirl = sin(t * (1.8f + debrisSpeed * 0.6f) + l.ph) * 0.32f
-                // Blow in -X (right to left), matching rain, snow, and window raindrops
-                l.x += (swirl - (l.vx * gust + windSlantX)) * dt
-                if (l.y < OUT.y0 + 0.1f || l.x < OUT.x0 - 0.8f || l.x > OUT.x1 + 1.8f) {
-                    if (debrisFreq >= 1.8f) {
-                        l.y = OUT.y1 + rand() * 0.35f
-                        l.x = randIn(OUT.x0, OUT.x1 + 1.2f + W.wind * 1.2f)
-                        l.z = randIn(OUT.z0, OUT.z1)
-                    } else {
-                        l.wait = randIn(0.08f, 1.5f) / freqBoost
+
+                when (l.state) {
+                    0 -> {
+                        // Real-life leaf terminal falling speed: gentle realistic glide (0.42 - 0.72 m/s)
+                        val fallSpeed = (0.42f + l.vy * 0.30f) * debrisSpeed
+                        val windDrift = (0.22f + W.wind * 0.75f) * debrisSpeed
+                        val sway = sin(t * (1.6f + l.rs * 0.3f) + l.ph) * 0.28f
+                        l.y -= fallSpeed * dt
+                        l.x -= (windDrift + sway) * dt
+                        l.z += cos(t * 1.2f + l.ph) * 0.04f * dt
+
+                        // Smooth organic aerial tumble
+                        l.rotX = t * l.rs * 0.7f * debrisSpeed
+                        l.rotY = t * l.rs * 0.5f * debrisSpeed
+                        l.rotZ = -0.22f - W.wind * 0.32f + sin(t * 2.0f + l.ph) * 0.45f
+
+                        // Collision with window glass or exterior sill:
+                        // Window pane: X in [-0.55f, 2.15f], Y in [1.58f, 3.75f], Z near glass [-3.26f, -3.13f]
+                        val inWindowX = l.x in -0.55f..2.15f
+                        val inWindowY = l.y in 1.58f..3.75f
+                        val hitGlassZ = l.z in -3.26f..-3.13f
+                        if (inWindowX && inWindowY && hitGlassZ) {
+                            // HIT THE WINDOW!
+                            l.state = 1
+                            l.contactTimer = randIn(3.0f, 7.5f) / max(0.5f, debrisFreq)
+                            l.rollSpeed = randIn(0.18f, 0.40f) * (0.8f + W.wind * 0.6f) * debrisSpeed
+                            l.z = if (l.y > 1.62f) -3.15f else -3.18f
+                        } else if (l.y < OUT.y0 + 0.1f || l.x < OUT.x0 - 0.8f || l.x > OUT.x1 + 1.8f) {
+                            l.wait = randIn(0.1f, 1.5f) / freqBoost
+                        }
+                    }
+                    1 -> {
+                        // HIT THE WINDOW: rolling & sliding across the glass pane or sill
+                        l.contactTimer -= dt
+                        if (l.y > 1.61f) {
+                            // Sliding down and rolling sideways along the window glass pane
+                            l.x -= (l.rollSpeed + W.wind * 0.28f) * dt
+                            l.y -= (0.10f + if (env.isRainingNow()) 0.30f else 0.05f) * dt
+                            l.z = -3.15f
+                            l.rollAngle += l.rollSpeed * 5.0f * dt
+                            l.rotX = sin(t * 6f + l.ph) * 0.10f
+                            l.rotY = cos(t * 3f + l.ph) * 0.08f
+                            l.rotZ = l.rollAngle
+                        } else {
+                            // Reached the exterior window sill: rolls along the ledge
+                            l.y = OUT.ledgeY // 1.60f
+                            l.z = -3.18f
+                            l.x -= (l.rollSpeed * 0.8f + W.wind * 0.32f) * dt
+                            l.rollAngle += l.rollSpeed * 4.0f * dt
+                            l.rotX = (-PI / 2).toFloat() + sin(t * 7f + l.ph) * (0.04f + W.wind * 0.12f)
+                            l.rotY = sin(t * 4f + l.ph) * 0.08f
+                            l.rotZ = l.rollAngle
+                        }
+
+                        // Wind catches it and it takes flight off the window!
+                        if (l.contactTimer <= 0f || l.x < -0.55f || (W.wind >= 0.75f && rand() < 0.02f)) {
+                            l.state = 2 // FLY OFF!
+                            l.vxOff = -(0.75f + W.wind * 1.55f) * debrisSpeed
+                            l.vyOff = (0.35f + W.wind * 0.60f) * debrisSpeed // updraft lift away from sill
+                            l.vzOff = -(0.30f + rand() * 0.45f) // blown backward into open street air
+                        }
+                    }
+                    2 -> {
+                        // FLYING OFF: carried away into the wind
+                        l.x += l.vxOff * dt
+                        l.y += l.vyOff * dt
+                        l.z += l.vzOff * dt
+                        l.vyOff -= 0.32f * dt
+                        l.rotX += (4f + l.rs) * dt
+                        l.rotY += (5f + l.rs) * dt
+                        l.rotZ += (6f + l.rs) * dt
+
+                        if (l.x < OUT.x0 - 0.8f || l.y < OUT.y0 || l.z < OUT.z1) {
+                            l.wait = randIn(0.1f, 1.2f) / freqBoost
+                        }
                     }
                 }
-                leafMesh.setInstance(i, l.x, l.y, l.z, t * l.rs * debrisSpeed, t * l.rs * 0.8f * debrisSpeed, -0.25f - W.wind * 0.35f + sin(t * debrisSpeed + l.ph) * 0.5f, scale)
+
+                leafMesh.setInstance(i, l.x, l.y, l.z, l.rotX, l.rotY, l.rotZ, scale)
             }
             leafMesh.needsUpdate()
         }
@@ -641,91 +641,6 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
                     f.z + cos(t * f.sp * 0.7f + f.ph) * 0.3f, 0f, 0f, 0f, if (blink > 0.6f) blink else 0f)
             }
             fireflyMesh.needsUpdate()
-        }
-        if (ledgeLeavesGroup.visible) {
-            val W = env.W
-            if (t >= nextLedgeFlyTime) {
-                val resting = ledgeLeaves.filter { it.state == 0 }
-                if (resting.isNotEmpty() && (W.wind >= 0.12f || debrisMode == "always")) {
-                    val leaf = resting[rnd.nextInt(resting.size)]
-                    leaf.state = 1
-                    leaf.x = leaf.mesh.position.x
-                    leaf.y = leaf.mesh.position.y
-                    leaf.z = leaf.mesh.position.z
-                    leaf.rx = leaf.mesh.rotation.x
-                    leaf.ry = leaf.mesh.rotation.y
-                    leaf.rz = leaf.mesh.rotation.z
-                    val windPush = 0.9f + W.wind * 2.4f
-                    leaf.vx = -windPush * (0.8f + rand() * 0.5f) * debrisSpeed
-                    leaf.vy = (0.35f + W.wind * 0.75f) * (0.8f + rand() * 0.6f) * debrisSpeed
-                    leaf.vz = (rand() - 0.5f) * 0.6f
-                    leaf.vrx = randIn(-5f, 5f)
-                    leaf.vry = randIn(-7f, 7f)
-                    leaf.vrz = randIn(-6f, 6f)
-                }
-                val delay = (3.6f - W.wind * 1.8f).coerceIn(0.8f, 5.0f) / max(0.4f, debrisFreq)
-                nextLedgeFlyTime = t + delay * (0.7f + rand() * 0.6f)
-            }
-            for (leaf in ledgeLeaves) {
-                when (leaf.state) {
-                    0 -> {
-                        // Resting on the sill: flutter and tremble with the passing wind
-                        val quiver = sin(t * 12.0f + leaf.phase) * (0.001f + W.wind * 0.0035f)
-                        val lift = abs(sin(t * 9.0f + leaf.phase)) * (0.001f + W.wind * 0.0035f)
-                        val rotTilt = sin(t * 7.0f + leaf.phase) * (0.04f + W.wind * 0.18f)
-                        leaf.mesh.position.set(leaf.baseX + quiver, leaf.baseY + lift, leaf.baseZ)
-                        leaf.mesh.rotation.set(leaf.baseRotX + rotTilt, sin(t * 5f + leaf.phase) * 0.08f, leaf.baseRotZ + quiver * 10f)
-                        leaf.mesh.visible = true
-                    }
-                    1 -> {
-                        // Flying off across the window into the wind!
-                        leaf.x += leaf.vx * dt
-                        leaf.y += leaf.vy * dt
-                        leaf.z += leaf.vz * dt
-                        leaf.rx += leaf.vrx * dt
-                        leaf.ry += leaf.vry * dt
-                        leaf.rz += leaf.vrz * dt
-                        leaf.vy += (sin(t * 8f + leaf.phase) * 0.5f - 0.25f) * dt
-                        leaf.mesh.position.set(leaf.x, leaf.y, leaf.z)
-                        leaf.mesh.rotation.set(leaf.rx, leaf.ry, leaf.rz)
-                        leaf.mesh.visible = true
-                        if (leaf.x < -2.6f || leaf.y > 4.2f || leaf.y < OUT.ledgeY - 0.45f || leaf.z < -4.8f) {
-                            leaf.state = 2
-                            leaf.timer = randIn(1.5f, 4.5f) / max(0.4f, debrisFreq)
-                            leaf.mesh.visible = false
-                        }
-                    }
-                    2 -> {
-                        // Off screen, waiting to respawn
-                        leaf.timer -= dt
-                        if (leaf.timer <= 0f) {
-                            leaf.state = 3
-                            leaf.x = leaf.baseX + randIn(0.15f, 0.55f)
-                            leaf.y = OUT.ledgeY + 0.9f + rand() * 0.4f
-                            leaf.z = leaf.baseZ + randIn(-0.02f, 0.02f)
-                            leaf.rx = leaf.baseRotX + randIn(-0.3f, 0.3f)
-                            leaf.ry = rand() * 6.28f
-                            leaf.rz = leaf.baseRotZ + randIn(-0.3f, 0.3f)
-                            leaf.mesh.position.set(leaf.x, leaf.y, leaf.z)
-                            leaf.mesh.rotation.set(leaf.rx, leaf.ry, leaf.rz)
-                            leaf.mesh.visible = true
-                        }
-                    }
-                    3 -> {
-                        // Drifting down to settle back onto the window ledge
-                        leaf.y -= 0.65f * dt
-                        leaf.x -= (0.25f + W.wind * 0.75f) * dt
-                        leaf.rx += sin(t * 8f + leaf.phase) * 0.06f
-                        leaf.mesh.position.set(leaf.x, leaf.y, leaf.z)
-                        leaf.mesh.rotation.set(leaf.rx, leaf.ry, leaf.rz)
-                        if (leaf.y <= leaf.baseY) {
-                            leaf.state = 0
-                            leaf.mesh.position.set(leaf.baseX, leaf.baseY, leaf.baseZ)
-                            leaf.mesh.rotation.set(leaf.baseRotX, 0f, leaf.baseRotZ)
-                        }
-                    }
-                }
-            }
         }
         glassAccum += dt
         if (glassAccum >= 0.08f) {

@@ -618,6 +618,10 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
                 row.addView(pill("Use", TEXT).apply { setOnClickListener { go() } }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginStart = dpi(6f) })
                 body.addView(row, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = dpi(8f) })
                 note(s.liveStatus)
+                val refOpts = listOf(2 to "2 min", 5 to "5 min", 10 to "10 min", 15 to "15 min", 30 to "30 min", 60 to "1 hour")
+                h4("Auto-refresh weather every", refOpts.firstOrNull { it.first == s.liveWeatherRefreshMinutes }?.second ?: "${s.liveWeatherRefreshMinutes} min")
+                chips(refOpts.map { (mins, label) -> Triple(label, s.liveWeatherRefreshMinutes == mins, { post { s.setLiveWeatherRefreshMinutes(mins) } }) })
+                tiles(listOf(Triple("🔄 REFRESH LIVE WEATHER NOW", false, { post { s.fetchLiveWeather(s.cityName, false); app.sfx("ui"); app.toast("🔄 Refreshing live weather from Open-Meteo...") } })))
                 note("Live weather comes from Open-Meteo (with automatic city detection if left blank) and updates the Downtown LED building ticker & billboard in real time.", true)
             }
             "auto" -> note("The weather drifts naturally on its own every 10-20 minutes, fitting the season.")

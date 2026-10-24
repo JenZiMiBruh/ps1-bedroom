@@ -24,6 +24,12 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.53.3", "Unified physical window leaves (hit, roll, fly off), real-life leaf speeds & weather API refresh interval", listOf(
+            "Unified 3D window leaf physics: all leaves on the window are the exact same 3D leaves as in the wind (zero fake 2D canvas stamps or static meshes)",
+            "Watch leaves hit and roll: observe leaves fall from the sky, collide with the window glass pane or sill, roll and slide across the window, and get swept into the air by wind gusts to fly off",
+            "Real-life leaf speeds: calibrated terminal fall velocity (0.42-0.72 m/s) with authentic aerodynamic pendulum rocking, flutter and gentle crosswind drift",
+            "Weather API refresh interval: user-configurable auto-refresh interval for Open-Meteo live weather (2m, 5m, 10m, 15m, 30m, 1h) plus manual instant refresh"
+        )),
         Entry("0.53.2", "Visceral lightning DSP, flying window leaves, Open-Meteo live wind & days of the week", listOf(
             "Visceral lightning audio: redesigned thunder with an explosive acoustic supersonic crack on strike onset, decaying into deep reverberant sub-bass rumble with instant arrival (<0.04s-0.38s)",
             "Dynamic window leaves: exterior window sill leaves flutter, tremble in the wind, and periodically take flight, blowing across the pane and resetting naturally; leaves on glass slide and peel off in gusts",

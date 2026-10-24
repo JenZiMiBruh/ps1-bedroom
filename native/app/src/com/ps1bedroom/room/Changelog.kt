@@ -24,7 +24,11 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
-        Entry("0.53.11", "Tune-up: YouTube restart fix, lighter widget alarms, less background work", listOf(
+        Entry("0.54", "Real lava lamp wax, sound presets, Jasper reacts to the room", listOf(
+            "Lava lamp: the wax is now one gooey surface instead of six balls. Blobs swell off the warm pool at the bottom, stretch tall as they pull free, round off and cool at the top, then sink back and melt into the pool, merging and pinching apart when they pass. When it's off the wax slumps into the pool",
+            "Sound presets in Sound › Mixer: Default, Study, Rainy night, Sleep, Lively and Music first, one tap each. Save your own mix (up to 6) and remove them any time",
+            "Jasper reacts: thunder makes him flinch, stare at the window and often hide on the bed; he looks over and trots to the TV when it or YouTube comes on, perks up at the boombox when music starts, watches a PlayStation boot, heads to bed when you turn the lights out at night, and glances at you when you walk or sit near him"
+        )),        Entry("0.53.11", "Tune-up: YouTube restart fix, lighter widget alarms, less background work", listOf(
             "YouTube: stopping a video right after starting it could leave the TV holding a closed screen, so the next video never showed up. Fixed",
             "Window widget refreshes no longer wake the phone from sleep just to repaint; they update the next time the phone is awake (saves battery)",
             "The outdoor scenes (cars, swaying trees, chimney smoke, leaves on roofs) update about 6 times a second while the window is off screen instead of every frame",

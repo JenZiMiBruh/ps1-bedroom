@@ -680,8 +680,37 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
         tiles(playItems)
         note("The room's own sounds (fan, rain, the PC, the living room TV) each have a volume in Mixer.", true)
     }
+    /** v0.54: one-tap mixes (keys: pc, fan, ac, livtv, bedtv, pcspk, weather, nature, sfx, radio). */
+    private val MIX_KEYS = listOf("pc", "fan", "ac", "livtv", "bedtv", "pcspk", "weather", "nature", "sfx", "radio")
+    private val MIX_PRESETS = linkedMapOf(
+        "🏠 Default" to doubleArrayOf(0.75, 0.70, 0.65, 0.35, 1.00, 0.75, 0.90, 0.80, 0.80, 0.90),
+        "📚 Study" to doubleArrayOf(0.50, 0.60, 0.40, 0.00, 0.30, 0.40, 0.70, 0.40, 0.30, 0.60),
+        "🌧 Rainy night" to doubleArrayOf(0.30, 0.40, 0.00, 0.15, 0.40, 0.30, 1.40, 0.30, 0.50, 0.50),
+        "😴 Sleep" to doubleArrayOf(0.20, 1.00, 0.80, 0.00, 0.20, 0.00, 0.90, 0.30, 0.10, 0.30),
+        "🏙 Lively" to doubleArrayOf(0.80, 0.60, 0.60, 0.70, 1.00, 0.90, 0.90, 1.30, 1.00, 1.00),
+        "🎧 Music first" to doubleArrayOf(0.25, 0.25, 0.20, 0.00, 0.25, 0.30, 0.30, 0.20, 0.40, 1.20)
+    )
+    private val mixPrefs get() = act.getSharedPreferences("ps1bedroom", android.content.Context.MODE_PRIVATE)
+    private fun myMixes(): org.json.JSONObject = try { org.json.JSONObject(mixPrefs.getString("mixPresets", "{}") ?: "{}") } catch (e: Exception) { org.json.JSONObject() }
+    private fun mixMatches(v: DoubleArray) = MIX_KEYS.withIndex().all { (i, k) -> kotlin.math.abs((app.sound.vol[k] ?: 1.0) - v[i]) < 0.01 }
+    private fun applyMix(name: String, v: DoubleArray) = post {
+        for ((i, k) in MIX_KEYS.withIndex()) app.sound.vol[k] = v[i]
+        app.sound.updateLayered(); s.changed(); app.sfx("ui"); app.toast("🎚 $name")
+    }
     private fun buildMixer() {
         val snd = app.sound
+        h4("Presets")
+        val mine = myMixes()
+        val mineArr = mine.keys().asSequence().toList().associateWith { n -> mine.getJSONArray(n).let { a -> DoubleArray(MIX_KEYS.size) { a.optDouble(it, 1.0) } } }
+        chips((MIX_PRESETS + mineArr).map { (name, v) -> Triple(name, mixMatches(v), { applyMix(name, v) }) })
+        chips(listOf(Triple("＋ Save this mix", false, {
+            val n = (1..99).first { !mine.has("⭐ My mix $it") }
+            if (mine.length() >= 6) app.toast("🎚 6 saved mixes is the limit: remove one first")
+            else {
+                mine.put("⭐ My mix $n", org.json.JSONArray(MIX_KEYS.map { snd.vol[it] ?: 1.0 }))
+                mixPrefs.edit().putString("mixPresets", mine.toString()).apply(); app.toast("🎚 Saved as My mix $n"); build()
+            }
+        })) + mineArr.keys.map { n -> Triple("✕ ${n.removePrefix("⭐ ")}", false, { mine.remove(n); mixPrefs.edit().putString("mixPresets", mine.toString()).apply(); build() }) })
         h4("Mixer")
         for ((k, label) in listOf("pc" to "PC tower fan & HDD", "fan" to "Ceiling fan", "ac" to "Wall AC", "livtv" to "Living room TV (muffled)", "bedtv" to "Bedroom TV & PS1",
                 "weather" to "Rain, wind & storms", "nature" to "Outdoors: city, birds, crickets", "pcspk" to "PC speakers", "sfx" to "Clicks, PS1 drive, lava lamp", "radio" to "Boombox radio"))

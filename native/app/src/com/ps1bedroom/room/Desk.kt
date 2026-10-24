@@ -27,7 +27,8 @@ class Desk(private val room: Room, private val tex: Textures, private val librar
     lateinit var matJewelPlastic: Material
     val deskGroup = Group()
     val lavaBlobs = ArrayList<Mesh>()
-    private val blobSpeed = ArrayList<Float>(); private val blobOffset = ArrayList<Float>()
+    private val wax = LavaWax()
+    private var lastWaxT = -1f; private var waxSettled = false
     lateinit var pcLedMat: Material
     lateinit var hddLedMat: Material
     lateinit var monScreen: Mesh
@@ -362,12 +363,10 @@ class Desk(private val room: Room, private val tex: Textures, private val librar
         val lavaCap = Mesh(Geo.cylinder(0.036f, 0.058f, 0.15f, 10), PS1.material(color = 0x26304d))
         lavaCap.position.y = 0.87f; lavaCap.castShadow = true; lavaGroup.add(lavaCap); room.registerInteractable(lavaCap, "lavalamp")
         blobMat = PS1.material(color = 0xff2a85, emissive = 0xff1493, emissiveIntensity = 1.0f)
-        for (i in 0 until 6) {
-            val blob = Mesh(GeoCurves.icosahedron(0.044f - i * 0.004f, 1), blobMat)
-            blobSpeed += 0.85f + i * 0.38f; blobOffset += i * 1.35f
-            lavaGroup.add(blob); lavaBlobs += blob
-            room.registerInteractable(blob, "lavalamp")
-        }
+        // v0.54: the wax is one gooey surface that swells, rises, merges and sinks (LavaWax), not separate balls
+        val waxMesh = Mesh(wax.geometry, blobMat)
+        lavaGroup.add(waxMesh); lavaBlobs += waxMesh
+        wax.simulate(0f, lavaWarmth); wax.mesh()
     }
 
     /** Lava blobs rise and fall inside the tapered glass (from the HTML's animate loop). */
@@ -383,15 +382,11 @@ class Desk(private val room: Room, private val tex: Textures, private val librar
         lavaGlassMat.emissiveIntensity = 0.05f + 0.83f * w
         blobMat.emissiveIntensity = 0.12f + 0.88f * w
         room.lavaLight.intensity = 1.15f * w
-        for (idx in lavaBlobs.indices) {
-            val blob = lavaBlobs[idx]
-            val cycle = sin(t * blobSpeed[idx] + blobOffset[idx])
-            val warmY = 0.5f + cycle * 0.15f
-            val coldY = 0.3f + idx * 0.014f            // cold wax resting in a heap at the bottom
-            blob.position.y = coldY + (warmY - coldY) * w
-            blob.position.x = cos(t * 0.7f + idx) * 0.015f * w
-            val s = 0.9f + sin(t * 1.5f + idx) * 0.2f * w
-            blob.scale.set(s, s, s)
-        }
+        // The wax moves slowly, so the surface is rebuilt ~15x a second (and not at all once it has cooled and settled)
+        if (t - lastWaxT > 0.066f && (w > 0f || !waxSettled)) {
+            lastWaxT = t
+            wax.simulate(t, w); wax.mesh()
+            waxSettled = w == 0f
+        } else if (w > 0f) waxSettled = false
     }
 }

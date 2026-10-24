@@ -572,7 +572,7 @@ class Renderer {
             if (group != null) glDrawElements(GL_TRIANGLES, group[1], GL_UNSIGNED_INT, group[0] * 4)
             else glDrawElements(GL_TRIANGLES, idx.size, GL_UNSIGNED_INT, 0)
         } else {
-            if (group != null) glDrawArrays(GL_TRIANGLES, group[0], group[1]) else glDrawArrays(GL_TRIANGLES, 0, g.vertexCount)
+            if (group != null) glDrawArrays(GL_TRIANGLES, group[0], group[1]) else glDrawArrays(GL_TRIANGLES, 0, if (g.drawCount >= 0) g.drawCount else g.vertexCount)
         }
     }
 
@@ -705,8 +705,23 @@ class Renderer {
     private val uploadedGeometries = ArrayList<Geometry>()
     private val uploadedTextures = ArrayList<Texture>()
 
+    private var dynBuf: FloatBuffer = ByteBuffer.allocateDirect(4).order(ByteOrder.nativeOrder()).asFloatBuffer()
     private fun upload(g: Geometry) {
-        if (g.uploaded) return
+        if (g.uploaded) {
+            if (g.version != g.uploadedVersion) {
+                g.uploadedVersion = g.version
+                val n = (if (g.drawCount >= 0) g.drawCount else g.vertexCount) * 3
+                if (n > 0) {
+                    if (dynBuf.capacity() < n) dynBuf = ByteBuffer.allocateDirect(n * 4).order(ByteOrder.nativeOrder()).asFloatBuffer()
+                    dynBuf.clear(); dynBuf.put(g.positions, 0, n); dynBuf.position(0)
+                    glBindBuffer(GL_ARRAY_BUFFER, g.vbo[0]); glBufferSubData(GL_ARRAY_BUFFER, 0, n * 4, dynBuf)
+                    dynBuf.clear(); dynBuf.put(g.normals, 0, n); dynBuf.position(0)
+                    glBindBuffer(GL_ARRAY_BUFFER, g.vbo[1]); glBufferSubData(GL_ARRAY_BUFFER, 0, n * 4, dynBuf)
+                }
+            }
+            return
+        }
+        g.uploadedVersion = g.version
         val vao = IntArray(1); glGenVertexArrays(1, vao, 0); g.vao = vao[0]
         glBindVertexArray(g.vao)
         val b = IntArray(5); glGenBuffers(5, b, 0); g.vbo = b

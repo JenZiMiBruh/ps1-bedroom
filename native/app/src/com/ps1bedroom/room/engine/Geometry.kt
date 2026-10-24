@@ -23,6 +23,11 @@ class Geometry(
     @JvmField var vao = 0
     @JvmField var vbo = IntArray(4)
     @JvmField var uploaded = false
+    /** Dynamic meshes (the lava lamp's wax): bump [version] after rewriting positions / normals and they're re-sent. */
+    @JvmField var version = 0
+    @JvmField var uploadedVersion = 0
+    /** Non-indexed meshes: how many vertices to draw (-1 = all of them). */
+    @JvmField var drawCount = -1
     @JvmField var boundingRadius = -1f
     @JvmField val boundingCenter = Vec3()
 

@@ -285,6 +285,21 @@ class App : GLSurfaceView.Renderer {
     private var lastClockDraw = -99f
     private var lastSkylineUpdate = -99f
     private var placesDt = 0f
+    // v0.54: what Jasper notices (edges of the room's state, checked each frame)
+    private var jTv = false; private var jYt = false; private var jRadio = 0; private var jPs = false; private var jLit = true; private var jPrimed = false
+    private fun reactJasper(t: Float) {
+        val tvOn = tv.bedroomTvOn; val yt = ytActive; val radio = extras.radioStation; val ps = ps1.ps1On
+        val lit = fanLightOn || furniture.lampOn || decor.stringLightsOn
+        if (jPrimed) {
+            if ((tvOn && !jTv) || (yt && !jYt)) jasper.react("tv", t)
+            if (radio > 0 && radio != jRadio) jasper.react("music", t)
+            if (ps && !jPs) jasper.react("console", t)
+            val h = env.hour
+            if (!lit && jLit && (h >= 21 || h < 6)) jasper.react("lightsOut", t)
+        }
+        jTv = tvOn; jYt = yt; jRadio = radio; jPs = ps; jLit = lit; jPrimed = true
+        jasper.playerPos = if (player.mode != "orbit") camera.position else null
+    }
     private val SPHERE_WINDOW_C = Vec3(0.8f, 2.65f, -3.4f)
 
     // settings (the HTML defaults: Balanced quality, 240p, wobble 160, camera breathing 40%)
@@ -413,7 +428,7 @@ class App : GLSurfaceView.Renderer {
                 exterior.markWeatherDirty()
                 ps1.sfx = { sound.sfx(it) }; ps1.stopBootSound = { sound.stopPs1BootSound() }; library.sfx = { sound.sfx(it) }
                 env.envHooks += { sound.updateLayered() }
-                weatherFx.onThunder = { sound.lightningStrike(settings.thunderFreqMode) }
+                weatherFx.onThunder = { sound.lightningStrike(settings.thunderFreqMode); jasper.react("thunder", lastT) }
 
                 exterior.onTrainPass = { sound.trainPass() }
                 player.onStep = { onRug -> sound.sfx(if (onRug) "stepRug" else "step") }
@@ -471,6 +486,7 @@ class App : GLSurfaceView.Renderer {
             if (monitor.pcPoweredOn && t - lastMonitorUpdate > 0.16f && renderer.sphereInView(SPHERE_MONITOR_C, 0.6f)) { monitor.update(t); lastMonitorUpdate = t }
             fan.update(dt)
             decor.update(t)
+            reactJasper(t)
             jasper.update(t, dt)
             extras.update(t, dt, fanLightOn, furniture.lampOn, decor.stringLightsOn)
             jasper.bedroomTvOn = tv.bedroomTvOn

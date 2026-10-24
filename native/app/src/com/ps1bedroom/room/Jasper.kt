@@ -545,6 +545,8 @@ class Jasper(private val room: Room, private val env: Environment) {
         // When eating/drinking (eatK > 0), lower his chest and pitch his body DOWN (+0.38 rad) so his snout reaches into the bowl
         dogBody.position.y = 0.6f - poseK * 0.38f - sitK * SIT_DROP - eatK * 0.15f + breathe
         dogBody.rotation.x = -sitK * SIT_TILT + eatK * 0.38f
+        // a thunder flinch: a quick hop and a shiver that settles over ~1.5 s
+        if (startle > 0f) { startle = max(0f, startle - dt * 0.7f); dogBody.position.y += startle * startle * 0.07f; dogBody.rotation.z = sin(t * 38f) * 0.05f * startle } else dogBody.rotation.z = 0f
         val walkSwing = if (pose == "walk") sin(t * 9) * 0.55f else 0f
         // Joint angles per pose [shoulder/hip, knee/hock], blended by how far into the pose he is
         val lieK = poseK; val standK = max(0f, 1 - lieK - sitK - eatK)
@@ -581,6 +583,8 @@ class Jasper(private val room: Room, private val env: Environment) {
             else -> sin(t * (if (playingNow) 4.5f else 0.27f)) * 0.35f
         }
         dogHead.rotation.z = if (eatingOrDrinking) 0f else if (petting || playingNow) sin(t * (if (playingNow) 6f else 3f)) * 0.25f else 0f
+        // v0.54: turn to look at whatever just happened (thunder at the window, the TV, the boombox, you)
+        if (!eatingOrDrinking && pose != "sleep") reactHead(t)
         if (::lowerJawMesh.isInitialized) {
             lowerJawMesh.position.y = -0.105f - (if (eatingOrDrinking) chewWave * 0.022f else 0f)
             lowerJawMesh.rotation.x = if (eatingOrDrinking) chewWave * 0.28f else 0f
@@ -621,6 +625,85 @@ class Jasper(private val room: Room, private val env: Environment) {
         if (pose == "sleep" && state == "rest" && t > nextSnore) { nextSnore = t + 4.2f + rnd.nextFloat() * 1.5f; onSound("snore", soundPos()) }
     }
     private var nextSnore = 0f
+
+    // ---- v0.54: he reacts to what happens in the room ----
+    private var lookAt: Vec3? = null
+    private var lookUntil = 0f
+    private var startle = 0f
+    private var lastReact = HashMap<String, Float>()
+    /** Where you are (the camera), fed by the app each frame while you walk around or sit. */
+    var playerPos: Vec3? = null
+    private var nextPlayerLook = 0f
+    private val TV_POS = Vec3(-1.95f, 1.2f, 0.65f)
+    private val WINDOW_POS = Vec3(0.8f, 2.4f, -3.3f)
+    private val BOOMBOX_POS = Vec3(-2.6f, 1.3f, -1.0f)
+    private val DOOR_POS = Vec3(2.3f, 1.0f, 3.0f)
+    private fun lookFor(at: Vec3, t: Float, secs: Float) { lookAt = at; lookUntil = t + secs }
+    private val awake get() = pose != "sleep" && !onBed
+    private val busy get() = pendingAction.isNotEmpty() || actionKind.isNotEmpty() || jump != null
+    /**
+     * Something happened: "thunder", "tv" (TV on or YouTube starting), "music" (radio / your music starts),
+     * "console" (a PlayStation boots), "lightsOut" (the room goes dark at night), "door".
+     */
+    fun react(kind: String, t: Float) {
+        // the same thing over and over doesn't keep getting a reaction
+        if (t - (lastReact[kind] ?: -99f) < (if (kind == "thunder") 6f else 12f)) return
+        lastReact[kind] = t
+        when (kind) {
+            "thunder" -> {
+                startle = 1f
+                lookFor(WINDOW_POS, t, 3.5f)
+                if (!awake && !onBed) { pose = "lie" }
+                if (!onBed && !busy && rnd.nextFloat() < 0.55f) {
+                    // a close one: he hides on the bed
+                    dogSpots().firstOrNull { it.name == "bed" }?.let { sendDog(it) }
+                    toast("⛈ Jasper scrambles onto the bed to hide from the thunder")
+                } else if (rnd.nextFloat() < 0.4f) onSound("boof", soundPos())
+            }
+            "tv" -> {
+                if (!awake) return
+                lookFor(TV_POS, t, 4f); wagUntil = t + 2f
+                if (!busy && spot?.name != "tv" && rnd.nextFloat() < 0.6f) dogSpots().firstOrNull { it.name == "tv" }?.let { sendDog(it) }
+            }
+            "music" -> {
+                if (!awake) return
+                lookFor(BOOMBOX_POS, t, 3f); wagUntil = t + 4f   // ears up, head tilt, happy tail
+            }
+            "console" -> {
+                if (!awake) return
+                lookFor(TV_POS, t, 3.5f); wagUntil = t + 1.5f
+            }
+            "door" -> {
+                if (!awake) return
+                lookFor(DOOR_POS, t, 3f)
+                if (!busy) dogSpots().firstOrNull { it.name == "door" }?.let { sendDog(it) }
+                onSound("boof", soundPos())
+            }
+            "lightsOut" -> {
+                if (busy || onBed) return
+                // big yawn, then off to bed
+                if (rnd.nextFloat() < 0.7f) { dogSpots().firstOrNull { it.name == "bed" }?.let { sendDog(it) }; toast("🌙 Jasper yawns and pads off to bed") }
+            }
+        }
+    }
+    /** Head turn toward whatever caught his attention (and you, now and then, when you're close). Returns false if nothing. */
+    private fun reactHead(t: Float): Boolean {
+        val pp = playerPos
+        if (t > lookUntil && pp != null && awake && t > nextPlayerLook) {
+            nextPlayerLook = t + 6f + rnd.nextFloat() * 8f
+            val d = kotlin.math.hypot(pp.x - pos.x, pp.z - pos.z)
+            if (d < 1.8f) { lookFor(pp, t, 2.5f); if (d < 1.1f) wagUntil = t + 2f }
+        }
+        val at = lookAt ?: return false
+        if (t > lookUntil) { lookAt = null; return false }
+        val want = atan2(at.x - pos.x, at.z - pos.z)
+        val yaw = shortAngle(heading, want).coerceIn(-1.0f, 1.0f)
+        dogHead.rotation.y += (yaw - dogHead.rotation.y) * 0.25f
+        val dist = kotlin.math.hypot(at.x - pos.x, at.z - pos.z).coerceAtLeast(0.3f)
+        val pitch = -kotlin.math.atan((at.y - (y + 0.75f)) / dist).coerceIn(-0.5f, 0.3f)
+        dogHead.rotation.x += (pitch - dogHead.rotation.x) * 0.25f
+        return true
+    }
     /** Sound hook (Sound.dogSound) and toasts, set by the app. */
     var onSound: (String, Vec3) -> Unit = { _, _ -> }
     var toast: (String) -> Unit = {}

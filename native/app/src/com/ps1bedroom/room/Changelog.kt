@@ -24,6 +24,13 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.55", "Paper Toss Deluxe, new weather card, seamless walls, leaves stay outside", listOf(
+            "Paper Toss is a full game now: runs with strikes, stages that add wind, a sliding basket, a box in the way and gusts, combo multipliers and ON FIRE streaks, golden wads worth triple, coins, an upgrade shop (bigger basket, aim guide, steady hand, extra strike, lucky rim, golden touch, coin magnet) and lifetime stats",
+            "Paper Toss looks better too: shaded basket and box, a window that follows the time of day, ball trails, confetti, screen shake and score pop-ups",
+            "TV weather, Simple view: redone as one clean card. The background matches the sky outside, with a big icon, a huge temperature, the condition in plain words and one strip for high / low and wind",
+            "Walls: the worn-paint texture is redone so it tiles cleanly, and every wall piece now uses the same scale, so there are no more seams or mismatched patches where the walls meet",
+            "Leaves blown toward the house now stop at the outside of the wall instead of drifting through it into the room. Only the open window lets them in, and once inside they stay inside the room"
+        )),
         Entry("0.54", "Real lava lamp wax, sound presets, Jasper reacts to the room", listOf(
             "Lava lamp: the wax is now one gooey surface instead of six balls. Blobs swell off the warm pool at the bottom, stretch tall as they pull free, round off and cool at the top, then sink back and melt into the pool, merging and pinching apart when they pass. When it's off the wax slumps into the pool",
             "Sound presets in Sound › Mixer: Default, Study, Rainy night, Sleep, Lively and Music first, one tap each. Save your own mix (up to 6) and remove them any time",

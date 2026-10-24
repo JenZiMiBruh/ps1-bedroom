@@ -1045,10 +1045,9 @@ class Tv(private val room: Room, private val env: Environment) {
     }
 
     /**
-     * High-legibility Weather Channel Simple View:
-     * Specially designed with bold 26px temperature, prominent animated 28px weather icon,
-     * high-contrast condition ribbon, and lower status strips so conditions are immediately
-     * legible from across the bedroom in the default room camera view.
+     * Simple view: one calm card readable from the bed. A sky backdrop that matches the weather and time of day,
+     * a big animated icon, a huge temperature, the condition in plain words and one strip with high / low and wind.
+     * (Redone: the old one crammed eight readouts and tiny emoji into 128x96.)
      */
     private fun drawSimpleWeatherView(
         ctx: Canvas2D, w: Int, h: Int, t: Float,
@@ -1058,28 +1057,6 @@ class Tv(private val room: Room, private val env: Environment) {
         windCompass: String, windSpeedStr: String,
         curMonth: Int
     ) {
-        // 1. Background: Deep rich retro CRT indigo-navy
-        ctx.fillStyle = "#050a16"; ctx.fillRect(0, 0, w, h)
-
-        // 2. Header Banner (y = 0..13)
-        ctx.fillStyle = themeHeaderCol; ctx.fillRect(0, 0, w, 13)
-        ctx.fillStyle = "#facc15"; ctx.fillRect(0, 13, w, 1)
-
-        // Left badge
-        ctx.fillStyle = "#003399"; ctx.fillRect(3, 2, 28, 9)
-        ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 0.8f; ctx.strokeRect(3, 2, 28, 9)
-        ctx.fillStyle = "#ffffff"; ctx.font = "bold 6px monospace"; ctx.textAlign = "center"
-        ctx.fillText("WEATHER", 17, 8.5)
-        ctx.textAlign = "left"
-
-        // Right city & time (large and crisp)
-        ctx.textAlign = "right"
-        ctx.fillStyle = "#ffffff"; ctx.font = "bold 6.5px monospace"
-        ctx.fillText("${cityText().take(8)} $timeStr", w - 4, 9)
-        ctx.textAlign = "left"
-
-        // 3. Main Center Display (y = 15..50)
-        // Weather Icon (large 28x28 centered at cx = 23, cy = 32)
         val iconType = when {
             env.W.lightning || env.W.rain > 0.7f -> "storm"
             env.W.rain > 0.2f -> "rain"
@@ -1088,76 +1065,55 @@ class Tv(private val room: Room, private val env: Environment) {
             env.W.cloud > 0.4f -> "cloud"
             else -> "sun"
         }
-        drawLargeWeatherIcon(ctx, iconType, 23f, 32f, t)
+        val night = env.daylight < 0.25f
+        // 1. Sky backdrop
+        val (skyTop, skyBottom) = when (iconType) {
+            "storm" -> "#14112e" to "#3b3f5c"
+            "rain" -> if (night) "#0d1626" to "#2b3a4f" else "#25405e" to "#5b7088"
+            "snow" -> if (night) "#152033" to "#3d4f66" else "#3f5873" to "#8aa0b8"
+            "fog" -> if (night) "#1c2129" to "#3c434d" else "#4b5563" to "#8b939e"
+            "cloud" -> if (night) "#111827" to "#334155" else "#3b5878" to "#7d97b3"
+            else -> if (night) "#070b24" to "#1e2a52" else "#1d4ed8" to "#6cb2f5"
+        }
+        val sky = ctx.createLinearGradient(0, 0, 0, h)
+        sky.addColorStop(0, skyTop); sky.addColorStop(1, skyBottom)
+        ctx.fillStyle = sky; ctx.fillRect(0, 0, w, h)
+        if (iconType == "storm" && env.W.lightning && sin(t * 23f) > 0.6f) { ctx.fillStyle = "rgba(255,255,255,0.18)"; ctx.fillRect(0, 0, w, h) }
 
-        // Giant 28px Temperature (bold white, with shadow for CRT pop)
-        ctx.textAlign = "left"
-        ctx.fillStyle = "rgba(0,0,0,0.75)"
-        ctx.font = "bold 28px monospace"
-        ctx.fillText(tempText(), 52, 38) // drop shadow
-        ctx.fillStyle = "#ffffff"
-        ctx.fillText(tempText(), 50, 37)
+        // 2. Top line: city and time
+        ctx.fillStyle = "rgba(0,0,0,0.35)"; ctx.fillRect(0, 0, w, 12)
+        ctx.font = "bold 6.5px monospace"; ctx.textAlign = "left"; ctx.fillStyle = "#e2e8f0"
+        ctx.fillText(cityText().take(11), 4, 8.5, 70)
+        ctx.textAlign = "right"; ctx.fillStyle = "#ffffff"
+        ctx.fillText(timeStr, w - 4, 8.5)
 
-        // Feels like tag
-        ctx.fillStyle = "#93c5fd"; ctx.font = "bold 6px monospace"
-        ctx.fillText("FEEL $feelsLikeStr", 52, 19)
+        // 3. Big icon (left) and the temperature (right)
+        ctx.save()
+        ctx.translate(31, 40); ctx.scale(1.25f, 1.25f)
+        drawLargeWeatherIcon(ctx, iconType, 0f, 0f, t)
+        ctx.restore()
+        val temp = tempText()
+        ctx.textAlign = "center"; ctx.font = "bold 30px monospace"
+        ctx.fillStyle = "rgba(0,0,0,0.45)"; ctx.fillText(temp, 92 + 1.5f, 52 + 1.5f, 64)
+        ctx.fillStyle = "#ffffff"; ctx.fillText(temp, 92, 52, 64)
+        ctx.font = "bold 6px monospace"; ctx.fillStyle = "#dbeafe"
+        ctx.fillText("FEELS $feelsLikeStr", 92, 62)
 
-        // High / Low estimation
+        // 4. The condition, in plain words
+        val label = env.W.label.uppercase()
+        ctx.font = "bold 9px monospace"
+        ctx.fillStyle = "rgba(0,0,0,0.45)"; ctx.fillText(label, w / 2 + 1f, 75f, w - 10)
+        ctx.fillStyle = "#fef9c3"; ctx.fillText(label, w / 2f, 74f, w - 10)
+
+        // 5. One strip: high / low and wind
         val hiC = cTemp + 3.0; val loC = cTemp - 4.0
-        val hiStr = if (tempUnit() == "F") "${(hiC * 1.8 + 32).roundToInt()}°" else "${hiC.roundToInt()}°"
-        val loStr = if (tempUnit() == "F") "${(loC * 1.8 + 32).roundToInt()}°" else "${loC.roundToInt()}°"
-        ctx.fillStyle = "#f87171"; ctx.font = "bold 6.5px monospace"
-        ctx.fillText("▲ $hiStr", 52, 47)
-        ctx.fillStyle = "#38bdf8"
-        ctx.fillText("▼ $loStr", 86, 47)
-
-        // 4. Prominent Weather Condition Banner (y = 51..65)
-        ctx.fillStyle = "#1e3a8a"; ctx.fillRect(2, 51, w - 4, 14)
-        ctx.strokeStyle = "#38bdf8"; ctx.lineWidth = 1f; ctx.strokeRect(2, 51, w - 4, 14)
-        ctx.fillStyle = "#000000"; ctx.font = "bold 9px monospace"; ctx.textAlign = "center"
-        ctx.fillText(env.W.label.take(15).uppercase(), w / 2 + 0.5f, 62f)
-        ctx.fillStyle = "#fef08a"
-        ctx.fillText(env.W.label.take(15).uppercase(), w / 2, 61.5)
-        ctx.textAlign = "left"
-
-        // 5. High-Contrast Lower Bars (y = 66..96)
-        // Bar 1: Day/Date & Wind Vector (y = 66..80, height 14)
-        val windDeg = if (env.liveWindDirDeg >= 0f) env.liveWindDirDeg else 225f
-        val windArrow = when ((((windDeg + 22.5f) / 45f).toInt()) % 8) {
-            0 -> "↓"
-            1 -> "↙"
-            2 -> "←"
-            3 -> "↖"
-            4 -> "↑"
-            5 -> "↗"
-            6 -> "→"
-            else -> "↘"
-        }
-        ctx.fillStyle = "#091428"; ctx.fillRect(0, 66, w, 14)
-        ctx.fillStyle = "#1e293b"; ctx.fillRect(0, 66, w, 1)
-        ctx.fillStyle = "#ffffff"; ctx.font = "bold 6.5px monospace"
-        ctx.fillText(dateStr, 4, 76.5)
-        ctx.textAlign = "right"
-        ctx.fillStyle = "#4ade80"; ctx.font = "bold 6.5px monospace"
-        ctx.fillText("$windArrow $windCompass $windSpeedStr", w - 4, 76.5)
-        ctx.textAlign = "left"
-
-        // Bar 2: Moon Phase & Holiday countdown (y = 81..96, height 15)
-        ctx.fillStyle = if (env.W.lightning) "#7f1d1d" else "#0c254c"
-        ctx.fillRect(0, 81, w, 15)
-        ctx.fillStyle = "#38bdf8"; ctx.fillRect(0, 81, w, 1)
-        ctx.fillStyle = "#93c5fd"; ctx.font = "bold 6px monospace"
-        val moonGlyph = when {
-            env.moonIllum < 0.10 -> "🌑"
-            env.moonPhase < 0.50 -> "🌓"
-            env.moonIllum > 0.85 -> "🌕"
-            else -> "🌗"
-        }
-        ctx.fillText("$moonGlyph ${(env.moonIllum * 100).roundToInt()}%", 4, 91.5)
-        ctx.textAlign = "right"
-        ctx.fillStyle = "#fde047"; ctx.font = "bold 6px monospace"
-        val holiText = if (firstHoli.daysUntil == 0) "${firstHoli.icon} TODAY!" else "${firstHoli.icon} ${firstHoli.name.take(6).uppercase()} ${firstHoli.daysUntil}D"
-        ctx.fillText(holiText, w - 4, 91.5)
+        fun deg(c: Double) = if (tempUnit() == "F") "${(c * 1.8 + 32).roundToInt()}°" else "${c.roundToInt()}°"
+        ctx.fillStyle = "rgba(0,0,0,0.5)"; ctx.fillRect(0, 81, w, 15)
+        ctx.font = "bold 7px monospace"; ctx.textAlign = "left"
+        ctx.fillStyle = "#fca5a5"; ctx.fillText("H ${deg(hiC)}", 4, 91)
+        ctx.fillStyle = "#93c5fd"; ctx.fillText("L ${deg(loC)}", 32, 91)
+        ctx.textAlign = "right"; ctx.fillStyle = "#bbf7d0"
+        ctx.fillText("$windCompass $windSpeedStr", w - 4, 91, 62)
         ctx.textAlign = "left"
     }
 

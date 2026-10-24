@@ -11,6 +11,7 @@ import com.ps1bedroom.room.engine.Scene
 import com.ps1bedroom.room.engine.SpotLight
 import com.ps1bedroom.room.engine.Vec3
 import kotlin.math.PI
+import kotlin.math.abs
 
 /**
  * The bedroom shell, ported from src/ps1_bedroom.html in the same order (lines 2464-2665 and 8141-8222):
@@ -37,6 +38,8 @@ class Room(val scene: Scene, val tex: Textures) {
     companion object {
         const val MIN_X = -3.73f; const val MAX_X = 4.38f; const val MIN_Z = -2.98f; const val MAX_Z = 3.48f; const val MIN_Y = 0f; const val MAX_Y = 5.0f
         const val DOOR_X = 2.85f
+        /** metres of wall per repeat of the paint texture */
+        const val WALL_TILE = 1.6f
         val celestialPos = Vec3(-0.75f, 3.45f, -5.85f)
         val roomLightTargetPos = Vec3(2.35f, 1.45f, -0.15f)
     }
@@ -50,6 +53,17 @@ class Room(val scene: Scene, val tex: Textures) {
     lateinit var fanHemiFill: HemisphereLight
     lateinit var bedroomTvLight: PointLight
     lateinit var doorLeaf: Group
+
+    /** Native fix: walls take their UVs from world position, so every slab shows the paint at the same scale and the
+     *  pieces meet without seams (each box used to stretch the texture over itself). Walls are never rotated. */
+    private fun worldWallUv(m: Mesh) {
+        val g = m.geometry; val p = g.positions; val n = g.normals; val uv = g.uvs
+        for (i in 0 until g.vertexCount) {
+            val wx = p[i * 3] + m.position.x; val wy = p[i * 3 + 1] + m.position.y; val wz = p[i * 3 + 2] + m.position.z
+            uv[i * 2] = (if (abs(n[i * 3]) > 0.5f) wz else wx) / WALL_TILE
+            uv[i * 2 + 1] = (if (abs(n[i * 3 + 1]) > 0.5f) wz else wy) / WALL_TILE
+        }
+    }
 
     fun build() {
         // Solid 3D floor and ceiling so shadows and light are physically bounded
@@ -69,7 +83,7 @@ class Room(val scene: Scene, val tex: Textures) {
         // Walls around the window aperture (opening: X -0.6..2.2, Y 1.55..3.75, Z -3.0)
         fun addSolidWall(w: Float, h: Float, d: Float, x: Float, y: Float, z: Float): Mesh {
             val m = Mesh(Geo.box(w, h, d, 10, 8, 2), matWall)
-            m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true
+            m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true; worldWallUv(m)
             scene.add(m); return m
         }
         addSolidWall(4.4f, 5.5f, 0.24f, -2.8f, 2.75f, -3.10f)   // left of window
@@ -77,10 +91,10 @@ class Room(val scene: Scene, val tex: Textures) {
         addSolidWall(2.8f, 1.55f, 0.24f, 0.8f, 0.775f, -3.10f)  // below window
         addSolidWall(2.8f, 1.75f, 0.24f, 0.8f, 4.625f, -3.10f)  // above window
         val rightWall = Mesh(Geo.box(0.24f, 5.5f, 10.0f, 2, 12, 16), matWall)
-        rightWall.position.set(4.50f, 2.75f, 1.5f); rightWall.castShadow = true; rightWall.receiveShadow = true
+        rightWall.position.set(4.50f, 2.75f, 1.5f); worldWallUv(rightWall); rightWall.castShadow = true; rightWall.receiveShadow = true
         scene.add(rightWall)
         val leftWall = Mesh(Geo.box(0.24f, 5.5f, 6.94f, 2, 10, 12), matWall)
-        leftWall.position.set(-3.85f, 2.75f, 0.25f); leftWall.castShadow = true; leftWall.receiveShadow = true
+        leftWall.position.set(-3.85f, 2.75f, 0.25f); worldWallUv(leftWall); leftWall.castShadow = true; leftWall.receiveShadow = true
         scene.add(leftWall)
 
         // Front wall (Z = 3.60) with the door opening (X 1.95..3.75, up to Y 3.7)

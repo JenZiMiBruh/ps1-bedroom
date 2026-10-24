@@ -35,7 +35,7 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
     private fun rand() = rnd.nextFloat()
 
     // Outside volume seen through the window
-    private object OUT { const val x0 = -1.8f; const val x1 = 3.4f; const val y0 = 0.4f; const val y1 = 4.8f; const val z0 = -3.25f; const val z1 = -6.2f; const val ledgeY = 1.6f }
+    private object OUT { const val x0 = -1.8f; const val x1 = 3.4f; const val y0 = 0.4f; const val y1 = 4.8f; const val z0 = -3.25f; const val z1 = -6.2f; const val ledgeY = 1.6f; const val wallZ = -3.23f }
 
     private fun makeInstanced(group: Group, geo: Geometry, mat: Material, count: Int): InstancedMesh {
         val mesh = InstancedMesh(geo, mat, count); group.add(mesh); return mesh
@@ -674,6 +674,9 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
                         l.y -= fallSpeed * dt
                         l.x += (driftX + sway) * dt
                         l.z += (driftZ + cos(t * 1.2f + l.ph) * 0.04f) * dt
+                        // The back wall's outer face is at Z -3.22: a leaf blown toward the house presses against it
+                        // instead of drifting through the wall into the bedroom (only the open sash below lets one in)
+                        if (l.z > OUT.wallZ) l.z = OUT.wallZ
 
                         // Smooth organic aerial tumble aligned with wind direction
                         l.rotX = -blowDirZ * 0.30f + sin(t * 1.8f + l.ph) * 0.35f + t * l.rs * 0.5f * debrisSpeed
@@ -682,11 +685,11 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
 
                         // Collision with window glass or aperture:
                         val inWindowX = l.x in -0.55f..2.15f
-                        val hitGlassZ = l.z in -3.26f..-3.12f
+                        val hitGlassZ = l.z >= OUT.wallZ - 0.02f
                         if (inWindowX && hitGlassZ && (windowHitRate > 0.01f)) {
                             val windowRaised = room.windowOpen && room.windowRaise > 0.30f
                             val inOpeningY = l.y in 1.58f..(1.58f + room.windowRaise)
-                            if (windowRaised && inOpeningY && (blowDirZ >= -0.15f && rand() < 0.28f)) {
+                            if (windowRaised && inOpeningY && l.x in -0.45f..2.05f && (blowDirZ >= -0.15f && rand() < 0.28f)) {
                                 // BLOW IN THE WINDOW! Occasional leaf drifts into bedroom through open sash
                                 l.state = 3
                                 l.vxOff = blowDirX * 0.40f + randIn(-0.12f, 0.12f)
@@ -759,6 +762,13 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
                         l.rotX += 2.2f * dt
                         l.rotY += 3.0f * dt
                         l.rotZ += 1.8f * dt
+                        // Until it's through the wall it stays inside the opening; after that, inside the room
+                        if (l.z < -2.9f) {
+                            l.x = l.x.coerceIn(-0.5f, 2.1f); l.y = l.y.coerceIn(1.6f, 1.55f + room.windowRaise)
+                        } else {
+                            if (l.x < Room.MIN_X + 0.05f || l.x > Room.MAX_X - 0.05f) { l.x = l.x.coerceIn(Room.MIN_X + 0.05f, Room.MAX_X - 0.05f); l.vxOff = -l.vxOff * 0.3f }
+                            if (l.z > Room.MAX_Z - 0.05f) { l.z = Room.MAX_Z - 0.05f; l.vzOff = 0f }
+                        }
 
                         // Check collision with desk surface or bedroom floor
                         val onDesk = l.x in 1.7f..3.1f && l.z in -2.6f..-1.4f && l.y <= 1.38f

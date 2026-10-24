@@ -5,6 +5,9 @@ import com.ps1bedroom.room.engine.PS1
 import com.ps1bedroom.room.engine.Texture
 import com.ps1bedroom.room.engine.Weather
 import com.ps1bedroom.room.engine.createCanvasTex
+import com.ps1bedroom.room.engine.makeFbm
+import com.ps1bedroom.room.engine.makeNoiseField
+import com.ps1bedroom.room.engine.makeRng
 import com.ps1bedroom.room.engine.rand
 import kotlin.math.cos
 import kotlin.math.sin
@@ -66,14 +69,23 @@ class Textures {
         ctx.fillStyle = "rgba(120, 88, 62, 0.14)"; ctx.fillRect(38, 78, 44, 26)
     }.tex
 
-    val wall = createCanvasTex(128, 128, 4f, 2f, Weather(seed = 21.0, blotch = 0.38, speckle = 0.07, smudges = 5, stains = 1, scuffs = 8)) { ctx, w, h ->
+    // Painted plaster walls. Native redo: the old one stamped stains / smudges / scuffs that didn't wrap and a sine
+    // swirl that didn't tile, so every repeat showed a seam. Everything here tiles, and Room maps it in world space
+    // (Room.WALL_TILE metres per repeat) so the separate wall slabs line up with each other.
+    val wall = createCanvasTex(128, 128) { ctx, w, h ->
+        val broad = makeFbm(w, h, 21.0)                   // soft, uneven paint coverage
+        val roller = makeNoiseField(w, h, 16.0, 22.0)     // faint vertical paint-roller lanes (sampled along x only)
+        val grain = makeNoiseField(w, h, 2.0, 23.0)       // fine plaster tooth
+        val rnd = makeRng(24.0)
+        val d = ctx.getImageData()
         for (y in 0 until h) for (x in 0 until w) {
-            val v = (rand() * 10 - 5).toInt()
-            val smudge = sin(x * 0.06) * cos(y * 0.06) * 4
-            ctx.fillStyle = "rgb(${(28 + v + smudge).toInt()}, ${(38 + v + smudge).toInt()}, ${(68 + v + smudge).toInt()})"
-            ctx.fillRect(x, y, 1, 1)
+            val i = (y * w + x) * 4
+            val m = 1.0 + (broad(x.toDouble(), y.toDouble()) - 0.5) * 0.16 + (roller(x.toDouble(), 0.0) - 0.5) * 0.06 +
+                (grain(x.toDouble(), y.toDouble()) - 0.5) * 0.1 + (rnd() - 0.5) * 0.035
+            d[i] = (30 * m).toInt().coerceIn(0, 255); d[i + 1] = (40 * m).toInt().coerceIn(0, 255); d[i + 2] = (70 * m).toInt().coerceIn(0, 255); d[i + 3] = 255
         }
-    }.tex
+        ctx.putImageData(d)
+    }.tex.also { it.wrapRepeat = true }
 
     val rug = createCanvasTex(128, 128, weather = Weather(seed = 31.0, blotch = 0.32, speckle = 0.16, stains = 3, worn = 0.22, scuffs = 6)) { ctx, w, h ->
         ctx.fillStyle = "#121932"; ctx.fillRect(0, 0, w, h)

@@ -240,8 +240,21 @@ class App : GLSurfaceView.Renderer {
             g3.render(ps1.gameTime(t), SystemClock.uptimeMillis())
             tv.useFeed(g3.rt.texture)
         } else {
-            tv.useFeed(null)
+            // YouTube plays ON the TV's screen texture in the 3D room (no overlay)
+            val f = ytFeed
+            if (ytActive && f != null && hud?.yt?.isFull != true) {
+                f.update()
+                tv.useFeed(f.rt.texture)
+            } else {
+                tv.useFeed(null)
+            }
         }
+    }
+    /** YouTube's texture on the TV (made on the GL thread when playback starts). */
+    @Volatile var ytFeed: YouTubeFeed? = null
+    fun ensureYtFeed(ready: (android.view.Surface) -> Unit) = post {
+        val f = ytFeed ?: YouTubeFeed(640, 480).also { ytFeed = it }
+        ready(f.surface)
     }
     private var lastTvUpdate = 0.05f
     private val SPHERE_TV_C = Vec3(-2.05f, 1.3f, 0.65f)
@@ -340,7 +353,6 @@ class App : GLSurfaceView.Renderer {
             controls.maxDistance = 25.0f
             controls.update()
             startMs = SystemClock.uptimeMillis()
-            built = true
             myMusic.onChanged = { hud?.refreshMenu(); hud?.refreshBoombox(); publishMedia() }
             scene.add(alarm.light)
             tv.tempText = { settings.formatTemp(settings.currentTempC()) }
@@ -373,6 +385,7 @@ class App : GLSurfaceView.Renderer {
             jasper.onSound = { kind, at -> sound.dogSound(kind, at) }; jasper.toast = { toast(it) }
             extras.onHeaterHum = { on -> sound.heaterHum(on) }; extras.toast = { toast(it) }; extras.sfx = { sound.sfx(it) }
             hud?.refreshMenu(); hud?.refreshStatus()
+            built = true
         }
     }
 
@@ -385,6 +398,7 @@ class App : GLSurfaceView.Renderer {
     }
 
     override fun onDrawFrame(gl: GL10?) {
+        if (!built) return
         val t = (SystemClock.uptimeMillis() - startMs) / 1000f
         val dt = minOf(0.05f, if (lastT < 0f) 0f else t - lastT)
         lastT = t

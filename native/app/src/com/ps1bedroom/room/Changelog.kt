@@ -24,6 +24,11 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.52", "100% reliable launch synchronization & CRT YouTube feed without overlays", listOf(
+            "Eliminated launch timing race: guarded onDrawFrame with atomic completion check so rendering never runs before scene construction finishes",
+            "YouTube plays directly ON the TV screen: runs on the TV's private display and feeds straight into the CRT texture (zero overlay on the bedroom)",
+            "Asynchronous widget resume dispatch: decoupled widget updates from onResume so startup is instantaneous and smooth every single time"
+        )),
         Entry("0.51", "Fix YouTube on bedroom TV & edge-to-edge flush CRT playback", listOf(
             "Fixed YouTube playback: removed VirtualDisplay/Presentation pipeline incompatibility that caused black/frozen player screens",
             "Restored direct hardware-accelerated playback with live origin verification and full audio/video stream decoding",

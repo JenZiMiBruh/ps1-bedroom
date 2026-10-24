@@ -13,6 +13,10 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.widget.RemoteViews
 import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
+import java.net.URLEncoder
+import java.util.Calendar
 import kotlin.math.roundToInt
 
 /**
@@ -26,6 +30,7 @@ import kotlin.math.roundToInt
 class RoomWidgetReceiver : BroadcastReceiver() {
     companion object {
         const val ACTION_WIDGET_CMD = "com.ps1bedroom.room.WIDGET_CMD"
+        const val ACTION_WIDGET_ALARM = "com.ps1bedroom.room.ACTION_WIDGET_ALARM"
         @Volatile var onCommand: ((String) -> Boolean)? = null
 
         fun cmdPendingIntent(ctx: Context, cmd: String, reqCode: Int): PendingIntent =
@@ -52,6 +57,142 @@ class RoomWidgetReceiver : BroadcastReceiver() {
 
         private fun writeSettingsJson(ctx: Context, obj: JSONObject) {
             ctx.getSharedPreferences("ps1bedroom", Context.MODE_PRIVATE).edit().putString("settings.v1", obj.toString()).apply()
+        }
+
+        private fun fetchJson(urlStr: String, timeout: Int): JSONObject? {
+            return try {
+                val conn = URL(urlStr).openConnection() as HttpURLConnection
+                conn.connectTimeout = timeout
+                conn.readTimeout = timeout
+                conn.inputStream.bufferedReader().use { JSONObject(it.readText()) }
+            } catch (_: Exception) {
+                null
+            }
+        }
+
+        private fun wmoToKind(code: Int, wind: Double): String {
+            var k = "clear"
+            if (code in 1..2) k = "partly"
+            else if (code == 3) k = "overcast"
+            else if (code in listOf(45, 48)) k = "fog"
+            else if (code in 51..57 || code in listOf(61, 80)) k = "drizzle"
+            else if (code in listOf(63, 81, 66, 67)) k = "rain"
+            else if (code in listOf(65, 82)) k = "downpour"
+            else if (code in listOf(71, 77, 85)) k = "flurries"
+            else if (code in listOf(73, 86)) k = "snow"
+            else if (code == 75) k = if (wind > 30) "blizzard" else "snow"
+            else if (code >= 95) k = "storm"
+            if ((k == "clear" || k == "partly") && wind > 35) k = "windy"
+            return k
+        }
+
+        private fun weatherIcon(kind: String): String = when (kind) {
+            "storm" -> "⛈️"
+            "heat" -> "⚡"
+            "rain", "downpour" -> "🌧️"
+            "drizzle", "sunshower" -> "🌦️"
+            "snow", "blizzard", "flurries" -> "🌨️"
+            "fog", "mist" -> "🌫️"
+            "windy" -> "💨"
+            "overcast", "partly" -> "⛅"
+            else -> "☀️"
+        }
+
+        /** Background worker that updates live weather, day/night lighting, and renders fresh snapshots without requiring the app to be open or in PiP. */
+        fun refreshWindowWidgetBackground(ctx: Context, forceSnapshot: Boolean = false, onComplete: (() -> Unit)? = null) {
+            Thread {
+                try {
+                    val s = readSettingsJson(ctx)
+                    val p = ctx.getSharedPreferences("window_widget", Context.MODE_PRIVATE)
+                    val weatherMode = s.optString("weatherMode", "live")
+                    val cityName = s.optString("cityName", "").trim()
+
+                    var weatherKind = s.optString("weatherKind", "clear")
+                    var tempStr = p.getString("infoTemp", "72°F") ?: "72°F"
+                    var desc = Environment.WEATHER_KINDS[weatherKind]?.label ?: "Clear"
+                    var windKmH = s.optDouble("liveWindSpeedKmH", -1.0).toFloat()
+
+                    if (weatherMode == "live") {
+                        try {
+                            var lat = s.optDouble("lat", 40.7128)
+                            var lon = s.optDouble("lon", -74.0060)
+                            var name = cityName
+
+                            if (cityName.isNotEmpty()) {
+                                val geoUrl = "https://geocoding-api.open-meteo.com/v1/search?name=${URLEncoder.encode(cityName, "UTF-8")}&count=1&language=en&format=json"
+                                val geo = fetchJson(geoUrl, 4000)
+                                val res = geo?.optJSONArray("results")
+                                if (res != null && res.length() > 0) {
+                                    val r0 = res.getJSONObject(0)
+                                    lat = r0.getDouble("latitude"); lon = r0.getDouble("longitude")
+                                    name = r0.optString("name", cityName)
+                                }
+                            } else if (!s.optBoolean("lonKnown", false)) {
+                                try {
+                                    val ip = fetchJson("https://get.geojs.io/v1/ip/geo.json", 3000)
+                                    if (ip != null) {
+                                        lat = ip.getString("latitude").toDouble()
+                                        lon = ip.getString("longitude").toDouble()
+                                        name = ip.optString("city", "").ifEmpty { ip.optString("region", "Local") }
+                                    }
+                                } catch (_: Exception) { }
+                            }
+
+                            val fcUrl = "https://api.open-meteo.com/v1/forecast?latitude=$lat&longitude=$lon&current=temperature_2m,weather_code,wind_speed_10m,wind_direction_10m&timezone=auto"
+                            val fc = fetchJson(fcUrl, 5000)
+                            val c = fc?.optJSONObject("current")
+                            if (c != null) {
+                                val tempC = c.getDouble("temperature_2m")
+                                val wCode = c.getInt("weather_code")
+                                windKmH = c.optDouble("wind_speed_10m", -1.0).toFloat()
+                                val windDir = c.optDouble("wind_direction_10m", -1.0).toFloat()
+                                weatherKind = wmoToKind(wCode, if (windKmH >= 0) windKmH.toDouble() else 0.0)
+                                val tempF = (tempC * 9 / 5 + 32).roundToInt()
+                                tempStr = "${tempF}°F"
+                                desc = Environment.WEATHER_KINDS[weatherKind]?.label ?: "Clear"
+
+                                s.put("weatherKind", weatherKind)
+                                s.put("liveTempC", tempC)
+                                s.put("liveWindSpeedKmH", windKmH.toDouble())
+                                s.put("liveWindDirDeg", windDir.toDouble())
+                                if (name.isNotEmpty()) s.put("cityName", name)
+                                writeSettingsJson(ctx, s)
+                            }
+                        } catch (e: Exception) {
+                            android.util.Log.w("PS1Bedroom", "Live weather background fetch failed", e)
+                        }
+                    }
+
+                    val icon = weatherIcon(weatherKind)
+                    val cal = Calendar.getInstance()
+                    val hour = cal.get(Calendar.HOUR)
+                    val h12 = if (hour == 0) 12 else hour
+                    val min = cal.get(Calendar.MINUTE).toString().padStart(2, '0')
+                    val ampm = if (cal.get(Calendar.AM_PM) == Calendar.AM) "AM" else "PM"
+                    val timeStr = "$h12:$min $ampm"
+
+                    val outsideKey = s.optString("outside", "city")
+                    val placeDef = Places.OUTSIDE_ENVS[outsideKey] ?: Places.OUTSIDE_ENVS["city"]!!
+                    val placeStr = "${placeDef.icon} ${placeDef.name.replace(Regex(" \\(.*\\)$"), "")}"
+
+                    p.edit()
+                        .putString("infoTemp", tempStr)
+                        .putString("infoWeatherOnly", "$icon $desc")
+                        .putString("infoWeather", "$timeStr  $tempStr  $icon $desc")
+                        .putString("infoPlace", placeStr)
+                        .putLong("shotAt", System.currentTimeMillis())
+                        .apply()
+
+                    WindowWidget.generateAndSaveOutdoorSnapshot(ctx, s, outsideKey, weatherKind)
+                    WindowWidget.updateAll(ctx)
+                    ClockWeatherWidget.updateAll(ctx)
+                    WindowWidget.scheduleNextRefresh(ctx)
+
+                    onComplete?.invoke()
+                } catch (e: Exception) {
+                    android.util.Log.w("PS1Bedroom", "refreshWindowWidgetBackground error", e)
+                }
+            }.start()
         }
 
         /** The alarm-time button steps through sensible wake-up times. */
@@ -90,8 +231,18 @@ class RoomWidgetReceiver : BroadcastReceiver() {
     }
 
     override fun onReceive(ctx: Context, intent: Intent?) {
-        if (intent?.action != ACTION_WIDGET_CMD) return
+        val action = intent?.action ?: return
+        if (action == ACTION_WIDGET_ALARM || action == Intent.ACTION_BOOT_COMPLETED) {
+            refreshWindowWidgetBackground(ctx)
+            return
+        }
+        if (action != ACTION_WIDGET_CMD) return
         val cmd = intent.getStringExtra("cmd") ?: return
+        if (cmd == "refresh_window") {
+            onCommand?.invoke(cmd)
+            refreshWindowWidgetBackground(ctx, forceSnapshot = true)
+            return
+        }
         // If MainActivity is alive, handle directly on the live room
         val handledLive = onCommand?.invoke(cmd) == true
         if (!handledLive) {
@@ -129,7 +280,7 @@ class RoomWidgetReceiver : BroadcastReceiver() {
                     ctx.getSharedPreferences("window_widget", Context.MODE_PRIVATE).edit().putString("alarmTime", nt).apply()
                 }
                 "jasper_pet" -> ctx.getSharedPreferences("window_widget", Context.MODE_PRIVATE).edit().putString("jasperMood", "Tail wagging! 🐾💕").apply()
-                "paper_toss" -> ctx.startActivity(Intent(ctx, MainActivity::class.java).apply { action = "com.ps1bedroom.room.WIDGET_paper_toss"; addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP) })
+                "paper_toss" -> ctx.startActivity(Intent(ctx, MainActivity::class.java).apply { setAction("com.ps1bedroom.room.WIDGET_paper_toss"); addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP) })
                 "step_weather" -> {
                     val keys = Environment.WEATHER_KINDS.keys.toList()
                     val cur = s.optString("weatherKind", "clear")
@@ -165,9 +316,9 @@ class RoomWidgetReceiver : BroadcastReceiver() {
                     if (p != null) ctx.getSharedPreferences("window_widget", Context.MODE_PRIVATE).edit()
                         .putString("infoPlace", "${p.icon} ${p.name.replace(Regex(" \\(.*\\)$"), "")}").apply()
                 }
-                "sleep_mode", "sleep_15", "refresh_window" -> {
+                "sleep_mode", "sleep_15" -> {
                     ctx.startActivity(Intent(ctx, MainActivity::class.java).apply {
-                        action = "com.ps1bedroom.room.WIDGET_$cmd"
+                        setAction("com.ps1bedroom.room.WIDGET_$cmd")
                         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
                     })
                 }
@@ -197,6 +348,13 @@ class RoomWidgetReceiver : BroadcastReceiver() {
             }
             writeSettingsJson(ctx, s)
             updateAllWidgets(ctx, null)
+            if (cmd in listOf("step_weather", "step_place", "cycle_blinds")) {
+                refreshWindowWidgetBackground(ctx, forceSnapshot = true)
+            }
+        } else {
+            if (cmd in listOf("step_weather", "step_place", "cycle_blinds")) {
+                refreshWindowWidgetBackground(ctx, forceSnapshot = true)
+            }
         }
     }
 }

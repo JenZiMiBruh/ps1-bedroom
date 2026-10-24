@@ -485,6 +485,7 @@ class Settings(private val app: App, private val ctx: Context) {
         put("liveRefreshMin", liveWeatherRefreshMinutes)
         put("tvWeatherView", weatherChannelView)
         put("calendarYear", calendarYear)
+        put("windowOpen", app.room.windowOpen)
     }
     fun saveNow() {
         lastSaved = System.currentTimeMillis()
@@ -523,6 +524,7 @@ class Settings(private val app: App, private val ctx: Context) {
             s.optInt("tvCh", 0).let { if (it in 1 until Tv.PS1_TV_CHANNEL) app.tv.setChannel(it) }
             weatherChannelView = s.optString("tvWeatherView", "simple")
             calendarYear = s.optString("calendarYear", "2001")
+            if (s.has("windowOpen")) app.room.setWindowState(s.getBoolean("windowOpen"))
             app.monitor.setChannel(s.optInt("pcCh", 0))
             app.extras.setStation(s.optInt("radio", 0), app.furniture.radioDisplayMat)
             app.sound.masterVolume = s.optDouble("master", 0.85)

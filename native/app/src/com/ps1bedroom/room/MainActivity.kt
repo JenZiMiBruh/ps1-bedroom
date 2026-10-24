@@ -237,7 +237,10 @@ class MainActivity : Activity() {
         } catch (_: Throwable) { }
         app.windowWidgets = WindowWidget.hasWidgets(this)
         app.windowShotIntervalSec = WindowWidget.refreshIntervalSec(this)
-        if (app.windowWidgets) app.windowShotNow = true
+        if (app.windowWidgets) {
+            app.windowShotNow = true
+            WindowWidget.scheduleNextRefresh(this)
+        }
         view.post {
             try {
                 if (app.isBuilt) RoomWidgetReceiver.updateAllWidgets(this@MainActivity, app)
@@ -256,6 +259,7 @@ class MainActivity : Activity() {
             val latch = java.util.concurrent.CountDownLatch(1)
             view.queueEvent { try { app.windowShotOnLeave() } catch (_: Exception) { } finally { latch.countDown() } }
             try { latch.await(400, java.util.concurrent.TimeUnit.MILLISECONDS) } catch (_: Exception) { }
+            WindowWidget.scheduleNextRefresh(this)
         }
         pacer.stop(); view.onPause(); app.glActive = false; super.onPause()
     }

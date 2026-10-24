@@ -13,4 +13,4 @@
     android:configure="com.ps1bedroom.room.WindowWidgetConfig"
     android:widgetFeatures="reconfigurable|configuration_optional"
     android:description="@string/window_widget_desc"
-    android:updatePeriodMillis="0" />
+    android:updatePeriodMillis="1800000" />

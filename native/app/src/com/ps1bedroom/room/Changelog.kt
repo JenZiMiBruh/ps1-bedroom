@@ -24,6 +24,13 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.53.8", "Self-Sufficient Background Window Widget Refresh & Live Outdoor Engine", listOf(
+            "Self-sufficient background Window Widget engine: home-screen Window Widget refreshes and updates dynamically even when the app is completely closed or terminated (no PiP mode required)",
+            "Periodic background alarm scheduler: sets Android AlarmManager setAndAllowWhileIdle ticks matching the chosen widget refresh interval (1m - 60m), waking up to update without opening the activity",
+            "Instant manual refresh & controls: tapping the widget refresh button (🔄) or cycling blinds, weather, and places triggers immediate background execution, live Open-Meteo weather fetch, and visual re-render without launching the room",
+            "Dynamic 2D Canvas PS1 outdoor renderer: generates pixel-perfect outdoor scenes reflecting exact day/night/dawn/dusk sky gradients, sun/moon/stars, clouds, rain, snow, lightning, and 15 distinct environments (Downtown, Skyscraper, Neon City, Suburbs, Backyard, Trailer Park, Arizona, Beach, Lake, Forest, Mountains, Countryside)",
+            "Window sash open indicator: widget window casing dynamically illustrates whether the bedroom window is raised open or closed shut"
+        )),
         Entry("0.53.7", "Open Window Soundscape, Theme-Styled Toasts, 2001/2026 Wall Calendar, Dynamic Holiday Lights & Sleep Screen-Off", listOf(
             "Open window soundscape: lower window sash slides open and shut with smooth physics animation; opening the window floods the room with loud, crystal-clear 18 kHz outdoor audio (rain, wind, crickets, traffic pass-bys), decoupling outdoor sound from the blinds",
             "Theme-styled toasts: room toasts dynamically mirror the active UI color theme and accent color (PS1 pink, memory card cyan, game boy green, sunset orange, arcade red) on a sleek matching backdrop",

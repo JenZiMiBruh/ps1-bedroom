@@ -12,6 +12,9 @@ class Raycaster {
     private val e1 = Vec3(); private val e2 = Vec3(); private val p = Vec3(); private val q = Vec3(); private val tv = Vec3()
     private val hitLocal = Vec3(); private val hitWorld = Vec3()
 
+    /** A ray from [o] along the unit vector [d] (world space). */
+    fun set(o: Vec3, d: Vec3) { origin.copy(o); dir.copy(d).normalize() }
+
     /** ndc: -1..1 with +y up. */
     fun setFromCamera(ndcX: Float, ndcY: Float, camera: PerspectiveCamera) {
         origin.setFromMatrixPosition(camera.matrixWorld)

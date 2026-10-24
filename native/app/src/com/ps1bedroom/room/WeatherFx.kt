@@ -84,7 +84,9 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
         var vzOff: Float = 0f,
         var rotX: Float = 0f,
         var rotY: Float = 0f,
-        var rotZ: Float = 0f
+        var rotZ: Float = 0f,
+        /** indoors: the surface under the leaf (raycast every so often) */
+        var groundY: Float = 0.045f, var groundT: Float = 0f
     )
     private val foliage3DGroup = Group()
     private val LEAF_COUNT = 160
@@ -296,6 +298,18 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
 
     /** Everything here moves every frame: none of it takes part in static batching. */
     fun dynamicRoots() = listOf(dustGroup, weather3DGroup, foliage3DGroup, fireflyGroup)
+
+    // Indoor leaves: height of the first furniture surface under a point (the room's tappable meshes cover the bed,
+    // pillows, desk, dresser, chair...), or the carpet
+    private val downRay = com.ps1bedroom.room.engine.Raycaster()
+    private val solidSurfaces = ArrayList<com.ps1bedroom.room.engine.Mesh>()   // (no invisible tap pads or glass)
+    private val rayO = com.ps1bedroom.room.engine.Vec3(); private val rayD = com.ps1bedroom.room.engine.Vec3(0f, -1f, 0f)
+    private fun surfaceBelow(x: Float, y: Float, z: Float): Float {
+        downRay.set(rayO.set(x, y, z), rayD)
+        if (solidSurfaces.size == 0) solidSurfaces.addAll(room.interactables.filter { m -> m.materials.all { it.visible && !it.transparent } })
+        val hit = downRay.intersect(solidSurfaces) ?: return 0.045f
+        return max(0.045f, y - hit.second + 0.012f)
+    }
 
     private fun recolorLeaves(palette: IntArray) {
         if (leafPalette === palette) return
@@ -784,11 +798,15 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
                             if (l.z > Room.MAX_Z - 0.05f) { l.z = Room.MAX_Z - 0.05f; l.vzOff = 0f }
                         }
 
-                        // Lands on the desk top or the floor and stays put
-                        val onDesk = l.x in 1.7f..3.1f && l.z in -2.6f..-1.4f && l.y <= 1.38f && l.y > 1.2f
-                        val onFloor = l.y <= 0.045f
-                        if (onDesk || onFloor) {
-                            l.y = if (onDesk) 1.385f else 0.045f
+                        // Lands on whatever is under it (floor, rug, bed, pillows, desk...) and stays put: the surface
+                        // below is found with a downward ray every 0.12 s, so it can't sink into the bed or float over it
+                        if (l.z >= -2.9f) {
+                            l.groundT -= dt
+                            // (cast from a little above, so a leaf that drifts into the side of the bed pops onto its top)
+                            if (l.groundT <= 0f) { l.groundT = 0.12f; l.groundY = surfaceBelow(l.x, l.y + 0.35f, l.z) }
+                        }
+                        if (l.z >= -2.9f && l.y <= l.groundY) {
+                            l.y = l.groundY
                             l.vxOff = 0f; l.vyOff = 0f; l.vzOff = 0f
                             l.rotX = (-PI / 2).toFloat(); l.rotZ = 0f
                             l.contactTimer = 0.001f

@@ -20,6 +20,8 @@ class FramePacer(context: Context, private val view: GLSurfaceView, private val 
     @Volatile var saver = false
     @Volatile var lastInteractMs = SystemClock.uptimeMillis()
     private var lastFrameNs = 0L
+    private var prevVsyncNs = 0L
+    private var vsyncNs = 16_666_667L
     private var running = false
     private val power = context.getSystemService(Context.POWER_SERVICE) as PowerManager
     @Volatile private var thermal = 0
@@ -78,8 +80,11 @@ class FramePacer(context: Context, private val view: GLSurfaceView, private val 
         val cap = currentCap(now)
         hintFrameRate(cap)
         val intervalNs = 1_000_000_000L / maxOf(1, cap)
-        // Use hardware vsync frameTimeNanos with 5 ms slack so 60 fps never skips every other vsync from UI jitter
-        if (frameTimeNanos - lastFrameNs >= intervalNs - 5_000_000L) {
+        // Measure the panel's real vsync period and allow half a vsync of slack. (A fixed 5 ms slack turned a 60 cap
+        // into 45 fps on 90 Hz panels: 11.1 ms vsyncs never cleared 16.7 - 5 ms, so every other frame was skipped.)
+        if (prevVsyncNs != 0L) { val d = frameTimeNanos - prevVsyncNs; if (d in 4_000_000L..40_000_000L) vsyncNs += (d - vsyncNs) / 8 }
+        prevVsyncNs = frameTimeNanos
+        if (frameTimeNanos - lastFrameNs >= intervalNs - vsyncNs / 2) {
             lastFrameNs = frameTimeNanos
             view.requestRender()
         }

@@ -311,7 +311,7 @@ class App : GLSurfaceView.Renderer {
     @Volatile var lastFrameTimeMs = 16.6f; private set
     private var fpsFrames = 0
     private var fpsTimer = 0L
-    fun setResolution(r: Int) { resShort = r.coerceIn(120, 2160); if (surfaceW > 1) renderer.resize(surfaceW, surfaceH, effectiveRes(), jitterBase) }
+    fun setResolution(r: Int) { resShort = r.coerceIn(120, 2160); dynLevel = 0; if (surfaceW > 1) renderer.resize(surfaceW, surfaceH, effectiveRes(), jitterBase) }
     fun setJitter(j: Float) { jitterBase = j; if (surfaceW > 1) renderer.resize(surfaceW, surfaceH, effectiveRes(), jitterBase) }
     var jitterBase = 160f
     var swayAmount = 0.4f
@@ -540,6 +540,7 @@ class App : GLSurfaceView.Renderer {
             fpsFrames++
             if (frameStart - fpsTimer >= 1000L) {
                 lastFps = (fpsFrames * 1000L / (frameStart - fpsTimer).coerceAtLeast(1L)).toInt()
+                adaptToFrameRate(frameStart)
                 fpsFrames = 0
                 fpsTimer = frameStart
             }
@@ -554,7 +555,27 @@ class App : GLSurfaceView.Renderer {
     private var perfLevel = 0
     var aoBase = 0.8f
     var marchSteps = 14
-    private fun effectiveRes() = maxOf(120, (resShort * floatArrayOf(1f, 1f, 0.85f, 0.7f)[perfLevel]).toInt())
+    private fun effectiveRes() = maxOf(120, (resShort * floatArrayOf(1f, 1f, 0.85f, 0.7f)[perfLevel] * DYN_SCALE[dynLevel]).toInt())
+
+    // v0.57 dynamic resolution: when the GPU can't keep up with the frame cap (the fps sits well under it for a few
+    // seconds) the internal resolution steps down, and creeps back up once there's headroom. Without this a frame that
+    // takes a hair over 16 ms is held for two vsyncs, so the counter falls straight from 60 to 30.
+    private val DYN_SCALE = floatArrayOf(1f, 0.85f, 0.72f, 0.6f)
+    private var dynLevel = 0
+    private var slowSecs = 0; private var fastSecs = 0; private var dynCooldownUntil = 0L
+    private fun adaptToFrameRate(now: Long) {
+        val p = pacer ?: return
+        val cap = p.currentCap(now)
+        if (cap < 25 || settings.sleeping || now < dynCooldownUntil) { slowSecs = 0; fastSecs = 0; return }
+        if (lastFps < cap * 0.82f) { slowSecs++; fastSecs = 0 } else if (lastFps >= cap * 0.96f) { fastSecs++; slowSecs = 0 } else { slowSecs = 0; fastSecs = 0 }
+        val next = when {
+            slowSecs >= 3 && dynLevel < DYN_SCALE.size - 1 -> dynLevel + 1
+            fastSecs >= 20 && dynLevel > 0 -> dynLevel - 1
+            else -> return
+        }
+        dynLevel = next; slowSecs = 0; fastSecs = 0; dynCooldownUntil = now + 4000L
+        renderer.resize(surfaceW, surfaceH, effectiveRes(), jitterBase)
+    }
     fun onThermal(status: Int) {
         wantedPerfLevel = when {
             status >= android.os.PowerManager.THERMAL_STATUS_CRITICAL -> 2

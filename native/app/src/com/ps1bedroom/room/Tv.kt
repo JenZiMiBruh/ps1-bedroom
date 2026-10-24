@@ -689,7 +689,7 @@ class Tv(private val room: Room, private val env: Environment) {
             drawSimpleWeatherView(
                 ctx, w, h, t, dateStr, timeStr,
                 themeHeaderCol, firstHoli, cTemp, feelsLikeStr,
-                windCompass, windSpeedStr, curMonth
+                windCompass, windSpeedStr, curMonth, humidity
             )
             return
         }
@@ -713,15 +713,15 @@ class Tv(private val room: Room, private val env: Environment) {
         ctx.textAlign = "left"
         if (firstHoli.daysUntil <= 5) {
             ctx.fillStyle = "#fde047"; ctx.font = "bold 5.5px monospace"
-            ctx.fillText("${firstHoli.icon} SPECIAL", 28, 9)
+            ctx.fillText("HOLIDAY SPECIAL", 28, 9, 60)
         } else {
             ctx.fillStyle = "#ffffff"; ctx.font = "bold 5.5px monospace"
-            ctx.fillText("WEATHERSTAR", 28, 9)
+            ctx.fillText("WEATHERSTAR", 28, 9, 60)
         }
 
         ctx.textAlign = "right"
         ctx.fillStyle = "#ffffff"; ctx.font = "bold 6px monospace"
-        ctx.fillText("${cityText().take(8)} $timeStr", w - 4, 9)
+        ctx.fillText(timeStr, w - 4, 9, 34) // (the city is on the lower third; both no longer fit up here)
         ctx.textAlign = "left"
 
         // 2. Subheader Ribbon (y = 14..22)
@@ -729,14 +729,14 @@ class Tv(private val room: Room, private val env: Environment) {
         ctx.fillStyle = "#0f172a"; ctx.fillRect(0, 14, w, 8)
         ctx.fillStyle = "#fde047"; ctx.font = "bold 5px monospace"
         when (slide) {
-            0 -> ctx.fillText("● CURRENT CONDITIONS & RADAR", 4, 20)
-            1 -> ctx.fillText("● 5-DAY EXTENDED LOCAL OUTLOOK", 4, 20)
-            2 -> ctx.fillText("● CELESTIAL ALMANAC & LUNAR PHASES", 4, 20)
-            3 -> ctx.fillText("● REGIONAL HOLIDAYS & CLIMATE", 4, 20)
+            0 -> ctx.fillText("● CURRENT CONDITIONS", 4, 20, 92)
+            1 -> ctx.fillText("● 5-DAY LOCAL FORECAST", 4, 20, 92)
+            2 -> ctx.fillText("● SUN, MOON & SKY", 4, 20, 92)
+            3 -> ctx.fillText("● HOLIDAYS & CLIMATE", 4, 20, 92)
         }
         ctx.textAlign = "right"
         ctx.fillStyle = "#38bdf8"; ctx.font = "bold 5px monospace"
-        ctx.fillText("PAGE ${slide + 1}/4", w - 4, 20)
+        ctx.fillText("${slide + 1}/4", w - 4, 20)
         ctx.textAlign = "left"
 
         // 3. Body Slides (y = 22..77)
@@ -827,22 +827,27 @@ class Tv(private val room: Room, private val env: Environment) {
                 // Condition pill
                 ctx.fillStyle = "#1e3a8a"; ctx.fillRect(64, 26, 59, 8)
                 ctx.fillStyle = "#fde047"; ctx.font = "bold 5px monospace"; ctx.textAlign = "center"
-                ctx.fillText(env.W.label.take(13).uppercase(), 93, 32)
+                ctx.fillText(env.W.label.uppercase(), 93, 32, 56)
                 ctx.textAlign = "left"
 
                 // Large Temp & Feels Like
+                // (temp on the left, "feels like" stacked on the right, so they can't run into each other or the edge)
                 ctx.fillStyle = "#ffffff"; ctx.font = "bold 11px monospace"
-                ctx.fillText(tempText(), 65, 43)
+                ctx.fillText(tempText(), 65, 44, 30)
+                ctx.textAlign = "right"
                 ctx.fillStyle = "#94a3b8"; ctx.font = "bold 4.5px monospace"
-                ctx.fillText("FEELS LIKE $feelsLikeStr", 86, 40)
+                ctx.fillText("FEELS", 122, 38)
+                ctx.fillStyle = "#e2e8f0"; ctx.font = "bold 6px monospace"
+                ctx.fillText(feelsLikeStr, 122, 44.5, 26)
+                ctx.textAlign = "left"
 
-                // Stats Table
-                ctx.fillStyle = "#f8fafc"; ctx.font = "5px monospace"
-                ctx.fillText("WIND:  $windCompass $windSpeedStr", 64, 49)
-                ctx.fillText("GUST:  $gustStr", 64, 55)
-                ctx.fillText("HUMID: $humidity%", 64, 61)
-                ctx.fillText("DEWPT: $dewPtStr", 64, 67)
-                ctx.fillText("BARO:  $baroStr", 64, 73)
+                // Stats table: label column and value column, every row inside the panel
+                ctx.font = "5px monospace"
+                for ((i, row) in listOf("WIND" to "$windCompass $windSpeedStr", "GUST" to gustStr, "HUMID" to "$humidity%", "DEWPT" to dewPtStr, "BARO" to baroStr).withIndex()) {
+                    val ry = 51f + i * 5.5f
+                    ctx.fillStyle = "#94a3b8"; ctx.fillText(row.first, 64, ry)
+                    ctx.fillStyle = "#f8fafc"; ctx.fillText(row.second, 84, ry, 39)
+                }
             }
             1 -> { // Slide 1: 5-Day Extended Local Outlook
                 val colW = 23f; val colGap = 1.5f
@@ -920,8 +925,8 @@ class Tv(private val room: Room, private val env: Environment) {
 
                 // Sun times
                 ctx.fillStyle = "#ffffff"; ctx.font = "5px monospace"
-                ctx.fillText("SUNRISE  ${env.formatHour(env.sunrise)}", 6, 38)
-                ctx.fillText("SUNSET   ${env.formatHour(env.sunset)}", 6, 45)
+                ctx.fillText("SUNRISE  ${env.formatHour(env.sunrise)}", 6, 38, 53)
+                ctx.fillText("SUNSET   ${env.formatHour(env.sunset)}", 6, 45, 53)
 
                 // Pixel Moon Graphic
                 drawMoonGraphic(ctx, 16f, 60f, 9f, env.moonPhase)
@@ -930,11 +935,11 @@ class Tv(private val room: Room, private val env: Environment) {
                 ctx.fillStyle = "#ffffff"; ctx.font = "bold 5px monospace"
                 val mPhase = moonPhaseName(env.moonPhase)
                 val mShort = if (mPhase.length > 10) mPhase.take(10) else mPhase
-                ctx.fillText(mShort, 29, 56)
+                ctx.fillText(mShort, 29, 56, 30)
                 ctx.fillStyle = "#38bdf8"; ctx.font = "5px monospace"
-                ctx.fillText("${(env.moonIllum * 100).roundToInt()}% ILLUM", 29, 63)
+                ctx.fillText("${(env.moonIllum * 100).roundToInt()}% LIT", 29, 63, 30)
                 ctx.fillStyle = "#4ade80"; ctx.font = "5px monospace"
-                ctx.fillText("$windCompass $windSpeedStr", 29, 70)
+                ctx.fillText("$windCompass $windSpeedStr", 29, 70, 30)
 
                 // Right: Atmospheric Telemetry & Solar Progress (x = 64, y = 24, w = 61, h = 52)
                 ctx.fillStyle = "#0b1426"; ctx.fillRect(64, 24, 61, 52)
@@ -951,7 +956,7 @@ class Tv(private val room: Room, private val env: Environment) {
                 ctx.fillStyle = "#facc15"; ctx.fillRect(67, 42, (54 * (dayPct / 100f)).toInt(), 4)
 
                 ctx.fillStyle = "#f8fafc"; ctx.font = "5px monospace"
-                ctx.fillText("BARO:  $baroStr", 67, 54)
+                ctx.fillText("BARO:  $baroStr", 67, 54, 55)
                 ctx.fillText("HUMID: $humidity%", 67, 61)
                 ctx.fillText("DEWPT: $dewPtStr", 67, 68)
             }
@@ -966,31 +971,31 @@ class Tv(private val room: Room, private val env: Environment) {
 
                 // Holiday Title
                 ctx.fillStyle = "#ffffff"; ctx.font = "bold 6px monospace"
-                ctx.fillText("${firstHoli.icon} ${firstHoli.name.take(9).uppercase()}", 6, 39)
+                ctx.fillText(firstHoli.name.uppercase(), 6, 39, 54)
 
                 // Countdown badge
                 ctx.fillStyle = firstHoli.themeCol; ctx.fillRect(6, 43, 54, 10)
                 ctx.fillStyle = "#ffffff"; ctx.font = "bold 6px monospace"; ctx.textAlign = "center"
                 val countText = when (firstHoli.daysUntil) {
-                    0 -> "TODAY! 🎊"
+                    0 -> "TODAY!"
                     1 -> "TOMORROW!"
                     else -> "${firstHoli.daysUntil} DAYS AWAY"
                 }
-                ctx.fillText(countText, 33, 50.5)
+                ctx.fillText(countText, 33, 50.5, 50)
                 ctx.textAlign = "left"
 
                 // Holiday tagline & Secondary Holiday preview
                 ctx.fillStyle = "#fde047"; ctx.font = "5px monospace"
-                ctx.fillText(firstHoli.tag.take(13), 6, 60)
+                ctx.fillText(firstHoli.tag, 6, 60, 54)
                 ctx.fillStyle = "#94a3b8"; ctx.font = "4.5px monospace"
-                ctx.fillText("THEN: ${secondHoli.name.take(6)} (${secondHoli.daysUntil}D)", 6, 69)
+                ctx.fillText("THEN: ${secondHoli.name.uppercase()} ${secondHoli.daysUntil}D", 6, 69, 54)
 
                 // Right: Climate Normals (x = 65, y = 24, w = 60, h = 52)
                 ctx.fillStyle = "#0b1426"; ctx.fillRect(65, 24, 60, 52)
                 ctx.strokeStyle = "#1e293b"; ctx.lineWidth = 1f; ctx.strokeRect(65, 24, 60, 52)
 
                 ctx.fillStyle = "#facc15"; ctx.font = "bold 5px monospace"
-                ctx.fillText("$monthStr CLIMATE NORM", 68, 31)
+                ctx.fillText("$monthStr CLIMATE", 68, 31, 54)
 
                 val avgHi = if (tempUnit() == "F") "68°F" else "20°C"
                 val avgLo = if (tempUnit() == "F") "48°F" else "9°C"
@@ -1012,10 +1017,10 @@ class Tv(private val room: Room, private val env: Environment) {
         ctx.fillStyle = "#080e1e"; ctx.fillRect(0, 78, w, 8)
         ctx.fillStyle = "#1d4ed8"; ctx.fillRect(0, 78, w, 1) // top border line
         ctx.fillStyle = "#f8fafc"; ctx.font = "bold 5px monospace"
-        ctx.fillText("$dateStr  $timeStr", 4, 84)
+        ctx.fillText(dateStr, 4, 84, 56)
         ctx.textAlign = "right"
         ctx.fillStyle = "#facc15"
-        ctx.fillText("${cityText().take(9)} ${tempText()}", w - 4, 84)
+        ctx.fillText("${cityText()} ${tempText()}", w - 4, 84, 62)
         ctx.textAlign = "left"
 
         // Lower deck (y = 86..95, height 10)
@@ -1055,7 +1060,7 @@ class Tv(private val room: Room, private val env: Environment) {
         themeHeaderCol: String, firstHoli: HolidayEvent,
         cTemp: Double, feelsLikeStr: String,
         windCompass: String, windSpeedStr: String,
-        curMonth: Int
+        curMonth: Int, humidity: Int
     ) {
         val iconType = when {
             env.W.lightning || env.W.rain > 0.7f -> "storm"
@@ -1089,31 +1094,42 @@ class Tv(private val room: Room, private val env: Environment) {
 
         // 3. Big icon (left) and the temperature (right)
         ctx.save()
-        ctx.translate(31, 40); ctx.scale(1.25f, 1.25f)
+        ctx.translate(29, 36); ctx.scale(1.1f, 1.1f)
         drawLargeWeatherIcon(ctx, iconType, 0f, 0f, t)
         ctx.restore()
         val temp = tempText()
         ctx.textAlign = "center"; ctx.font = "bold 30px monospace"
-        ctx.fillStyle = "rgba(0,0,0,0.45)"; ctx.fillText(temp, 92 + 1.5f, 52 + 1.5f, 64)
-        ctx.fillStyle = "#ffffff"; ctx.fillText(temp, 92, 52, 64)
+        ctx.fillStyle = "rgba(0,0,0,0.45)"; ctx.fillText(temp, 92 + 1.5f, 46 + 1.5f, 62)
+        ctx.fillStyle = "#ffffff"; ctx.fillText(temp, 92, 46, 62)
         ctx.font = "bold 6px monospace"; ctx.fillStyle = "#dbeafe"
-        ctx.fillText("FEELS $feelsLikeStr", 92, 62)
+        ctx.fillText("FEELS LIKE $feelsLikeStr", 92, 55, 62)
 
         // 4. The condition, in plain words
         val label = env.W.label.uppercase()
         ctx.font = "bold 9px monospace"
-        ctx.fillStyle = "rgba(0,0,0,0.45)"; ctx.fillText(label, w / 2 + 1f, 75f, w - 10)
-        ctx.fillStyle = "#fef9c3"; ctx.fillText(label, w / 2f, 74f, w - 10)
+        ctx.fillStyle = "rgba(0,0,0,0.45)"; ctx.fillText(label, w / 2 + 1f, 66f, w - 10)
+        ctx.fillStyle = "#fef9c3"; ctx.fillText(label, w / 2f, 65f, w - 10)
 
-        // 5. One strip: high / low and wind
+        // 5. Two strips: humidity / next sunrise or sunset / chance of rain, then high / low and wind
+        val precip = when {
+            env.W.lightning -> 90
+            env.W.snow -> max(60, (env.W.rain * 100).roundToInt())
+            else -> (env.W.rain * 100).roundToInt().coerceIn(0, 100).let { if (it == 0) (env.W.cloud * 20).roundToInt() else it }
+        }
+        val sunLine = if (env.daylight > 0.05) "SET ${env.formatHour(env.sunset)}" else "RISE ${env.formatHour(env.sunrise)}"
+        ctx.fillStyle = "rgba(0,0,0,0.32)"; ctx.fillRect(0, 70, w, 12)
+        ctx.font = "bold 6.5px monospace"
+        ctx.textAlign = "left"; ctx.fillStyle = "#e0f2fe"; ctx.fillText("HUM $humidity%", 4, 78.5, 34)
+        ctx.textAlign = "center"; ctx.fillStyle = "#fde68a"; ctx.fillText(sunLine, w / 2f, 78.5, 48)
+        ctx.textAlign = "right"; ctx.fillStyle = "#bae6fd"; ctx.fillText("RAIN $precip%", w - 4, 78.5, 34)
         val hiC = cTemp + 3.0; val loC = cTemp - 4.0
         fun deg(c: Double) = if (tempUnit() == "F") "${(c * 1.8 + 32).roundToInt()}°" else "${c.roundToInt()}°"
-        ctx.fillStyle = "rgba(0,0,0,0.5)"; ctx.fillRect(0, 81, w, 15)
+        ctx.fillStyle = "rgba(0,0,0,0.5)"; ctx.fillRect(0, 83, w, 13)
         ctx.font = "bold 7px monospace"; ctx.textAlign = "left"
-        ctx.fillStyle = "#fca5a5"; ctx.fillText("H ${deg(hiC)}", 4, 91)
-        ctx.fillStyle = "#93c5fd"; ctx.fillText("L ${deg(loC)}", 32, 91)
+        ctx.fillStyle = "#fca5a5"; ctx.fillText("H ${deg(hiC)}", 4, 92, 26)
+        ctx.fillStyle = "#93c5fd"; ctx.fillText("L ${deg(loC)}", 33, 92, 26)
         ctx.textAlign = "right"; ctx.fillStyle = "#bbf7d0"
-        ctx.fillText("$windCompass $windSpeedStr", w - 4, 91, 62)
+        ctx.fillText("$windCompass $windSpeedStr", w - 4, 92, 60)
         ctx.textAlign = "left"
     }
 

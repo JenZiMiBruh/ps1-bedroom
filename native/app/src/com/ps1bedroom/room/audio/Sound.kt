@@ -699,6 +699,11 @@ class Sound(private val app: App) {
         val tone2 by lazy { Synth(ctx, "sine", Envelope(ctx, 0.005, 0.1, 0.6, 0.08)).also { keep(it); it.volume.value = -8.0; it.connect(out) } }
         val pad by lazy { PolySynth(ctx) { Synth(ctx, "triangle", Envelope(ctx, 0.6, 0.4, 0.7, 2.0)) }.also { keep(it); it.volume.value = -14.0; it.connect(out) } }
         val voice by lazy { Voice(ctx, out, 500.0, 1.2).also { v -> v.parts.forEach { keep(it) } } }
+        // v0.57 boot-screen voices: an inharmonic sine bell (rings out), a filtered detuned-saw swell, a long deep boom
+        val bell by lazy { PolySynth(ctx) { Synth(ctx, "sine", Envelope(ctx, 0.002, 2.4, 0.0, 2.0), 1, 0.0) }.also { keep(it); it.volume.value = -14.0; it.connect(out) } }
+        val swellFilter by lazy { filt(300.0, "lowpass", 2.0).also { keep(it) } }
+        val swell by lazy { PolySynth(ctx) { Synth(ctx, "sawtooth", Envelope(ctx, 1.2, 0.6, 0.75, 1.8), 3, 14.0) }.also { keep(it); it.volume.value = -22.0; it.chain(swellFilter, out) } }
+        val boom by lazy { MembraneSynth(ctx, 0.12, 3.0, Envelope(ctx, 0.002, 2.6, 0.0, 1.5)).also { keep(it); it.volume.value = -4.0; it.connect(out) } }
         var disposeNow: () -> Unit = {}
     }
     /** A placed, self-disposing SFX kit. */
@@ -812,51 +817,67 @@ class Sound(private val app: App) {
                 k.noise.triggerAttackRelease(1.0, tt + 0.85, 0.3)
             }
             "ps1Boot" -> {
-                // From the TV speaker, synced to the two boot screens
+                // From the TV speaker, synced to the two boot screens (modelled on the real ones, not copied):
+                // 1) the white Sony screen: a dark synth swell that opens up, then a cascade of crystal "tings"
+                // 2) the PlayStation logo: a deep resonant "dooong" with a low bell chord ringing out under it
                 k = sfxAt(P.getValue("tv"), 10.0); ps1BootKit = k
-                k.noiseFilter.type = "lowpass"
-                k.noiseFilter.frequency.setValueAtTime(200.0, t + 0.5); k.noiseFilter.frequency.exponentialRampToValueAtTime(2500.0, t + 2.0)
-                k.noise.envelope.attack = 0.9; k.noise.envelope.decay = 1.6; k.noise.triggerAttackRelease(1.5, t + 0.5, 0.35)
-                k.pad.triggerAttackRelease(listOf("C#3", "G#3", "C#4", "F4"), 3.0, t + 0.6, 0.5)
-                k.tone.oscillator.type = "sine"
-                k.tone.triggerAttackRelease("G#6", 0.3, t + 1.6, 0.1); k.tone.triggerAttackRelease("C#7", 0.4, t + 1.85, 0.1)
-                k.thump.triggerAttackRelease("C#2", 0.6, t + 4.3, 0.45)
-                k.pad.triggerAttackRelease(listOf("F#3", "C#4", "F4", "A#4"), 2.6, t + 4.3, 0.4)
-                listOf("C#6", "F6", "G#6", "C#7").forEachIndexed { i, n -> k.tone2.triggerAttackRelease(n, 0.3, t + 4.4 + i * 0.12, 0.14) }
+                fun bell(note: Double, at: Double, v: Double, d: Double = 2.0) = k.bell.triggerAttackRelease(listOf(note, note * 2.76, note * 5.4), d, at, v)
+                k.swellFilter.frequency.setValueAtTime(140.0, t + 0.5); k.swellFilter.frequency.exponentialRampToValueAtTime(3200.0, t + 2.2); k.swellFilter.frequency.exponentialRampToValueAtTime(600.0, t + 3.8)
+                k.swell.triggerAttackRelease(listOf("C#2", "G#2", "C#3", "G#3"), 2.2, t + 0.5, 0.7)
+                k.noiseFilter.type = "highpass"; k.noiseFilter.frequency.value = 5000.0
+                k.noise.envelope.attack = 0.4; k.noise.envelope.decay = 1.4; k.noise.triggerAttackRelease(1.2, t + 1.5, 0.18)
+                val cascade = listOf("C#7", "G#6", "F6", "C#6", "G#6", "C#7", "F7", "G#7")
+                cascade.forEachIndexed { i, n -> bell(AudioCtx.noteHz(n), t + 1.55 + i * 0.075, 0.22 - i * 0.012, 1.6) }
+                k.boom.triggerAttackRelease("C#1", 2.4, t + 4.3, 0.9)
+                bell(AudioCtx.noteHz("C#3"), t + 4.3, 0.45, 3.0); bell(AudioCtx.noteHz("G#3"), t + 4.32, 0.3, 3.0); bell(AudioCtx.noteHz("F4"), t + 4.36, 0.2, 2.6)
+                k.pad.triggerAttackRelease(listOf("C#3", "G#3", "C#4", "F4"), 2.4, t + 4.35, 0.3)
             }
             // ---- The other consoles' boot sounds (Consoles.kt), timed to their boot screens ----
             "ps2Boot" -> {
+                // PS2: a cold, dark drone and airy wind while the towers rise, a deep hit and a high crystal shimmer at the logo
                 k = sfxAt(P.getValue("tv"), 10.0); ps1BootKit = k
+                fun bell(note: Double, at: Double, v: Double, d: Double = 2.0) = k.bell.triggerAttackRelease(listOf(note, note * 2.76, note * 5.4), d, at, v)
                 k.noiseFilter.type = "lowpass"; k.noiseFilter.frequency.setValueAtTime(120.0, t); k.noiseFilter.frequency.exponentialRampToValueAtTime(1400.0, t + 3.2)
                 k.noise.envelope.attack = 1.6; k.noise.envelope.decay = 2.0; k.noise.triggerAttackRelease(2.6, t + 0.2, 0.45)
-                k.pad.triggerAttackRelease(listOf("D2", "A2", "D3", "F3"), 3.4, t + 0.3, 0.55)
-                listOf("A5", "D6", "F6", "A6", "D7").forEachIndexed { i, n -> k.tone2.triggerAttackRelease(n, 0.5, t + 1.8 + i * 0.28, 0.08) }
-                k.thump.triggerAttackRelease("D2", 0.8, t + 4.4, 0.4)
-                k.pad.triggerAttackRelease(listOf("D3", "A3", "D4", "E4"), 2.8, t + 4.4, 0.4)
+                k.swellFilter.frequency.setValueAtTime(90.0, t + 0.2); k.swellFilter.frequency.exponentialRampToValueAtTime(900.0, t + 3.8)
+                k.swell.triggerAttackRelease(listOf("D1", "A1", "D2"), 3.8, t + 0.2, 0.8)
+                listOf("A5", "D6", "F6", "A6").forEachIndexed { i, n -> bell(AudioCtx.noteHz(n), t + 1.8 + i * 0.5, 0.08, 2.4) }
+                k.boom.triggerAttackRelease("D1", 2.6, t + 4.4, 0.8)
+                listOf("D7", "A6", "F7", "D7", "A7").forEachIndexed { i, n -> bell(AudioCtx.noteHz(n), t + 4.5 + i * 0.11, 0.12, 2.2) }
+                k.pad.triggerAttackRelease(listOf("D3", "A3", "D4", "E4"), 2.8, t + 4.4, 0.35)
             }
             "ps3Boot" -> {
+                // PS3: a soft warm orchestral swell under the waving ribbon, then a gentle open chord with a chime
                 k = sfxAt(P.getValue("tv"), 10.0); ps1BootKit = k
-                k.pad.triggerAttackRelease(listOf("D3", "A3", "D4", "F#4", "A4"), 3.2, t + 0.5, 0.45)
-                k.tone2.triggerAttackRelease("A5", 1.2, t + 1.4, 0.06)
-                k.pad.triggerAttackRelease(listOf("G3", "B3", "D4", "G4", "B4"), 3.4, t + 4.0, 0.5)
-                listOf("D6", "G6", "B6").forEachIndexed { i, n -> k.tone2.triggerAttackRelease(n, 0.8, t + 4.3 + i * 0.35, 0.07) }
+                fun bell(note: Double, at: Double, v: Double, d: Double = 2.0) = k.bell.triggerAttackRelease(listOf(note, note * 2.0, note * 3.0), d, at, v)
+                k.swellFilter.frequency.setValueAtTime(220.0, t + 0.3); k.swellFilter.frequency.exponentialRampToValueAtTime(1600.0, t + 3.5)
+                k.swell.triggerAttackRelease(listOf("D2", "A2", "D3", "F#3"), 3.4, t + 0.3, 0.55)
+                k.pad.triggerAttackRelease(listOf("D3", "A3", "D4", "F#4", "A4"), 3.2, t + 0.5, 0.4)
+                k.pad.triggerAttackRelease(listOf("G3", "B3", "D4", "G4", "B4"), 3.4, t + 4.0, 0.45)
+                listOf("D6", "G6", "B6").forEachIndexed { i, n -> bell(AudioCtx.noteHz(n), t + 4.2 + i * 0.3, 0.09, 2.6) }
             }
             "ps4Boot" -> {
+                // PS4: a light airy rush, then the bright chime arpeggio over a soft major chord
                 k = sfxAt(P.getValue("tv"), 10.0); ps1BootKit = k
+                fun bell(note: Double, at: Double, v: Double, d: Double = 2.0) = k.bell.triggerAttackRelease(listOf(note, note * 2.0, note * 4.1), d, at, v)
                 k.noiseFilter.type = "highpass"; k.noiseFilter.frequency.value = 2500.0
                 k.noise.envelope.attack = 0.6; k.noise.envelope.decay = 0.8; k.noise.triggerAttackRelease(0.8, t + 0.2, 0.2)
-                k.pad.triggerAttackRelease(listOf("E3", "B3", "E4", "G#4", "B4"), 2.6, t + 0.9, 0.5)
-                k.tone.oscillator.type = "sine"
-                listOf("E5", "G#5", "B5", "E6").forEachIndexed { i, n -> k.tone.triggerAttackRelease(n, 0.25, t + 1.3 + i * 0.14, 0.09) }
-                k.pad.triggerAttackRelease(listOf("A3", "C#4", "E4", "B4"), 2.4, t + 3.6, 0.35)
+                k.pad.triggerAttackRelease(listOf("E3", "B3", "E4", "G#4", "B4"), 2.6, t + 0.9, 0.45)
+                listOf("B5", "E6", "G#6", "B6", "E7").forEachIndexed { i, n -> bell(AudioCtx.noteHz(n), t + 1.2 + i * 0.13, 0.16 - i * 0.015, 2.0) }
+                k.pad.triggerAttackRelease(listOf("A3", "C#4", "E4", "B4"), 2.4, t + 3.6, 0.3)
+                bell(AudioCtx.noteHz("E6"), t + 3.7, 0.08, 2.4)
             }
             "ps5Boot" -> {
+                // PS5: a long rising whoosh, a deep weighty boom, and a bright sustained shimmer that blooms after it
                 k = sfxAt(P.getValue("tv"), 10.0); ps1BootKit = k
-                k.noiseFilter.type = "bandpass"; k.noiseFilter.frequency.setValueAtTime(400.0, t); k.noiseFilter.frequency.exponentialRampToValueAtTime(5000.0, t + 3.5)
-                k.noise.envelope.attack = 2.6; k.noise.envelope.decay = 0.9; k.noise.triggerAttackRelease(3.0, t + 0.3, 0.3)
-                k.pad.triggerAttackRelease(listOf("F3", "C4", "F4", "A4"), 3.0, t + 0.8, 0.35)
-                k.tone2.triggerAttackRelease("C7", 0.9, t + 3.6, 0.1); k.tone2.triggerAttackRelease("F7", 1.1, t + 3.75, 0.08)
-                k.pad.triggerAttackRelease(listOf("F3", "A3", "C4", "E4", "G4"), 3.0, t + 4.3, 0.45)
+                fun bell(note: Double, at: Double, v: Double, d: Double = 2.0) = k.bell.triggerAttackRelease(listOf(note, note * 2.76, note * 5.4), d, at, v)
+                k.noiseFilter.type = "bandpass"; k.noiseFilter.frequency.setValueAtTime(300.0, t); k.noiseFilter.frequency.exponentialRampToValueAtTime(6000.0, t + 3.4)
+                k.noise.envelope.attack = 2.8; k.noise.envelope.decay = 0.5; k.noise.triggerAttackRelease(3.0, t + 0.3, 0.35)
+                k.swellFilter.frequency.setValueAtTime(200.0, t + 0.6); k.swellFilter.frequency.exponentialRampToValueAtTime(2400.0, t + 3.5)
+                k.swell.triggerAttackRelease(listOf("F2", "C3", "F3"), 2.9, t + 0.6, 0.5)
+                k.boom.triggerAttackRelease("F1", 2.6, t + 3.55, 1.0)
+                listOf("C7", "F7", "A7").forEachIndexed { i, n -> bell(AudioCtx.noteHz(n), t + 3.6 + i * 0.09, 0.12, 3.0) }
+                k.pad.triggerAttackRelease(listOf("F3", "A3", "C4", "E4", "G4"), 3.0, t + 3.7, 0.4)
             }
             "ps1Power" -> { k = sfxAt(P.getValue("ps1"), 1.0); k.tickFilter.frequency.value = 1600.0; k.tick.triggerAttackRelease(0.01, t, 0.8); k.thump.triggerAttackRelease("C3", 0.06, t + 0.01, 0.3) }
             "ps1Reset", "ps1Button" -> { k = sfxAt(P.getValue("ps1"), 1.0); k.tickFilter.frequency.value = 2000.0; k.tick.triggerAttackRelease(0.01, t, 0.6) }

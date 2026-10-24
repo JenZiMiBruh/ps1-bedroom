@@ -24,6 +24,15 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.57", "GTA traffic that never collides, a look for every GTA, new boot sounds, steadier frame rate", listOf(
+            "GTA on the TV (III through VI): traffic now drives in real lanes, two each way. Cars keep their distance and slow down behind slower ones, and your car changes lanes only into a clear gap, overtakes through the oncoming lane only when it's empty, and brakes when it's boxed in. No more cars driving through each other",
+            "Every GTA looks different now: Liberty City's elevated railway and rainy blue night (III) or grey fog (LCS), neon pink Vice City, low desert towns with hills and power lines in San Andreas, tall sepia-grey Algonquin towers in IV, Los Santos hills with the VINEWOOD sign in V, and the Leonida beach in VI. Each game also gets its own colour grade, traffic colours, driving speed and HUD",
+            "PlayStation boot sounds redone to sound much more like the real ones. PS1: a dark swell that opens into a cascade of crystal chimes, then the deep ringing \"dooong\" on the PlayStation logo. PS2: a cold drone and a high shimmer. PS3: a warm swell and a soft chime. PS4: a bright chime run. PS5: a rising whoosh into a deep boom",
+            "Frame rate: on 90 Hz screens the 60 fps cap was only giving 45 fps; it now holds 60. When the phone can't keep up, the resolution steps down a little on its own instead of the frame rate dropping straight to 30, and it steps back up once things are smooth",
+            "TV weather, Simple view: adds humidity, chance of rain, and the next sunrise or sunset",
+            "TV weather, Advanced view: fixed text running into other text or off the panel edges. The section titles are shorter, the city moved down to the lower third, the temperature and \"feels like\" no longer overlap, and every line now fits its box",
+            "Leaves that blow in now land on whatever they hit: the bed, the pillows, the desk or the floor. No more floating above the pillows or sinking through the bed"
+        )),
         Entry("0.56", "Quality preset crash fix, resting leaves, sharp Paper Toss, desk phone mute", listOf(
             "Fixed: picking a quality or resolution preset could break the app. Each change leaked the shadow maps, and the 4K / 1080p presets rendered far above the phone's own screen. Resolution now tops out at your screen's real resolution, nothing leaks, and if the GPU can't handle a size it steps down instead of failing. The 4K preset is now called Max (full screen res)",
             "Leaves that blow in through the window drift down, land flat on the floor or desk and stay still, then fade away after about 45 seconds. Turn on World › Weather / Sky › \"Leaves blown inside stay on the floor\" to keep them for good",

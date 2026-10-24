@@ -375,6 +375,9 @@ class App : GLSurfaceView.Renderer {
                 myMusic.onChanged = { hud?.refreshMenu(); hud?.refreshBoombox(); publishMedia() }
                 scene.add(alarm.light)
                 tv.tempText = { settings.formatTemp(settings.currentTempC()) }
+                tv.cityText = { settings.cityName.ifEmpty { "LOCAL AREA" }.uppercase() }
+                tv.rawTempC = { settings.currentTempC() }
+                tv.tempUnit = { settings.tempUnit }
                 tv.onPowerChanged = { on ->
                     if (!on) {
                         ytActive = false

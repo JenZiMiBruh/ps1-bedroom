@@ -102,6 +102,8 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
     var debrisAmount = 1.0f; private set
     var debrisSpeed = 1.0f; private set
     var debrisFreq = 1.0f; private set
+    /** Controls the percentage (0..1) of leaves that drift toward and hit the window glass & sill. */
+    var windowHitRate = 0.50f; private set
     /** User-configurable lightning frequency ("off", "rare", "normal", "frequent", "constant"). */
     var lightningFreq = "normal"
     private var lastWeatherKind = ""
@@ -130,11 +132,15 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
         "rare"     -> 14.0f + rand() * 8.0f   // 14s - 22s
         else       -> 5.0f + rand() * 4.0f    // 5.0s - 9.0s ("normal")
     }
-    fun setDebrisParams(amount: Float, speed: Float, freq: Float) {
+    fun setDebrisParams(amount: Float, speed: Float, freq: Float, windowHits: Float = windowHitRate) {
         debrisAmount = amount.coerceIn(0f, 2.5f)
         debrisSpeed = speed.coerceIn(0.2f, 2.5f)
         debrisFreq = freq.coerceIn(0.2f, 2.5f)
+        windowHitRate = windowHits.coerceIn(0f, 1f)
         updateSettings()
+    }
+    fun setWindowHitRate(rate: Float) {
+        windowHitRate = rate.coerceIn(0f, 1f)
     }
     // Exterior window ledge weather accumulation (puffy snow bank in winter)
     private val ledgeSnowGroup = Group()
@@ -179,9 +185,9 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
         scene.add(foliage3DGroup)
         leafMesh = makeInstanced(foliage3DGroup, Geo.plane(0.085f, 0.065f), PS1.basic(color = 0xffffff, side = DOUBLE_SIDE), LEAF_COUNT)
         leaves = List(LEAF_COUNT) { idx ->
-            val nearWindow = idx < 45
+            val nearWindow = idx < (LEAF_COUNT * (0.08f + windowHitRate * 0.35f)).toInt()
             val z = if (nearWindow) randIn(-3.24f, -3.15f) else randIn(OUT.z0, OUT.z1)
-            val preHit = idx < 4
+            val preHit = idx < (4 * windowHitRate).roundToInt()
             val leaf = Leaf(
                 if (preHit) randIn(-0.2f, 1.8f) else randIn(OUT.x0, OUT.x1),
                 if (preHit) randIn(1.60f, 2.2f) else randIn(OUT.y0 + 0.6f, OUT.y1),
@@ -546,7 +552,7 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
                     if (l.wait <= 0f) {
                         l.y = OUT.y1 + rand() * 0.35f
                         l.x = randIn(OUT.x0, OUT.x1 + 1.2f + W.wind * 1.2f)
-                        l.z = if (i < 45 || rand() < 0.35f) randIn(-3.24f, -3.15f) else randIn(OUT.z0, OUT.z1)
+                        l.z = if (rand() < windowHitRate * 0.65f) randIn(-3.24f, -3.15f) else randIn(OUT.z0, OUT.z1)
                         l.state = 0
                     }
                     continue
@@ -572,7 +578,7 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
                         val inWindowX = l.x in -0.55f..2.15f
                         val inWindowY = l.y in 1.58f..3.75f
                         val hitGlassZ = l.z in -3.26f..-3.13f
-                        if (inWindowX && inWindowY && hitGlassZ) {
+                        if (inWindowX && inWindowY && hitGlassZ && (windowHitRate > 0.01f && (rand() < windowHitRate * 1.4f || windowHitRate >= 0.95f))) {
                             // HIT THE WINDOW!
                             l.state = 1
                             l.contactTimer = randIn(3.0f, 7.5f) / max(0.5f, debrisFreq)

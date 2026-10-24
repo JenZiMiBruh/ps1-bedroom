@@ -24,6 +24,15 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.53.4", "Window leaf hit slider & complete 90s WeatherStar 4000 weather channel overhaul", listOf(
+            "Leaves hitting window slider: new 0% to 100% collision chance slider under Weather & Sky Debris settings modulating how many airborne leaves strike the window glass and sill",
+            "Overhauled TV Weather Channel: transformed Channel 12 into an authentic nostalgic 1990s WeatherStar 4000 'Local on the 8s' broadcast with rotating multi-page local forecast slides",
+            "Live Doppler Radar 4000: authentic radar scope with 360° rotating sweep line, range rings, crosshairs, and live weather reflectivity cells drifting with real wind speed & direction",
+            "4-Day Extended Local Outlook: day-of-week columns, custom pixel weather icons, short forecast summaries, High/Low temperatures, and precipitation probabilities",
+            "Celestial Almanac & Moon phase: exact astronomical pixel moon rendering showing live crescent/quarter/gibbous illumination, phase name, and sunrise/sunset times",
+            "Upcoming holiday countdown & seasonal themes: tracks days remaining until Halloween, Thanksgiving, Christmas, New Year's, Valentine's, 4th of July, etc., with dynamic seasonal channel branding",
+            "Double-deck lower-third crawler: always-on L-bar ticker showing real-time clock, date, month, day of week, city, temperature, and scrolling marquee weather & holiday reports"
+        )),
         Entry("0.53.3", "Unified physical window leaves (hit, roll, fly off), real-life leaf speeds & weather API refresh interval", listOf(
             "Unified 3D window leaf physics: all leaves on the window are the exact same 3D leaves as in the wind (zero fake 2D canvas stamps or static meshes)",
             "Watch leaves hit and roll: observe leaves fall from the sky, collide with the window glass pane or sill, roll and slide across the window, and get swept into the air by wind gusts to fly off",

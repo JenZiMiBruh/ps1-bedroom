@@ -585,6 +585,7 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
             slider("How much (amount)", 0, 250, 10, (s.debrisAmount * 100).roundToInt(), { if (it == 0) "Off" else "$it%" }) { v -> post { s.setDebrisAmount(v / 100f) } }
             slider("How fast (fall & wind speed)", 20, 250, 10, (s.debrisSpeed * 100).roundToInt(), { "$it%" }) { v -> post { s.setDebrisSpeed(v / 100f) } }
             slider("How often (gusts & spawn rate)", 20, 250, 10, (s.debrisFreq * 100).roundToInt(), { "$it%" }) { v -> post { s.setDebrisFreq(v / 100f) } }
+            slider("Leaves hitting window", 0, 100, 5, (s.windowHitRate * 100).roundToInt(), { if (it == 0) "Never (0%)" else "$it%" }) { v -> post { s.setWindowHitRate(v / 100f) } }
         }
         note("Weather-tied scales leaves, blossoms, and debris with the wind, rain, storm intensity, and whether the place outside has trees. All rain, window drops, and leaves blow in the same wind direction.", true)
     }

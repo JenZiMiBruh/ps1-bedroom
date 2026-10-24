@@ -24,6 +24,11 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.50", "Launch crash fix & bulletproof widget updates", listOf(
+            "Fixed launch crash: eliminated early lightning triggering during startup settings restoration",
+            "Bulletproof widget updates: safely isolated all RemoteViews rendering, bitmap allocations, and widget broadcast dispatches with fail-safes so a widget refresh can never interrupt app launch or resume",
+            "Window widget preview stability: robust canvas drawing and bitmap scaling ensures smooth updates without Binder memory overhead"
+        )),
         Entry("0.49", "Edge-to-edge YouTube on TV, responsive lightning & live blinds on Window widget", listOf(
             "YouTube on TV border removed: the video now renders flush edge-to-edge with no margins, inset borders, or rounded letterboxing inside the CRT bezel",
             "Lightning frequency is instantly responsive: changing frequency immediately clears cooldown and triggers an instant flash & thunderclap. Constant mode strikes rapidly every ~0.7-1.6s",

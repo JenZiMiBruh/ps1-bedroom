@@ -62,28 +62,30 @@ class RoomWidgetReceiver : BroadcastReceiver() {
 
         /** Updates all home-screen widgets from the latest room state (or persisted preferences). */
         fun updateAllWidgets(ctx: Context, app: App? = null) {
-            if (app != null && app.isBuilt) {
-                val st = app.settings.status()
-                val p = app.places.envDef()
-                ctx.getSharedPreferences("window_widget", Context.MODE_PRIVATE).edit()
-                    .putString("infoTemp", st.temp)
-                    .putString("infoWeatherOnly", st.weather)
-                    .putString("infoPlace", "${p.icon} ${p.name.replace(Regex(" \\(.*\\)$"), "")}")
-                    .putString("infoWeather", "${st.time.substringBefore(' ')} ${st.temp} ${st.weather}")
-                    .putString("infoSeason", st.season)
-                    .putString("infoStation", app.extras.RADIO_STATIONS.getOrElse(app.extras.radioStation) { "OFF" }.substringBefore(':'))
-                    .putString("sleepLeft", st.timer ?: "")
-                    .putBoolean("alarmOn", app.alarm.on)
-                    .putString("alarmTime", app.alarm.time)
-                    .putString("jasperMood", app.jasper.moodLabel())
-                    .apply()
-            }
-            ClockWeatherWidget.updateAll(ctx)
-            QuickControlsWidget.updateAll(ctx)
-            SleepAlarmWidget.updateAll(ctx)
-            JasperWidget.updateAll(ctx)
-            WindowWidget.updateAll(ctx)
-            NowPlayingWidget.update(ctx, MediaService.state, force = true)
+            try {
+                if (app != null && app.isBuilt) {
+                    val st = app.settings.status()
+                    val p = app.places.envDef()
+                    ctx.getSharedPreferences("window_widget", Context.MODE_PRIVATE).edit()
+                        .putString("infoTemp", st.temp)
+                        .putString("infoWeatherOnly", st.weather)
+                        .putString("infoPlace", "${p.icon} ${p.name.replace(Regex(" \\(.*\\)$"), "")}")
+                        .putString("infoWeather", "${st.time.substringBefore(' ')} ${st.temp} ${st.weather}")
+                        .putString("infoSeason", st.season)
+                        .putString("infoStation", app.extras.RADIO_STATIONS.getOrElse(app.extras.radioStation) { "OFF" }.substringBefore(':'))
+                        .putString("sleepLeft", st.timer ?: "")
+                        .putBoolean("alarmOn", app.alarm.on)
+                        .putString("alarmTime", app.alarm.time)
+                        .putString("jasperMood", app.jasper.moodLabel())
+                        .apply()
+                }
+            } catch (_: Exception) { }
+            try { ClockWeatherWidget.updateAll(ctx) } catch (_: Exception) { }
+            try { QuickControlsWidget.updateAll(ctx) } catch (_: Exception) { }
+            try { SleepAlarmWidget.updateAll(ctx) } catch (_: Exception) { }
+            try { JasperWidget.updateAll(ctx) } catch (_: Exception) { }
+            try { WindowWidget.updateAll(ctx) } catch (_: Exception) { }
+            try { NowPlayingWidget.update(ctx, MediaService.state, force = true) } catch (_: Exception) { }
         }
     }
 

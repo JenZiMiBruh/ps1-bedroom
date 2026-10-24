@@ -97,7 +97,9 @@ class MainActivity : Activity() {
             app.windowShotNow = true   // every widget change shows up on the Window widget straight away
             app.settings.saveNow()
             view.post {
-                RoomWidgetReceiver.updateAllWidgets(this@MainActivity, app)
+                try {
+                    RoomWidgetReceiver.updateAllWidgets(this@MainActivity, app)
+                } catch (_: Exception) { }
             }
         }
         return true
@@ -205,7 +207,9 @@ class MainActivity : Activity() {
         app.windowWidgets = WindowWidget.hasWidgets(this)
         app.windowShotIntervalSec = WindowWidget.refreshIntervalSec(this)
         if (app.windowWidgets) app.windowShotNow = true
-        RoomWidgetReceiver.updateAllWidgets(this, if (app.isBuilt) app else null)
+        try {
+            RoomWidgetReceiver.updateAllWidgets(this, if (app.isBuilt) app else null)
+        } catch (_: Exception) { }
     }
     private fun askNotifications() { if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 7) }
     override fun onDestroy() { RoomWidgetReceiver.onCommand = null; MediaService.onControl = null; MediaService.onSeek = null; MediaService.stop(this); NowPlayingWidget.update(this, null); app.sound.shutdown(); super.onDestroy() }

@@ -149,6 +149,7 @@ class Settings(private val app: App, private val ctx: Context) {
     fun setLightningFreq(mode: String) {
         lightningFreq = if (mode in listOf("off", "rare", "normal", "frequent", "constant")) mode else "normal"
         app.weatherFx.lightningFreq = lightningFreq
+        app.weatherFx.onLightningFreqChanged()
         app.toast("⚡ Lightning: ${lightningFreq.replaceFirstChar { it.uppercase() }}")
         changed()
     }

@@ -87,17 +87,13 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
     var debrisFreq = 1.0f; private set
     /** User-configurable lightning frequency ("off", "rare", "normal", "frequent", "constant"). */
     var lightningFreq = "normal"
-        set(v) {
-            field = v
-            onLightningFreqChanged()
-        }
     private var lastWeatherKind = ""
     private var stormIntroTimer = 0f
     private var lightningCooldown = 0f
 
     fun onLightningFreqChanged() {
         lightningCooldown = 0f
-        if (lightningFreq != "off") {
+        if (lightningFreq != "off" && (env.W.lightning || lightningFreq == "constant" || lightningFreq == "frequent")) {
             // Immediate lightning flash and acoustic thunderclap so user gets instant response to the setting
             triggerLightningStrike(instantThunder = true)
         }

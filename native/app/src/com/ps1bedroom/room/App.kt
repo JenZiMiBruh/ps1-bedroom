@@ -65,7 +65,7 @@ class App : GLSurfaceView.Renderer {
     lateinit var alarm: Alarm
     lateinit var surprises: Surprises; private set
     private val steadyTextures by lazy { SteadyTextures(scene) }
-    private val YT_CORNERS = arrayOf(Vec3(-0.395f, 0.3f, -0.015f), Vec3(0.395f, 0.3f, -0.015f), Vec3(-0.395f, -0.3f, -0.015f), Vec3(0.395f, -0.3f, -0.015f))
+    private val YT_CORNERS = arrayOf(Vec3(-0.37f, 0.28f, 0.005f), Vec3(0.37f, 0.28f, 0.005f), Vec3(-0.37f, -0.28f, 0.005f), Vec3(0.37f, -0.28f, 0.005f))
     private val ytPts = FloatArray(8); private val ytTmp = Vec3(); private val ytView = Vec3(); private val ytC = Vec3(); private val ytN = Vec3()
     /** ytPlaceOverlay: the TV glass's 4 corners on screen, snapped like the PS1 vertex shader snaps the TV. */
     private fun placeYouTube() {
@@ -240,14 +240,9 @@ class App : GLSurfaceView.Renderer {
             g3.render(ps1.gameTime(t), SystemClock.uptimeMillis())
             tv.useFeed(g3.rt.texture)
         } else {
-            // YouTube plays on the TV's own display: its newest frame becomes the CRT's picture
-            val f = ytFeed
-            if (ytActive && f != null && hud?.yt?.isFull != true) { f.update(); tv.useFeed(f.rt.texture) } else tv.useFeed(null)
+            tv.useFeed(null)
         }
     }
-    /** YouTube's texture on the TV (made on the GL thread the first time a video plays). */
-    @Volatile var ytFeed: YouTubeFeed? = null
-    fun ensureYtFeed(ready: (android.view.Surface) -> Unit) = post { val f = ytFeed ?: YouTubeFeed(640, 480).also { ytFeed = it }; ready(f.surface) }
     private var lastTvUpdate = 0.05f
     private val SPHERE_TV_C = Vec3(-2.05f, 1.3f, 0.65f)
     /** Set by MainActivity before the GL thread starts (for raw model files). */

@@ -334,44 +334,75 @@ object Buffers {
             }
         }
     }
-    /** Natural rolling acoustic thunder (deep brown/pink pressure rumble with organic cloud-reflection swells, no harsh hiss or sine sweeps). */
-    fun thunder(ctx: AudioCtx) = make(ctx, 5.8) { d, sr ->
+    /** Visceral, obvious cinematic acoustic thunder: explosive initial shockwave crack decaying into a deep rolling sub-bass cloud rumble. */
+    fun thunder(ctx: AudioCtx) = make(ctx, 6.2) { d, sr ->
         var brown = 0.0
+        var pink = 0.0
         var warmBody = 0.0
-        var smoothOut = 0.0
+        var smoothRumble = 0.0
+        var crackleLp = 0.0
         var flutterLp = 0.0
         val swells = arrayOf(
-            doubleArrayOf(0.05, 0.14, 1.00),
-            doubleArrayOf(rand(0.32, 0.58), 0.36, rand(0.72, 0.92)),
-            doubleArrayOf(rand(0.95, 1.45), 0.65, rand(0.50, 0.72)),
-            doubleArrayOf(rand(1.90, 2.65), 0.95, rand(0.32, 0.48)),
-            doubleArrayOf(rand(3.15, 3.95), 1.25, rand(0.16, 0.26))
+            doubleArrayOf(0.04, 0.12, 1.00),
+            doubleArrayOf(rand(0.28, 0.52), 0.38, rand(0.78, 0.98)),
+            doubleArrayOf(rand(0.85, 1.35), 0.68, rand(0.58, 0.82)),
+            doubleArrayOf(rand(1.80, 2.50), 0.95, rand(0.38, 0.55)),
+            doubleArrayOf(rand(3.10, 3.85), 1.35, rand(0.20, 0.34)),
+            doubleArrayOf(rand(4.20, 4.90), 1.50, rand(0.10, 0.18))
         )
-        // A few brief, warm acoustic micro-bursts in the first 0.22s for the initial pressure wave (never high-pitched or hissy)
-        val tearCenters = doubleArrayOf(0.015, rand(0.045, 0.075), rand(0.10, 0.145), rand(0.165, 0.22))
+        // Explosive initial shockwave crack bursts in the first 0.24s (supersonic lightning air-channel expansion)
+        val snapCenters = doubleArrayOf(0.008, rand(0.032, 0.055), rand(0.075, 0.115), rand(0.145, 0.190))
+        var peak = 0.0001
         for (i in d.indices) {
             val t = i / sr
             val w = Random.nextDouble() * 2 - 1
-            brown = (brown + 0.024 * w) / 1.024
-            warmBody = (warmBody + 0.11 * w) / 1.11
-            flutterLp = (flutterLp + 0.004 * w) / 1.004
-            var env = kotlin.math.exp(-t * 0.72) * 0.35
+            // Brown noise integration for sub-bass rumble (30-80 Hz)
+            brown = (brown + 0.028 * w) / 1.028
+            // Pink noise integration for mid-low warmth
+            pink = (pink + 0.095 * w) / 1.095
+            warmBody = (warmBody + 0.22 * w) / 1.22
+            flutterLp = (flutterLp + 0.005 * w) / 1.005
+
+            // Main acoustic envelope with rolling cloud reflection swells
+            var env = kotlin.math.exp(-t * 0.65) * 0.40
             for ((c, width, a) in swells) env += a * kotlin.math.exp(-((t - c) / width).pow(2))
-            // Natural turbulent air modulation so the rumble rolls instead of sounding like static
-            val flutter = (0.76 + 0.24 * sin(t * 11.5) * cos(t * 4.3) + flutterLp * 1.4).coerceIn(0.35, 1.35)
-            var tear = 0.0
-            if (t < 0.32) {
-                for ( idx in tearCenters.indices) {
-                    val tc = tearCenters[idx]
-                    tear += kotlin.math.exp(-((t - tc) / 0.014).pow(2)) * (0.85 - idx * 0.16)
+
+            // Turbulent rolling modulation (spatial cloud echoes)
+            val flutter = (0.75 + 0.25 * sin(t * 10.5) * cos(t * 3.8) + flutterLp * 1.5).coerceIn(0.35, 1.45)
+
+            // Sharp supersonic shockwave crack transient at onset (t < 0.28s)
+            var crack = 0.0
+            if (t < 0.28) {
+                for (idx in snapCenters.indices) {
+                    val tc = snapCenters[idx]
+                    val decay = 0.010 + idx * 0.006
+                    val snapEnv = kotlin.math.exp(-((t - tc) / decay).pow(2)) * (1.25 - idx * 0.22)
+                    // High-energy acoustic impulse burst
+                    crack += snapEnv * w
                 }
             }
-            val sub = brown * 2.4
-            val mid = (warmBody - brown) * (1.35 + tear * 1.6)
-            val raw = (sub + mid) * env * flutter
-            // Final warm low-pass smoothing (~550 Hz) so there is zero harsh high-frequency hiss
-            smoothOut += (raw - smoothOut) * 0.075
-            d[i] = smoothOut.toFloat()
+            // Dynamic filtering on crackle: fast low-pass decaying from ~2800 Hz down to 600 Hz
+            val crackAlpha = (0.35 * kotlin.math.exp(-t * 12.0) + 0.06).coerceIn(0.06, 0.40)
+            crackleLp += (crack - crackleLp) * crackAlpha
+
+            val sub = brown * 3.2
+            val mid = (pink - brown) * 1.6
+            val rumbleRaw = (sub + mid) * env * flutter
+            // Low-pass body smoothing (~450 Hz)
+            smoothRumble += (rumbleRaw - smoothRumble) * 0.085
+
+            // Combine punchy shockwave crack transient with rolling sub-bass rumble
+            val total = smoothRumble + crackleLp * 1.6
+            // Soft analog saturation
+            val saturated = kotlin.math.tanh(total * 1.15)
+            val absVal = kotlin.math.abs(saturated)
+            if (absVal > peak) peak = absVal
+            d[i] = saturated.toFloat()
+        }
+        // Normalize peak amplitude to 0.88 so lightning is bold, prominent, and clean
+        if (peak > 0.001) {
+            val scale = (0.88 / peak).toFloat()
+            for (i in d.indices) d[i] *= scale
         }
     }
     @Suppress("unused") private fun unused() = ln(min(1.0, 1.0))

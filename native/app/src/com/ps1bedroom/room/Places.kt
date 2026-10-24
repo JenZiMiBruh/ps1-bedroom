@@ -222,8 +222,19 @@ class Places(
         for (s in list) { s.parent = g; s.kinds = kinds }
         slots[place] = ArrayList(list)
     }
-    private fun nextCarEvent(now: Long): Long =
-        if (carsStayMinutes <= 0f) Long.MAX_VALUE else now + (carsStayMinutes * 60000f * (0.4f + carRnd.nextFloat() * 1.2f)).toLong()
+    private fun nextCarEvent(now: Long): Long {
+        if (carsStayMinutes <= 0f) return Long.MAX_VALUE
+        // Modulate car turnover by weekday commute vs weekend leisure rhythms
+        val h = env.hour
+        val turnoverFactor = when {
+            !env.isWeekend && ((h in 7.0..9.5) || (h in 16.5..19.0)) -> 0.45f // rapid weekday commute turnover
+            env.isWeekend && (h in 6.0..10.5) -> 1.75f                         // sleepy weekend morning (cars stay parked)
+            env.isWeekend && (h in 12.0..18.5) -> 0.65f                        // weekend afternoon outings and visits
+            h in 1.0..5.5 -> 2.6f                                              // quiet late night (rare departures)
+            else -> 1.0f
+        }
+        return now + (carsStayMinutes * 60000f * turnoverFactor * (0.4f + carRnd.nextFloat() * 1.2f)).toLong()
+    }
     private fun dropCar(s: Slot) { s.car?.let { s.parent.remove(it) }; s.car = null; s.state = 0 }
     /** A new street scene: which spaces are taken, and by what. Runs whenever you arrive at a place and whenever the options change. */
     fun reshuffleCars(place: String = outsideEnv) {

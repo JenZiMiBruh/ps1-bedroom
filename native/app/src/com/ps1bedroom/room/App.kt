@@ -335,7 +335,8 @@ class App : GLSurfaceView.Renderer {
                     com.ps1bedroom.room.engine.PS1.syncGrime(256)   // HTML 8225: weather and season FX
                     weatherFx = WeatherFx(room, env, sky); weatherFx.renderer = renderer; room.extraDynamicRoots.addAll(weatherFx.dynamicRoots())
                     env.envHooks += { weatherFx.updateSettings() }
-                    furniture = Furniture(room); furniture.build()
+                    furniture = Furniture(room, env); furniture.build()
+                    env.envHooks += { furniture.refreshCalendar() }
                     decor = Decor(room, res); decor.build()
                     room.extraBatchExcluded.addAll(decor.stringBulbs)
                     jasper = Jasper(room, env); jasper.build()

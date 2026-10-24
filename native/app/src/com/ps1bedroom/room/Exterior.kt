@@ -412,12 +412,23 @@ class Exterior(private val group: Group, private val env: Environment, private v
     /** Everything of the city (setOutsideEnv hides it elsewhere); the trees show wherever the place has trees. */
     fun cityParts(): List<Pair<com.ps1bedroom.room.engine.Object3D, Boolean>> = group.children.map { o -> o to exteriorTrees.any { it.first === o } }
 
-    // How busy the highway is right now (0..1): rush hours, a quiet middle of the night, fewer cars in storms
+    // How busy the highway is right now (0..1): rush hours, weekend leisure rhythms, nightlife, and storm slowdowns
     private fun trafficDensity(): Double {
         val h = env.hour
         fun bump(c: Double, w: Double, a: Double) = a * exp(-((h - c) * (h - c)) / (2 * w * w))
-        var d = 0.12 + bump(8.0, 1.2, 0.7) + bump(17.5, 1.5, 0.75) + bump(12.5, 2.5, 0.3) + bump(21.0, 2.0, 0.2)
-        if (h >= 1 && h < 5) d = 0.06 + bump(5.0, 1.0, 0.1)
+        var d: Double
+        if (env.isWeekend) {
+            // Weekend traffic rhythm: sleepy mornings with no commuter rush, building into a bustling afternoon leisure peak, with nightlife traffic lasting late
+            d = 0.08 + bump(14.5, 3.0, 0.58) + bump(20.0, 2.2, 0.45) + bump(23.5, 2.2, 0.32)
+            if (h >= 1 && h < 6) {
+                // Friday/Saturday late night cruising lingers until ~02:30 AM before dropping off
+                d = if (env.isFridayOrSaturdayNight && h < 3.2) 0.16 * (1.0 - (h - 1.0) / 2.2) else 0.04
+            }
+        } else {
+            // Weekday traffic rhythm: sharp morning commuter rush (7:30-9:15), lunch bump (12:30), heavy evening rush (16:45-18:45), and dead quiet late night
+            d = 0.08 + bump(8.0, 1.1, 0.78) + bump(12.5, 2.0, 0.26) + bump(17.5, 1.3, 0.82) + bump(21.0, 1.8, 0.18)
+            if (h >= 1 && h < 5) d = 0.04 + bump(5.0, 1.0, 0.08)
+        }
         val W = env.W
         if (W.base == "storm") d *= 0.5
         else if (env.isSnowingNow()) d *= 0.6

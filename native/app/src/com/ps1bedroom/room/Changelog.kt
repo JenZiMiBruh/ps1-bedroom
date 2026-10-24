@@ -24,6 +24,14 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.53.2", "Visceral lightning DSP, flying window leaves, Open-Meteo live wind & days of the week", listOf(
+            "Visceral lightning audio: redesigned thunder with an explosive acoustic supersonic crack on strike onset, decaying into deep reverberant sub-bass rumble with instant arrival (<0.04s-0.38s)",
+            "Dynamic window leaves: exterior window sill leaves flutter, tremble in the wind, and periodically take flight, blowing across the pane and resetting naturally; leaves on glass slide and peel off in gusts",
+            "Open-Meteo live wind: queries real-time wind speed & direction from Open-Meteo API, driving tree swaying, window leaves, debris slant, waves, wind chimes, laundry, and wind audio",
+            "Days of the week simulation: tracks Sunday-Saturday across live clock, cycle time-lapse, and presets; modulates highway commute rush hours vs weekend afternoon leisure traffic",
+            "Weekend house lights: houses, trailers, and apartments stay lit ~1.8 hours later into the night on Friday and Saturday, with earlier lights-out on work/school nights",
+            "Bedroom calendar & UI: wall calendar highlights the active day-of-week column, and Time of Day menu displays day names with full weekday/weekend preset picking"
+        )),
         Entry("0.53.1", "Launch crash fix, TV-native YouTube without overlays & performance optimizations", listOf(
             "100% reliable launch: eliminated CalledFromWrongThreadException by eagerly constructing all HUD sheets and views on the main UI thread",
             "YouTube plays directly on CRT TV: runs on the TV's off-screen display and feeds the 3D CRT texture just like channels do (zero window overlay)",

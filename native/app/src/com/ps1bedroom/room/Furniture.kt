@@ -28,7 +28,7 @@ import kotlin.math.sin
  * nightstand with the reading lamp, water glass and book, wastebasket with crumpled paper, backpack, the wall
  * calendar (today's month laid out like 2001, days crossed off) and the movie poster over the bed.
  */
-class Furniture(private val room: Room) {
+class Furniture(private val room: Room, private val env: Environment) {
     private val scene = room.scene
     lateinit var lampLight: PointLight
     private lateinit var lampShadeMat: Material
@@ -404,12 +404,16 @@ class Furniture(private val room: Room) {
         val first = Calendar.getInstance().apply { clear(); set(2001, m, 1) }.get(Calendar.DAY_OF_WEEK) - 1
         val days = Calendar.getInstance().apply { clear(); set(2001, m, 1) }.getActualMaximum(Calendar.DAY_OF_MONTH)
         val gx = 4.0; val gy = artH + 22.0; val cw = (w - 8) / 7.0; val chh = (h - gy - 4) / 7
-        ctx.font = "bold 8px monospace"; ctx.fillStyle = "#374151"
-        "SMTWTFS".forEachIndexed { c, l -> ctx.fillText(l.toString(), gx + c * cw + cw / 2, gy + chh / 2) }
+        ctx.font = "bold 8px monospace"
+        val activeDow = env.dayOfWeek - 1
+        "SMTWTFS".forEachIndexed { c, l ->
+            ctx.fillStyle = if (c == activeDow) "#dc2626" else "#374151"
+            ctx.fillText(l.toString(), gx + c * cw + cw / 2, gy + chh / 2)
+        }
         ctx.font = "bold 9px monospace"
         for (i in 0 until 42) {
             val r = i / 7 + 1; val c = i % 7; val x = gx + c * cw; val y = gy + r * chh; val dn = i - first + 1
-            ctx.strokeStyle = "#d1d5db"; ctx.lineWidth = 1f; ctx.strokeRect(jsRound(x) + 0.5, jsRound(y) + 0.5, jsRound(cw) - 1, jsRound(chh) - 1)
+            ctx.strokeStyle = if (c == activeDow) "#fca5a5" else "#d1d5db"; ctx.lineWidth = 1f; ctx.strokeRect(jsRound(x) + 0.5, jsRound(y) + 0.5, jsRound(cw) - 1, jsRound(chh) - 1)
             if (dn < 1 || dn > days) continue
             ctx.fillStyle = if (dn == day) "#b91c1c" else "#1f2937"; ctx.fillText(dn.toString(), x + cw / 2, y + chh / 2 + 1)
             if (dn < day) { ctx.strokeStyle = "rgba(220,38,38,0.8)"; ctx.lineWidth = 1.5f; ctx.beginPath(); ctx.moveTo(x + 2, y + 2); ctx.lineTo(x + cw - 2, y + chh - 2); ctx.moveTo(x + cw - 2, y + 2); ctx.lineTo(x + 2, y + chh - 2); ctx.stroke() }
@@ -419,7 +423,7 @@ class Furniture(private val room: Room) {
     }
     /** Redraws the calendar when the date changes (the HTML checks once a minute). */
     fun refreshCalendar() {
-        val (m, day) = calendarDay(); val k = "$m/$day"
+        val (m, day) = calendarDay(); val k = "$m/$day/${env.dayOfWeek}"
         if (k == calendarKey) return
         calendarKey = k
         drawCalendar(calendarTex.ctx, 128, 198); weatherCanvas(calendarTex.ctx, 128, 198, CAL_WEATHER); calendarTex.tex.needsUpdate()

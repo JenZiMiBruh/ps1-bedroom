@@ -39,7 +39,9 @@ class Settings(private val app: App, private val ctx: Context) {
     var weatherMode = "manual"; private set   // manual · auto · live
     var cityName = ""
     var liveTempC: Double? = null
-    @Volatile var liveStatus = "Tap Live or type a city to sync the weather, temperature, and sun with the real world."
+    @Volatile var liveWindSpeedKmH = -1f
+    @Volatile var liveWindDirDeg = -1f
+    @Volatile var liveStatus = "Tap Live or type a city to sync the weather, temperature, wind, and sun with the real world."
     private var autoNextAt = 0L
     private var liveNextAt = 0L
     // Timers
@@ -91,11 +93,19 @@ class Settings(private val app: App, private val ctx: Context) {
         val kind = if (Environment.WEATHER_KINDS.containsKey(kind0)) kind0 else "clear"
         env.weatherKind = kind
         env.applyEnvironmentSettings()
+        if (weatherMode == "live" && liveWindSpeedKmH >= 0f) {
+            env.applyLiveWind(liveWindSpeedKmH, liveWindDirDeg)
+        }
         if (!quiet) app.toast("🌦 WEATHER: ${env.W.label}")
         changed()
     }
     fun setTimeMode(mode: String) { env.setTimeMode(mode); changed() }
     fun setPresetHour(h: Double) { env.setPresetHour(h); changed() }
+    fun setPresetDayOfWeek(day: Int) {
+        env.setPresetDayOfWeek(day)
+        app.toast("📅 ${env.dayOfWeekName.uppercase()}")
+        changed()
+    }
     fun setTimePreset(name: String) {
         env.updateAstronomy()
         env.setTimePreset(name)
@@ -203,17 +213,31 @@ class Settings(private val app: App, private val ctx: Context) {
                         name = ip2.optString("city", "Local"); admin = ip2.optString("region", "")
                     }
                 }
-                val fc = getJson("https://api.open-meteo.com/v1/forecast?latitude=$lat&longitude=$lon&current=temperature_2m,weather_code,wind_speed_10m&timezone=auto")
+                val fc = getJson("https://api.open-meteo.com/v1/forecast?latitude=$lat&longitude=$lon&current=temperature_2m,weather_code,wind_speed_10m,wind_direction_10m&timezone=auto")
                 val c = fc.getJSONObject("current")
                 val tempC = c.getDouble("temperature_2m")
-                val kind = wmoToKind(c.getInt("weather_code"), c.getDouble("wind_speed_10m"))
+                val windKmH = c.optDouble("wind_speed_10m", -1.0).toFloat()
+                val windDirDeg = c.optDouble("wind_direction_10m", -1.0).toFloat()
+                val kind = wmoToKind(c.getInt("weather_code"), if (windKmH >= 0f) windKmH.toDouble() else 0.0)
                 app.post {
                     env.lat = lat; env.lon = lon; env.lonKnown = true
                     cityName = name
                     liveTempC = tempC
+                    liveWindSpeedKmH = windKmH
+                    liveWindDirDeg = windDirDeg
                     val desc = Environment.WEATHER_KINDS.getValue(kind).label
-                    liveStatus = "$name${if (admin.isNotEmpty() && admin != name) ", $admin" else ""} · ${tempC.roundToInt()}°C / ${(tempC * 9 / 5 + 32).roundToInt()}°F · $desc"
-                    if (weatherMode == "live") setWeatherKind(kind, quiet) else { env.applyEnvironmentSettings(); changed() }
+                    val windStr = if (windKmH >= 0f) {
+                        val windMph = (windKmH * 0.621371f).roundToInt()
+                        " · Wind ${windKmH.roundToInt()} km/h (${windMph} mph)"
+                    } else ""
+                    liveStatus = "$name${if (admin.isNotEmpty() && admin != name) ", $admin" else ""} · ${tempC.roundToInt()}°C / ${(tempC * 9 / 5 + 32).roundToInt()}°F · $desc$windStr"
+                    if (weatherMode == "live") {
+                        setWeatherKind(kind, quiet)
+                        env.applyLiveWind(windKmH, windDirDeg)
+                    } else {
+                        env.applyEnvironmentSettings()
+                        changed()
+                    }
                     app.exterior.markWeatherDirty()
                 }
             } catch (e: Exception) {

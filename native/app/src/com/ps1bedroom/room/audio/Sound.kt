@@ -272,14 +272,14 @@ class Sound(private val app: App) {
         lfos += Lfo(ctx, windGust.gain, 0.045, 0.25, 1.0)
         Noise(ctx, "brown").start().chain(windFilter, windGust, gain(1.5), wind)
         thunderBufs = listOf(Buffers.thunder(ctx), Buffers.thunder(ctx), Buffers.thunder(ctx))
-        thunderFilter = filt(520.0, "lowpass", 0.7)
-        val thunderBoost = gain(1.15)
+        thunderFilter = filt(4200.0, "lowpass", 0.7)
+        val thunderBoost = gain(1.65)
         thunderFilter.connect(thunderBoost)
         thunderBoost.connect(weatherBus)
-        // Warm low-end room rumble so thunder is gently felt inside the bedroom without harshness
-        val thunderRoom = gain(0.28)
-        thunderBoost.chain(filt(170.0, "lowpass", 0.6), thunderRoom, windowLevel)
-        val thunderFar = gain(0.55); thunderBoost.connect(thunderFar); thunderFar.connect(farIn)
+        // Deep low-end room resonance so lightning crack and thunder rumble are tangibly felt inside the bedroom
+        val thunderRoom = gain(0.55)
+        thunderBoost.chain(filt(160.0, "lowpass", 0.8), thunderRoom, windowLevel)
+        val thunderFar = gain(0.60); thunderBoost.connect(thunderFar); thunderFar.connect(farIn)
         // ---- Season / time layers
         crickets = gain(0.0); crickets.chain(filt(6000.0, "lowpass"), natureBus)
         val cr = Player(ctx, Buffers.crickets(ctx)); cr.loop = true; cr.chain(gain(0.12), crickets); cr.start()
@@ -471,23 +471,27 @@ class Sound(private val app: App) {
         }
     }
 
-    /** Thunderclap: natural acoustic rumble 0.15-1.4 s after the flash, with a warm low-pass sweep as it echoes away. */
+    /** Thunderclap: visceral acoustic lightning strike: crisp immediate supersonic crack decaying into deep rolling sub-bass rumble. */
     fun thunderclap() {
         if (!ready || !playing) return
         ctx.sync {
             val distance = rnd.nextDouble()
-            val t = ctx.currentTime + 0.15 + distance * 1.25
+            // Immediate onset: 0.02s to 0.38s so thunder hits right when the flash is seen
+            val t = ctx.currentTime + 0.02 + distance * 0.36
             val p = Player(ctx, pick(thunderBufs))
-            p.playbackRate = rand(0.74, 1.04)
-            p.volume.value = -1.5 - distance * 6.5
-            p.connect(thunderFilter)
-            val startCutoff = 680.0 - distance * 360.0
-            val endCutoff = 140.0 - distance * 35.0
-            thunderFilter.frequency.cancelScheduledValues(t)
-            thunderFilter.frequency.setValueAtTime(startCutoff, t)
-            thunderFilter.frequency.exponentialRampToValueAtTime(endCutoff.coerceAtLeast(95.0), t + 3.6)
+            p.playbackRate = rand(0.82, 1.06)
+            p.volume.value = 3.5 - distance * 4.0
+            // Dynamic low-pass per strike: starts open (up to 3.2 kHz) for the electric shockwave crack, then sweeps into rolling bass rumble
+            val startCutoff = 3200.0 - distance * 1400.0
+            val endCutoff = 180.0 - distance * 35.0
+            val lp = filt(startCutoff, "lowpass", 0.8)
+            lp.frequency.cancelScheduledValues(t)
+            lp.frequency.setValueAtTime(startCutoff, t)
+            lp.frequency.exponentialRampToValueAtTime(endCutoff.coerceAtLeast(110.0), t + 3.8)
+            p.connect(lp)
+            lp.connect(thunderFilter)
             p.start(t)
-            pendingDispose += (t + 7.2) to { p.dispose() }
+            pendingDispose += (t + 7.5) to { p.dispose(); lp.dispose() }
         }
     }
 

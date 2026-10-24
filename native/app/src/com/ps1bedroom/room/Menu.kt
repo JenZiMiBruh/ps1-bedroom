@@ -539,11 +539,15 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
 
     // ---- World ----
     private fun buildTime() {
-        h4("Time of day", env.formatHour(env.hour))
+        h4("Time of day", "${env.dayOfWeekName}, ${env.formatHour(env.hour)}")
         seg(listOf("live" to "Live clock", "preset" to "Pick a time", "cycle" to "Time-lapse"), env.timeMode) { m -> post { s.setTimeMode(m) } }
         if (env.timeMode == "preset") {
             chips(env.TIME_PRESETS.map { (name, fn) -> Triple(name, kotlin.math.abs(((fn() % 24) + 24) % 24 - env.presetHour) < 0.02, { post { s.setTimePreset(name) } }) })
             slider("Exact time", 0, 2395, 5, (env.presetHour * 100).roundToInt(), { env.formatHour(it / 100.0) }) { v -> post { s.setPresetHour(v / 100.0) } }
+            h4("Day of the week", env.dayOfWeekName)
+            val dows = listOf(2 to "Mon", 3 to "Tue", 4 to "Wed", 5 to "Thu", 6 to "Fri", 7 to "Sat", 1 to "Sun")
+            chips(dows.map { (d, label) -> Triple(label, env.dayOfWeek == d, { post { s.setPresetDayOfWeek(d) } }) })
+            note("Weekdays feature morning & evening commuter rush hours and earlier lights-out; weekends have late-night cruising and party lights that stay on late.", true)
         }
         if (env.timeMode == "cycle") chips(listOf(5.0 to "1 day = 5 min", 20.0 to "1 day = 20 min", 60.0 to "1 day = 1 hour").map { (m, l) -> Triple(l, env.cycleMinutes == m, { post { s.setCycleMinutes(m) } }) })
         note(s.sunInfo())
@@ -553,7 +557,7 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
         })
         h4("Nighttime window lights")
         seg(listOf("gradual" to "Turn off late", "early" to "Turn off early", "never" to "Stay on all night"), env.lightsOut) { m -> post { s.setLightsOut(m) } }
-        note("Windows in houses, trailers, apartments, and distant buildings gradually go dark one by one as the night gets late.", true)
+        note("Windows in houses, trailers, apartments, and distant buildings gradually go dark one by one as the night gets late (staying lit significantly later on weekends).", true)
     }
 
     private fun buildDebrisControls() {

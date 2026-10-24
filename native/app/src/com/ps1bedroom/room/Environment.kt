@@ -59,6 +59,44 @@ class Environment(private val scene: Scene, private val room: Room, private val 
     var cycleStart = 0L
     var cycleBaseHour = 0.0
     var hour = 0.0
+
+    // ---- Day of the week tracking (Sunday = 1 ... Saturday = 7) ----
+    var dayOfWeek: Int = Calendar.getInstance().get(Calendar.DAY_OF_WEEK)
+    @set:JvmName("assignPresetDayOfWeek") var presetDayOfWeek: Int = Calendar.getInstance().get(Calendar.DAY_OF_WEEK)
+    var cycleBaseDayOfWeek: Int = Calendar.getInstance().get(Calendar.DAY_OF_WEEK)
+
+    val dayOfWeekName: String get() = when (dayOfWeek) {
+        Calendar.SUNDAY -> "Sunday"
+        Calendar.MONDAY -> "Monday"
+        Calendar.TUESDAY -> "Tuesday"
+        Calendar.WEDNESDAY -> "Wednesday"
+        Calendar.THURSDAY -> "Thursday"
+        Calendar.FRIDAY -> "Friday"
+        Calendar.SATURDAY -> "Saturday"
+        else -> "Sunday"
+    }
+    val dayOfWeekShort: String get() = dayOfWeekName.take(3)
+    val isWeekend: Boolean get() = dayOfWeek == Calendar.SATURDAY || dayOfWeek == Calendar.SUNDAY
+    /** Friday & Saturday night (including early AM Saturday & Sunday): late night hours where lights stay lit and night traffic runs late. */
+    val isFridayOrSaturdayNight: Boolean get() =
+        (dayOfWeek == Calendar.FRIDAY && hour >= 18.0) ||
+        (dayOfWeek == Calendar.SATURDAY && hour < 5.0) ||
+        (dayOfWeek == Calendar.SATURDAY && hour >= 18.0) ||
+        (dayOfWeek == Calendar.SUNDAY && hour < 5.0)
+
+    // ---- Live Open-Meteo wind tracking ----
+    @Volatile var liveWindSpeedKmH = -1f
+    @Volatile var liveWindDirDeg = -1f
+
+    fun applyLiveWind(speedKmH: Float, dirDeg: Float = -1f) {
+        liveWindSpeedKmH = speedKmH
+        liveWindDirDeg = dirDeg
+        if (speedKmH >= 0f) {
+            val normWind = (speedKmH / 32.0f).coerceIn(0.08f, 1.6f)
+            W = W.copy(wind = normWind)
+        }
+    }
+
     var seasonMode = "live"
     var weatherKind = "clear"
     var skyStyle = "natural"
@@ -78,12 +116,17 @@ class Environment(private val scene: Scene, private val room: Room, private val 
     fun windowActivity(): Double {
         val h = hour
         if (lightsOut == "never") return if (h >= 1 && h < 5) 0.18 else if (h >= 5 && h < 7) 0.3 else if (h >= 22 || h < 1) 0.45 else 0.62
-        val hh = (((h + (if (lightsOut == "early") 2.0 else 0.0)) % 24) + 24) % 24
+        val shift = if (lightsOut == "early") 2.0 else 0.0
+        // On Friday and Saturday nights (weekends), windows stay lit ~1.8 hours later into the night.
+        // On weekdays, lights-out begins earlier (~22:00) with few lights remaining past midnight.
+        val weekendLate = isFridayOrSaturdayNight
+        val lateShift = if (weekendLate) -1.8 else 0.0
+        val hh = (((h + shift + lateShift) % 24) + 24) % 24
         return when {
-            hh < 1.0 -> 0.35 - 0.15 * hh
-            hh < 3.5 -> 0.2 * (1 - (hh - 1) / 2.5)
-            hh < 5.0 -> 0.0
-            hh < 7.0 -> 0.3 * (hh - 5) / 2
+            hh < 1.0 -> 0.38 - 0.15 * hh
+            hh < 3.5 -> 0.22 * (1 - (hh - 1) / 2.5)
+            hh < (if (isWeekend) 6.0 else 5.0) -> if (weekendLate) 0.05 else 0.0
+            hh < (if (isWeekend) 8.5 else 7.0) -> 0.3 * (hh - (if (isWeekend) 6.0 else 5.0)) / (if (isWeekend) 2.5 else 2.0)
             hh < 22.0 -> 0.65
             else -> 0.65 - 0.3 * (hh - 22) / 2
         }
@@ -127,12 +170,17 @@ class Environment(private val scene: Scene, private val room: Room, private val 
     fun currentHour(): Double {
         if (timeMode == "live") {
             val d = Calendar.getInstance()
+            dayOfWeek = d.get(Calendar.DAY_OF_WEEK)
             return d.get(Calendar.HOUR_OF_DAY) + d.get(Calendar.MINUTE) / 60.0 + d.get(Calendar.SECOND) / 3600.0
         }
         if (timeMode == "cycle") {
             val mins = (android.os.SystemClock.uptimeMillis() - cycleStart) / 60000.0
-            return (cycleBaseHour + (mins / cycleMinutes) * 24) % 24
+            val totalHours = cycleBaseHour + (mins / cycleMinutes) * 24
+            val daysPassed = floor(totalHours / 24.0).toInt()
+            dayOfWeek = (((cycleBaseDayOfWeek - 1 + daysPassed) % 7 + 7) % 7) + 1
+            return totalHours % 24
         }
+        dayOfWeek = presetDayOfWeek
         return presetHour
     }
     fun updateAstronomy() {
@@ -267,8 +315,15 @@ class Environment(private val scene: Scene, private val room: Room, private val 
     // ---- Time controls (HTML setTimeMode / setPresetHour / setTimePreset) ----
     fun setTimeMode(mode: String) {
         updateAstronomy()
-        if (mode == "cycle") { cycleBaseHour = hour; cycleStart = android.os.SystemClock.uptimeMillis() }
-        if (mode == "preset") presetHour = hour
+        if (mode == "cycle") {
+            cycleBaseHour = hour
+            cycleBaseDayOfWeek = dayOfWeek
+            cycleStart = android.os.SystemClock.uptimeMillis()
+        }
+        if (mode == "preset") {
+            presetHour = hour
+            presetDayOfWeek = dayOfWeek
+        }
         timeMode = mode
         applyEnvironmentSettings()
     }
@@ -276,6 +331,13 @@ class Environment(private val scene: Scene, private val room: Room, private val 
         timeMode = "preset"
         presetHour = ((h % 24) + 24) % 24
         applyEnvironmentSettings()
+    }
+    fun setPresetDayOfWeek(day: Int) {
+        presetDayOfWeek = day.coerceIn(1, 7)
+        if (timeMode == "preset") {
+            dayOfWeek = presetDayOfWeek
+            applyEnvironmentSettings()
+        }
     }
     fun setTimePreset(name: String) { TIME_PRESETS.firstOrNull { it.first == name }?.let { setPresetHour(it.second()) } }
 

@@ -24,6 +24,13 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.53", "2D A* pathfinding for Jasper around bedroom obstacles (bed, heater, desk, TV & bowls)", listOf(
+            "Full 2D A* navigation grid: Jasper computes optimal collision-free routes across the bedroom floor with obstacle inflation clearance",
+            "No more getting stuck: routes safely around the space heater and foot of the bed without vibrating or oscillating against collision boundaries",
+            "Smooth canine paths: line-of-sight raycast string pulling produces natural straight corridors and curves with zero clipping",
+            "Precise bowl alignment: Jasper stands directly in front of the food and water bowls facing forward with mouth reaching naturally into the dish",
+            "Dynamic anti-stuck watchdog: automatically replans path if dynamic obstacles (like the rolling chair) block forward progress"
+        )),
         Entry("0.52", "100% reliable launch synchronization & CRT YouTube feed without overlays", listOf(
             "Eliminated launch timing race: guarded onDrawFrame with atomic completion check so rendering never runs before scene construction finishes",
             "YouTube plays directly ON the TV screen: runs on the TV's private display and feeds straight into the CRT texture (zero overlay on the bedroom)",

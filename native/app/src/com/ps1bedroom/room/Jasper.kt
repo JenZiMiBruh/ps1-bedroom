@@ -62,13 +62,15 @@ class Jasper(private val room: Room, private val env: Environment) {
     // ---- Behaviour state ----
     private class Spot(val name: String, val pos: Vec3, val pose: String, var w: Float, val bed: Boolean = false)
     private class Jump(val from: Vec3, val to: Vec3, var t: Float, val fromY: Float, val toY: Float)
-    private val DOG_HUB = Vec3(0.45f, 0f, 0.85f) // open floor in the middle of the room
+    val pathfinder = JasperPathfinder()
     private val pos = Vec3(0.6f, 0f, 1.6f)
     private var heading = PI.toFloat()
     private var state = "idle"
     var pose = "lie"; private set
     private var poseK = 1f; private var sitK = 0f
     private val path = ArrayList<Vec3>()
+    private var stuckTimer = 0f
+    private val lastWalkPos = Vec3()
     private var until = 0f
     private var spot: Spot? = null
     private var onBed = false
@@ -344,7 +346,7 @@ class Jasper(private val room: Room, private val env: Environment) {
             Spot("bed", Vec3(2.75f, 0.85f, 0.25f), "sleep", if (night) 6f else 1f, bed = true),
             Spot("tv", Vec3(-1.25f, 0f, 1.55f), "lie", if (bedroomTvOn) 2.5f else 0.5f),
             Spot("desk", Vec3(-0.35f, 0f, 0.15f), "sit", if (sittingAtDesk) 5f else 0.6f),
-            Spot("bowls", Vec3(1.66f, 0f, 1.80f), "sit", if (careEnabled && (hunger < 45f || thirst < 45f)) 4.5f else 0.7f)
+            Spot("bowls", Vec3(1.66f, 0f, 2.02f), "sit", if (careEnabled && (hunger < 45f || thirst < 45f)) 4.5f else 0.7f)
         )
         val sun = if (env.daylight > 0.35 && room.blindsOpenState != 2 && env.moonBaseIntensity > 0.5f) sunbeamFloorPoint() else null
         if (sun != null) spots += Spot("sunbeam", sun, "lie", 5f)
@@ -360,21 +362,27 @@ class Jasper(private val room: Room, private val env: Environment) {
     private fun sendDog(s: Spot) {
         spot = s
         path.clear()
-        if (onBed) { jump = Jump(pos.clone(), Vec3(1.25f, 0f, 0.25f), 0f, 0.9f, 0f); onBed = false }
-        // Only detour through DOG_HUB if crossing the room around the bed/desk; if already near the front of the room, walk straight over
-        val directNearFront = !s.bed && pos.z >= 1.45f && s.pos.z >= 1.45f && pos.x > -0.8f && s.pos.x > -0.8f
-        if (!directNearFront) path += DOG_HUB.clone()
-        if (s.bed) path += Vec3(1.25f, 0f, 0.25f)
-        if (!s.bed) path += Vec3(s.pos.x, 0f, s.pos.z) // native fix: for the bed he stops at its edge and jumps up from there
-        state = "walk"
+        stuckTimer = 0f
+        val startFloor = if (onBed) {
+            jump = Jump(pos.clone(), Vec3(1.25f, 0f, 0.25f), 0f, 0.9f, 0f)
+            onBed = false
+            Vec3(1.25f, 0f, 0.25f)
+        } else {
+            pos.clone()
+        }
+        val targetFloor = if (s.bed) Vec3(1.25f, 0f, 0.25f) else Vec3(s.pos.x, 0f, s.pos.z)
+        val computed = pathfinder.findPath(startFloor, targetFloor, obstacles)
+        path.addAll(computed)
+        lastWalkPos.copy(pos)
+        state = if (path.isNotEmpty() || jump != null) "walk" else "rest"
     }
 
     /** Furniture he walks around (TV cart, chair, heater) with clearance radii; set by the app. */
     var obstacles: List<Pair<Object3D, Float>> = emptyList()
     // native fix: he used to walk straight through the bed, the desk, the chair and everything else
     private fun keepClear() {
-        if (pos.x > 1.35f && pos.z < 1.65f) pos.x = 1.35f            // bed
-        if (pos.x < -0.1f && pos.z < -0.5f) pos.z = -0.5f            // desk
+        if (pos.x > 1.38f && pos.z < 1.58f) pos.x = 1.38f            // bed
+        if (pos.x < -0.1f && pos.z < -0.45f) pos.z = -0.45f          // desk
         if (pos.x < -2.8f && pos.z > 1.5f && pos.z < 3.05f) pos.x = -2.8f // dresser
         if (pos.x > 0.7f && pos.x < 1.55f && pos.z < -2.15f) pos.z = -2.15f // nightstand
         for ((o, r) in obstacles) {
@@ -394,45 +402,85 @@ class Jasper(private val room: Room, private val env: Environment) {
             y = j.fromY + (j.toY - j.fromY) * k + sin(PI.toFloat() * k) * 0.45f
             if (k >= 1) jump = null
         } else if (state == "walk") {
-            val target = path[0]
-            to.set(target.x - pos.x, 0f, target.z - pos.z)
-            val dist = to.length()
-            val want = atan2(to.x, to.z)
-            heading += shortAngle(heading, want) * min(1f, dt * 5)
-            pose = "walk"
-            if (dist < 0.08f) {
-                path.removeAt(0)
-                if (path.isEmpty()) {
-                    val s = spot!!
-                    if (s.bed) { jump = Jump(pos.clone(), Vec3(s.pos.x, 0f, s.pos.z), 0f, 0f, 0.83f); onBed = true }
-                    state = "rest"
-                    if (pendingAction == "eat" || pendingAction == "drink") {
-                        actionKind = pendingAction
-                        pendingAction = ""
-                        actionUntil = t + 6.0f
-                        wagUntil = t + 6.5f
-                        nextEatSfxAt = t + 0.15f
-                        pose = "eat"
-                        until = t + 28f
-                        onStateChanged?.invoke()
-                    } else if (pendingAction == "play") {
-                        actionKind = "play"
-                        pendingAction = ""
-                        actionUntil = t + 6.0f
-                        wagUntil = t + 6.5f
-                        pose = s.pose
-                        until = t + 35f
-                        onStateChanged?.invoke()
+            if (path.isEmpty()) {
+                val s = spot
+                if (s != null && s.bed && !onBed && jump == null) {
+                    jump = Jump(pos.clone(), Vec3(s.pos.x, 0f, s.pos.z), 0f, 0f, 0.83f)
+                    onBed = true
+                }
+                state = "rest"
+                pose = s?.pose ?: "lie"
+            } else {
+                val target = path[0]
+                to.set(target.x - pos.x, 0f, target.z - pos.z)
+                val dist = to.length()
+                val want = atan2(to.x, to.z)
+                heading += shortAngle(heading, want) * min(1f, dt * 5)
+                pose = "walk"
+                val arrivalDist = if (path.size > 1) 0.12f else 0.08f
+                if (dist < arrivalDist) {
+                    path.removeAt(0)
+                    stuckTimer = 0f
+                    if (path.isEmpty()) {
+                        val s = spot!!
+                        if (s.bed) { jump = Jump(pos.clone(), Vec3(s.pos.x, 0f, s.pos.z), 0f, 0f, 0.83f); onBed = true }
+                        state = "rest"
+                        if (pendingAction == "eat") {
+                            heading = 0f // face +Z directly toward the food bowl
+                            actionKind = "eat"
+                            pendingAction = ""
+                            actionUntil = t + 6.0f
+                            wagUntil = t + 6.5f
+                            nextEatSfxAt = t + 0.15f
+                            pose = "eat"
+                            until = t + 28f
+                            onStateChanged?.invoke()
+                        } else if (pendingAction == "drink") {
+                            heading = 0f // face +Z directly toward the water bowl
+                            actionKind = "drink"
+                            pendingAction = ""
+                            actionUntil = t + 6.0f
+                            wagUntil = t + 6.5f
+                            nextEatSfxAt = t + 0.15f
+                            pose = "eat"
+                            until = t + 28f
+                            onStateChanged?.invoke()
+                        } else if (pendingAction == "play") {
+                            actionKind = "play"
+                            pendingAction = ""
+                            actionUntil = t + 6.0f
+                            wagUntil = t + 6.5f
+                            pose = s.pose
+                            until = t + 35f
+                            onStateChanged?.invoke()
+                        } else {
+                            pose = s.pose
+                            until = t + 40 + (rnd.nextDouble() * 80).toFloat()
+                        }
+                    }
+                } else {
+                    val walkSpd = if (pendingAction.isNotEmpty()) 1.25f else 0.85f
+                    val stepDist = min(dist, walkSpd * dt)
+                    pos.addScaledVector(to.normalize(), stepDist)
+                    keepClear()
+
+                    // Anti-stuck detector: if dynamic obstacles or pushback prevent forward motion, replan path
+                    val actualProgress = kotlin.math.hypot(pos.x - lastWalkPos.x, pos.z - lastWalkPos.z)
+                    if (actualProgress < stepDist * 0.25f) {
+                        stuckTimer += dt
+                        if (stuckTimer > 1.2f) {
+                            stuckTimer = 0f
+                            val dest = spot?.let { if (it.bed) Vec3(1.25f, 0f, 0.25f) else Vec3(it.pos.x, 0f, it.pos.z) } ?: target
+                            val replanned = pathfinder.findPath(pos, dest, obstacles)
+                            path.clear()
+                            path.addAll(replanned)
+                        }
                     } else {
-                        pose = s.pose
-                        until = t + 40 + (rnd.nextDouble() * 80).toFloat()
+                        stuckTimer = 0f
                     }
                 }
-            } else {
-                val walkSpd = if (pendingAction.isNotEmpty()) 1.25f else 0.85f
-                pos.addScaledVector(to.normalize(), min(dist, walkSpd * dt))
-                keepClear()
             }
+            lastWalkPos.set(pos.x, pos.y, pos.z)
         } else if (state == "rest" || state == "idle") {
             if (spot?.name == "desk" && !sittingAtDesk) until = min(until, t + 5)
             if (t > until && pendingAction.isEmpty() && t >= actionUntil) sendDog(pickDogSpot())
@@ -600,9 +648,9 @@ class Jasper(private val room: Room, private val env: Environment) {
             kibbleGroup.scale.set(1f, 1f, 1f)
         }
         wagUntil = t + 8.0f
-        val foodSpot = Vec3(1.66f, 0f, 1.80f) // stands directly behind the red food bowl at (1.66, 0, 2.32), facing +Z
-        if (!onBed && jump == null && Vec3(pos.x - foodSpot.x, 0f, pos.z - foodSpot.z).length() < 0.16f) {
-            path.clear(); state = "rest"; pose = "eat"
+        val foodSpot = Vec3(1.66f, 0f, 2.02f) // stands directly in front of the red food bowl at (1.66, 0, 2.32), facing +Z
+        if (!onBed && jump == null && kotlin.math.hypot(pos.x - foodSpot.x, pos.z - foodSpot.z) < 0.22f) {
+            path.clear(); state = "rest"; pose = "eat"; heading = 0f
             pendingAction = ""; actionKind = "eat"; actionUntil = t + 6.0f; nextEatSfxAt = t + 0.15f; until = t + 28f
         } else {
             actionKind = ""; actionUntil = 0f; pendingAction = "eat"
@@ -621,9 +669,9 @@ class Jasper(private val room: Room, private val env: Environment) {
             waterGroup.scale.set(1f, 1f, 1f)
         }
         wagUntil = t + 8.0f
-        val waterSpot = Vec3(1.98f, 0f, 1.80f) // stands directly behind the blue water bowl at (1.98, 0, 2.32), facing +Z
-        if (!onBed && jump == null && Vec3(pos.x - waterSpot.x, 0f, pos.z - waterSpot.z).length() < 0.16f) {
-            path.clear(); state = "rest"; pose = "eat"
+        val waterSpot = Vec3(1.98f, 0f, 2.02f) // stands directly in front of the blue water bowl at (1.98, 0, 2.32), facing +Z
+        if (!onBed && jump == null && kotlin.math.hypot(pos.x - waterSpot.x, pos.z - waterSpot.z) < 0.22f) {
+            path.clear(); state = "rest"; pose = "eat"; heading = 0f
             pendingAction = ""; actionKind = "drink"; actionUntil = t + 6.0f; nextEatSfxAt = t + 0.15f; until = t + 28f
         } else {
             actionKind = ""; actionUntil = 0f; pendingAction = "drink"

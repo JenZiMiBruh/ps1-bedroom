@@ -284,6 +284,7 @@ class App : GLSurfaceView.Renderer {
     private var lastCalendarCheck = 0f
     private var lastClockDraw = -99f
     private var lastSkylineUpdate = -99f
+    private var placesDt = 0f
     private val SPHERE_WINDOW_C = Vec3(0.8f, 2.65f, -3.4f)
 
     // settings (the HTML defaults: Balanced quality, 240p, wobble 160, camera breathing 40%)
@@ -455,7 +456,9 @@ class App : GLSurfaceView.Renderer {
             if (debugWeatherStep) { debugWeatherStep = false; val keys = Environment.WEATHER_KINDS.keys.toList(); env.weatherKind = keys[(keys.indexOf(env.weatherKind) + 1) % keys.size]; env.applyEnvironmentSettings() }
             weatherFx.update(t, dt)
             exterior.update(t, dt, sky.outsideEnv)
-            places.update(t, dt)
+            // The outdoor scenes (cars, trees, smoke, roof leaves) are only seen through the window: ~6x a second when it's off screen
+            placesDt += dt
+            if (placesDt >= 0.16f || renderer.sphereInView(SPHERE_WINDOW_C, 2.0f)) { places.update(t, min(placesDt, 0.2f)); placesDt = 0f }
             desk.update(t)
             monitor.tick(t)
             phone.update(t)

@@ -1,4 +1,4 @@
-package com.ps1bedroom.room
+﻿package com.ps1bedroom.room
 
 import com.ps1bedroom.room.engine.CanvasTex
 import com.ps1bedroom.room.engine.DOUBLE_SIDE
@@ -486,7 +486,7 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
         }
         // Falling leaves, blossoms & outdoor debris tied to weather and trees (with user mode: "weather", "always", "off")
         val noDebrisPlace = sky.outsideEnv in setOf("space", "underwater", "ocean")
-        val desertPlace = sky.outsideEnv in setOf("desert", "canyon", "pyramid", "redrock", "oasis", "beach", "arizona")
+        val desertPlace = sky.outsideEnv in SMALL_LEAF_PLACES
         val weatherActive = when (debrisMode) {
             "off" -> false
             "always" -> true
@@ -531,6 +531,7 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
     }
 
     /** Per-frame particle motion. */
+    private val SMALL_LEAF_PLACES = setOf("desert", "canyon", "pyramid", "redrock", "oasis", "beach", "arizona")
     fun update(t: Float, dt: Float) {
         // Dust floats inside the light beam, wherever the sun or moon is shining in from (and fades with it)
         val tp = Room.roomLightTargetPos
@@ -639,7 +640,7 @@ class WeatherFx(private val room: Room, private val env: Environment, private va
             val activeCount = (LEAF_COUNT * (weatherFactor * (debrisAmount / 1.35f)).coerceIn(0.05f, 1f)).roundToInt()
             val freqBoost = max(0.2f, debrisFreq * (0.7f + W.wind * 0.9f))
             val scale = when {
-                sky.outsideEnv in setOf("desert", "canyon", "pyramid", "redrock", "oasis", "beach", "arizona") -> 0.48f
+                sky.outsideEnv in SMALL_LEAF_PLACES -> 0.48f
                 env.currentSeason == "spring" -> 0.68f
                 env.currentSeason == "summer" -> 0.58f
                 env.currentSeason == "winter" -> 0.55f

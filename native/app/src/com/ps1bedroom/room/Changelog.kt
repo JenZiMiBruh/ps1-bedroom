@@ -24,7 +24,12 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
-        Entry("0.53.10", "4K Ultra HD Rendering & Resolution Scaling Up to 2160p", listOf(
+        Entry("0.53.11", "Tune-up: YouTube restart fix, lighter widget alarms, less background work", listOf(
+            "YouTube: stopping a video right after starting it could leave the TV holding a closed screen, so the next video never showed up. Fixed",
+            "Window widget refreshes no longer wake the phone from sleep just to repaint; they update the next time the phone is awake (saves battery)",
+            "The outdoor scenes (cars, swaying trees, chimney smoke, leaves on roofs) update about 6 times a second while the window is off screen instead of every frame",
+            "Weather effects no longer build a new list every frame"
+        )),        Entry("0.53.10", "4K Ultra HD Rendering & Resolution Scaling Up to 2160p", listOf(
             "4K Ultra HD resolution support: internal render target scaling now supports up to 4K (2160p / 3840×2160), delivering ultra-sharp geometry and immaculate fidelity",
             "Resolution presets & slider: expanded settings slider from 160p up to 2160p with dedicated 1-tap chips for 180p, 240p (PS1), 360p, 480p, 720p (HD), 1080p (FHD), 1440p (2K), and 2160p (4K UHD)",
             "Quality mode expansion: added 'Ultra (1080p)' and '4K UHD (2160p)' quality presets with enhanced volumetric ray steps and high-resolution shadow mapping",

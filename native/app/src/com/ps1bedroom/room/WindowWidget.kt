@@ -1,4 +1,4 @@
-package com.ps1bedroom.room
+﻿package com.ps1bedroom.room
 
 import android.app.Activity
 import android.app.PendingIntent
@@ -72,9 +72,9 @@ class WindowWidget : AppWidgetProvider() {
                 val intervalMs = (intervalSec * 1000L).toLong().coerceIn(60_000L, 3600_000L)
                 val triggerAt = System.currentTimeMillis() + intervalMs
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-                    am.setAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, triggerAt, pi)
+                    am.setAndAllowWhileIdle(android.app.AlarmManager.RTC, triggerAt, pi)
                 } else {
-                    am.set(android.app.AlarmManager.RTC_WAKEUP, triggerAt, pi)
+                    am.set(android.app.AlarmManager.RTC, triggerAt, pi)
                 }
             } catch (e: Exception) {
                 android.util.Log.w("PS1Bedroom", "scheduleNextRefresh failed", e)

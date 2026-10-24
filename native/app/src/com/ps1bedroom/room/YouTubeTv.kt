@@ -349,8 +349,8 @@ class YouTubeTv(private val act: Activity, private val root: FrameLayout, privat
         if (feedSurface == null) {
             app.ensureYtFeed { s ->
                 act.runOnUiThread {
-                    feedSurface = s
-                    if (active) placeWeb()
+                    // stopped before the feed was ready: that surface is already released, never keep it
+                    if (active) { feedSurface = s; placeWeb() }
                 }
             }
         }

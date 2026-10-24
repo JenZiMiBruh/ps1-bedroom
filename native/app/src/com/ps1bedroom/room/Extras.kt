@@ -67,13 +67,27 @@ class Extras(private val room: Room, private val env: Environment, private val t
     private class Recolor(val tex: Texture, val opts: LinkedHashMap<String, Pair<String, String>>) { lateinit var original: Bitmap }
     private lateinit var RECOLOR: Map<String, Recolor>
     val roomColors = linkedMapOf("walls" to "navy", "carpet" to "navy", "sheets" to "space")
-    private val decor = linkedMapOf("halloween" to Group(), "winter" to Group(), "valentine" to Group(), "summer" to Group())
+    private val decor = linkedMapOf(
+        "halloween" to Group(),
+        "winter" to Group(),
+        "valentine" to Group(),
+        "stpatrick" to Group(),
+        "easter" to Group(),
+        "summer" to Group(),
+        "thanksgiving" to Group(),
+        "newyear" to Group()
+    )
     private lateinit var faceMat: Material
     private lateinit var pumpkinLight: PointLight
     private lateinit var treeBulbMats: List<Material>
     private lateinit var treeLight: PointLight
+    private lateinit var cloverLight: PointLight
+    private lateinit var easterLight: PointLight
+    private lateinit var harvestLight: PointLight
+    private lateinit var nyLight: PointLight
     private lateinit var fanBlades: Group
     var decorMode = "auto"
+    var onDecorChanged: (() -> Unit)? = null
     // Boombox radio: OFF -> Q 97.1 Slow Jams -> ALT 104.3 -> OFF
     val RADIO_STATIONS = listOf("OFF", "Q 97.1 FM: Late-Night Slow Jams", "ALT 104.3 FM: Pop-Punk Countdown", "MY MUSIC: Your Own Songs")
     var radioStation = 0; private set
@@ -241,12 +255,107 @@ class Extras(private val room: Room, private val env: Environment, private val t
         }
         val card = Mesh(Geo.box(0.14f, 0.18f, 0.01f), PS1.material(color = 0xff8fab))
         card.position.set(-1.0f, 1.58f, -1.25f); card.rotation.set(-0.15f, 0.5f, 0f); decor.getValue("valentine").add(card)
-        // Summer: a box fan on the floor, blades spinning
+        // Summer: a box fan on the floor, blades spinning, and patriotic 4th of July bunting
         val boxFan = Group(); boxFan.position.set(-0.9f, 0f, 2.6f); boxFan.rotation.y = (PI * 0.9).toFloat(); decor.getValue("summer").add(boxFan)
         val fanFrame = Mesh(Geo.box(0.55f, 0.55f, 0.12f), PS1.material(color = 0xe5e7eb)); fanFrame.position.y = 0.3f; boxFan.add(fanFrame)
         val grille = Mesh(Geo.circle(0.24f, 16), PS1.material(color = 0x374151)); grille.position.set(0f, 0.3f, 0.062f); boxFan.add(grille)
         fanBlades = Group(); fanBlades.position.set(0f, 0.3f, 0.07f); boxFan.add(fanBlades)
         for (i in 0 until 3) { val bl = Mesh(Geo.box(0.06f, 0.2f, 0.005f), PS1.material(color = 0x93c5fd)); bl.position.y = 0.1f; val pv = Group(); pv.rotation.z = i * 2.094f; pv.add(bl); fanBlades.add(pv) }
+        val buntingMats = intArrayOf(0xdc2626, 0xf8fafc, 0x2563eb).map { PS1.material(color = it, side = DOUBLE_SIDE) }
+        for (i in 0 until 8) {
+            val b = Mesh(Geo.circle(0.12f, 12), buntingMats[i % 3]); b.scale.set(1f, 0.55f, 1f)
+            b.position.set(-0.4f + i * 0.34f, 3.66f, -2.92f); decor.getValue("summer").add(b)
+        }
+
+        // St. Patrick's Day: shamrock garland, pot of gold on desk, leprechaun hat on sill
+        val cloverMats = intArrayOf(0x16a34a, 0x22c55e, 0x15803d, 0x84cc16).map { PS1.material(color = it, side = DOUBLE_SIDE) }
+        for (i in 0 until 10) {
+            val clv = Group()
+            clv.position.set(-0.45f + i * 0.28f, 3.62f - sin((i / 9.0) * PI).toFloat() * 0.12f, -2.9f)
+            for (leaf in 0 until 4) {
+                val l = Mesh(Geo.circle(0.024f, 6), cloverMats[(i + leaf) % 4])
+                l.position.set(cos(leaf * PI.toFloat() / 2f) * 0.02f, sin(leaf * PI.toFloat() / 2f) * 0.02f, 0f)
+                clv.add(l)
+            }
+            decor.getValue("stpatrick").add(clv)
+        }
+        val potOfGold = Group(); potOfGold.position.set(-1.05f, 1.58f, -1.25f); decor.getValue("stpatrick").add(potOfGold)
+        val potCauldron = Mesh(Geo.cylinder(0.06f, 0.08f, 0.09f, 8), PS1.material(color = 0x1f2937))
+        potCauldron.position.y = 0.045f; potOfGold.add(potCauldron)
+        val goldCoins = Mesh(Geo.sphere(0.062f, 7, 5), PS1.material(color = 0xf59e0b, emissive = 0xd97706, emissiveIntensity = 0.7f))
+        goldCoins.position.y = 0.085f; potOfGold.add(goldCoins)
+        val lepHat = Group(); lepHat.position.set(1.5f, 1.57f, -2.86f); decor.getValue("stpatrick").add(lepHat)
+        val hatBrim = Mesh(Geo.cylinder(0.09f, 0.09f, 0.012f, 8), PS1.material(color = 0x15803d))
+        hatBrim.position.y = 0.006f; lepHat.add(hatBrim)
+        val hatCrown = Mesh(Geo.cylinder(0.052f, 0.058f, 0.09f, 8), PS1.material(color = 0x16a34a))
+        hatCrown.position.y = 0.055f; lepHat.add(hatCrown)
+        val hatBand = Mesh(Geo.cylinder(0.059f, 0.059f, 0.022f, 8), PS1.material(color = 0x1f2937))
+        hatBand.position.y = 0.025f; lepHat.add(hatBand)
+        val hatBuckle = Mesh(Geo.box(0.024f, 0.02f, 0.01f), PS1.material(color = 0xfacc15, emissive = 0xeab308, emissiveIntensity = 0.5f))
+        hatBuckle.position.set(0f, 0.025f, 0.058f); lepHat.add(hatBuckle)
+        cloverLight = PointLight(0x10b981, 0.0f, 1.8f, 2f); cloverLight.position.set(-1.05f, 1.7f, -1.2f); decor.getValue("stpatrick").add(cloverLight)
+
+        // Easter & Spring: woven egg basket with decorated eggs and pastel ribbon garland
+        val easterMats = intArrayOf(0xf472b6, 0x38bdf8, 0xfde047, 0xc084fc, 0x86efac).map { PS1.material(color = it, side = DOUBLE_SIDE) }
+        for (i in 0 until 10) {
+            val rib = Mesh(Geo.plane(0.06f, 0.12f), easterMats[i % easterMats.size])
+            rib.position.set(-0.45f + i * 0.28f, 3.63f - sin((i / 9.0) * PI).toFloat() * 0.13f, -2.9f)
+            rib.rotation.z = if (i % 2 == 0) 0.15f else -0.15f
+            decor.getValue("easter").add(rib)
+        }
+        val eggBasket = Group(); eggBasket.position.set(-1.0f, 1.58f, -1.25f); decor.getValue("easter").add(eggBasket)
+        val basketMesh = Mesh(Geo.cylinder(0.065f, 0.09f, 0.065f, 8), PS1.material(color = 0xd97706))
+        basketMesh.position.y = 0.032f; eggBasket.add(basketMesh)
+        val basketGrass = Mesh(Geo.cylinder(0.076f, 0.076f, 0.02f, 8), PS1.material(color = 0x84cc16))
+        basketGrass.position.y = 0.06f; eggBasket.add(basketGrass)
+        for (idx in 0 until 4) {
+            val egg = Mesh(Geo.sphere(0.022f, 6, 6), easterMats[idx])
+            egg.scale.set(1f, 1.35f, 1f)
+            val ang = idx * (PI / 2).toFloat()
+            egg.position.set(cos(ang) * 0.035f, 0.078f, sin(ang) * 0.035f)
+            egg.rotation.z = 0.25f
+            eggBasket.add(egg)
+        }
+        easterLight = PointLight(0xfef08a, 0.0f, 1.8f, 2f); easterLight.position.set(-1.0f, 1.7f, -1.2f); decor.getValue("easter").add(easterLight)
+
+        // Thanksgiving / Autumn: harvest gourd & squash cluster on windowsill, rustic maple garland
+        val fallMats = intArrayOf(0xea580c, 0xf59e0b, 0xb91c1c, 0x78350f).map { PS1.material(color = it, side = DOUBLE_SIDE) }
+        for (i in 0 until 10) {
+            val leaf = Mesh(starShape, fallMats[i % fallMats.size])
+            leaf.scale.set(0.075f, 0.075f, 0.075f)
+            leaf.position.set(-0.45f + i * 0.28f, 3.62f - sin((i / 9.0) * PI).toFloat() * 0.12f, -2.9f)
+            leaf.rotation.z = ((i * 7) % 5) * 0.2f
+            decor.getValue("thanksgiving").add(leaf)
+        }
+        val harvestCluster = Group(); harvestCluster.position.set(1.5f, 1.57f, -2.86f); decor.getValue("thanksgiving").add(harvestCluster)
+        val roundGourd = Mesh(Geo.sphere(0.082f, 8, 6), PS1.material(color = 0xea580c))
+        roundGourd.scale.set(1.15f, 0.85f, 1.15f); roundGourd.position.set(0f, 0.07f, 0f); harvestCluster.add(roundGourd)
+        val longSquash = Mesh(Geo.cylinder(0.028f, 0.046f, 0.11f, 6), PS1.material(color = 0xf59e0b))
+        longSquash.position.set(0.11f, 0.055f, 0.02f); longSquash.rotation.z = -0.3f; harvestCluster.add(longSquash)
+        val greenGourd = Mesh(Geo.sphere(0.048f, 6, 5), PS1.material(color = 0x4d7c0f))
+        greenGourd.position.set(-0.09f, 0.045f, 0.04f); harvestCluster.add(greenGourd)
+        harvestLight = PointLight(0xd97706, 0.0f, 1.8f, 2f); harvestLight.position.set(1.5f, 1.7f, -2.6f); decor.getValue("thanksgiving").add(harvestLight)
+
+        // New Year's: champagne top hat with 2001/2026 band, noisemaker, silver & gold star streamer
+        val nyMats = intArrayOf(0xfacc15, 0xf1f5f9, 0xfef08a, 0xe2e8f0).map { PS1.material(color = it, side = DOUBLE_SIDE) }
+        for (i in 0 until 10) {
+            val star = Mesh(starShape, nyMats[i % nyMats.size])
+            star.scale.set(0.075f, 0.075f, 0.075f)
+            star.position.set(-0.45f + i * 0.28f, 3.63f - sin((i / 9.0) * PI).toFloat() * 0.12f, -2.9f)
+            star.rotation.z = ((i * 5) % 4) * 0.25f
+            decor.getValue("newyear").add(star)
+        }
+        val nyHat = Group(); nyHat.position.set(-1.0f, 1.58f, -1.25f); decor.getValue("newyear").add(nyHat)
+        val nyBrim = Mesh(Geo.cylinder(0.082f, 0.082f, 0.012f, 8), PS1.material(color = 0x0f172a))
+        nyBrim.position.y = 0.006f; nyHat.add(nyBrim)
+        val nyCrown = Mesh(Geo.cylinder(0.052f, 0.056f, 0.095f, 8), PS1.material(color = 0x0f172a))
+        nyCrown.position.y = 0.055f; nyHat.add(nyCrown)
+        val nyBand = Mesh(Geo.cylinder(0.057f, 0.057f, 0.024f, 8), PS1.material(color = 0xfacc15, emissive = 0xeab308, emissiveIntensity = 0.8f))
+        nyBand.position.y = 0.024f; nyHat.add(nyBand)
+        val noisemaker = Mesh(Geo.cone(0.035f, 0.13f, 6), PS1.material(color = 0xe2e8f0))
+        noisemaker.position.set(-0.08f, 0.02f, 0.06f); noisemaker.rotation.set(0f, 0.6f, (PI / 2).toFloat()); nyHat.add(noisemaker)
+        nyLight = PointLight(0xfacc15, 0.0f, 2.0f, 2f); nyLight.position.set(-1.0f, 1.7f, -1.2f); decor.getValue("newyear").add(nyLight)
+
         applyDecor()
     }
     /** Everything here that moves or switches on and off stays out of static batching. */
@@ -370,6 +479,10 @@ class Extras(private val room: Room, private val env: Environment, private val t
         if (decor.getValue("halloween").visible) { faceMat.emissiveIntensity = 0.8f + sin(t * 9) * 0.12f + (if (rnd.nextDouble() < 0.05) -0.3f else 0f); pumpkinLight.intensity = 0.25f + 0.5f * night }
         if (decor.getValue("winter").visible) { treeBulbMats.forEachIndexed { i, m -> m.emissiveIntensity = if (sin(t * 1.5f + i * 1.6f) > -0.2f) 1.1f else 0.2f }; treeLight.intensity = 0.2f + 0.5f * night }
         if (decor.getValue("summer").visible) fanBlades.rotation.z -= dt * 14
+        if (decor.getValue("stpatrick").visible) cloverLight.intensity = 0.2f + 0.5f * night
+        if (decor.getValue("easter").visible) easterLight.intensity = 0.2f + 0.5f * night
+        if (decor.getValue("thanksgiving").visible) harvestLight.intensity = 0.25f + 0.5f * night
+        if (decor.getValue("newyear").visible) nyLight.intensity = 0.25f + 0.5f * (0.8f + 0.2f * sin(t * 4)) * night
     }
     private fun heaterShouldBeOn() = when (heaterMode) { "on" -> true; "off" -> false; else -> env.currentSeason == "winter" && (env.daylight < 0.4 || env.isSnowingNow()) }
     /** Sound hooks / toasts, set by the app. */
@@ -481,8 +594,12 @@ class Extras(private val room: Room, private val env: Environment, private val t
         if (decorMode != "auto") return decorMode
         val d = Calendar.getInstance(); val m = d.get(Calendar.MONTH); val day = d.get(Calendar.DAY_OF_MONTH)
         if (m == 9) return "halloween"
+        if (m == 10) return "thanksgiving"
+        if ((m == 11 && day >= 27) || (m == 0 && day in 1..2)) return "newyear"
         if (m == 11 || (m == 0 && day <= 6)) return "winter"
-        if (m == 1 && day <= 14) return "valentine"
+        if (m == 1 && day <= 20) return "valentine"
+        if (m == 2 && day in 8..24) return "stpatrick"
+        if ((m == 2 && day >= 25) || (m == 3 && day <= 28)) return "easter"
         if ((m == 5 && day >= 15) || m == 6 || m == 7) return "summer"
         return "off"
     }
@@ -490,6 +607,7 @@ class Extras(private val room: Room, private val env: Environment, private val t
         val a = activeDecor()
         for ((k, g) in decor) g.visible = a == k
         room.onShadowsChanged.invoke()
+        onDecorChanged?.invoke()
     }
 
     // ---- Boombox radio (the stations' sound comes with the audio phase) ----

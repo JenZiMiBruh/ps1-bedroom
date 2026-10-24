@@ -24,6 +24,15 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.53.7", "Open Window Soundscape, Theme-Styled Toasts, 2001/2026 Wall Calendar, Dynamic Holiday Lights & Sleep Screen-Off", listOf(
+            "Open window soundscape: lower window sash slides open and shut with smooth physics animation; opening the window floods the room with loud, crystal-clear 18 kHz outdoor audio (rain, wind, crickets, traffic pass-bys), decoupling outdoor sound from the blinds",
+            "Theme-styled toasts: room toasts dynamically mirror the active UI color theme and accent color (PS1 pink, memory card cyan, game boy green, sunset orange, arcade red) on a sleek matching backdrop",
+            "Suppressed boot sound toast: quieted audio initialization during the boot logo sequence to eliminate early toast popups before entering the bedroom",
+            "2001 vs 2026 calendar toggle: switch between authentic retro October 2001 nostalgia (Wednesday 24th) and current live 2026 real-world calendar with exact days of the week, selectable via menu, debug tool, or direct room tap",
+            "Holiday-themed string lights: hanging bedroom string lights dynamically transform their bulb color palettes and glow to celebrate every holiday (Halloween orange/purple, Christmas red/green/gold, Valentine pink/crimson, St. Patrick's emerald, Easter pastel, Summer 4th red/white/blue, Thanksgiving harvest amber, New Year's champagne gold)",
+            "Expanded holiday decorations: added bespoke 3D decor for St. Patrick's (clover garland, desk pot of gold, windowsill leprechaun hat), Easter (woven wicker basket with painted pastel eggs), Thanksgiving (harvest pumpkin & squash cluster, autumn maple garland), New Year's (celebratory top hat with 2001/2026 band, noisemaker, star streamer), and Summer 4th of July bunting",
+            "Sleep mode screen-off: when the sleep timer ends, the display gracefully sets brightness to zero, clears screen lock flags, and relinquishes the screen to Android OS system sleep / display lock"
+        )),
         Entry("0.53.6", "Developer Debug Suite, High-Legibility TV Weather View, Trinitron Remote, & Swings Fix", listOf(
             "In-App Developer Debug Suite: comprehensive retro PS1 debug tool with 6 tabs for instantaneous 1-tap testing of weather, time warp (1x - 300x), day of week, all 15 outside locations, TV channels, Jasper behaviors, and real-time engine diagnostics",
             "Instant lightning trigger & leaf flurries: dedicated debug buttons to immediately strike lightning with audio + window flash and spawn leaf flurries drifting into the window pane",

@@ -21,7 +21,7 @@ class Room(val scene: Scene, val tex: Textures) {
     val interactables = ArrayList<Mesh>()
     fun registerInteractable(m: Mesh, tag: String) { m.userData["interactTag"] = tag; interactables += m }
     /** Groups that move or animate: never merged by static batching (the HTML's DYNAMIC_ROOTS). */
-    fun dynamicRoots(): Set<com.ps1bedroom.room.engine.Object3D> = setOf(doorLeaf, acLouvre) + extraDynamicRoots
+    fun dynamicRoots(): Set<com.ps1bedroom.room.engine.Object3D> = setOf(doorLeaf, acLouvre, windowSashGroup) + extraDynamicRoots
     /** Other moving groups (the outside world, the sky) registered by their builders. */
     val extraDynamicRoots = HashSet<com.ps1bedroom.room.engine.Object3D>()
     val extraBatchExcluded = HashSet<com.ps1bedroom.room.engine.Object3D>()
@@ -250,6 +250,12 @@ class Room(val scene: Scene, val tex: Textures) {
         acPart(Geo.box(0.08f, 4.0f, 0.08f), matAcShell, 0.08f, -2.2f, -0.76f)
     }
 
+    val windowSashGroup = Group()
+    var windowOpen = false; private set
+    var windowRaise = 0f; private set
+    /** Called when the lower window sash opens or closes. */
+    var onWindowStateChanged: () -> Unit = {}
+
     // ---------------------------------------------------------------- window and blinds (HTML 4296-4368, 10644-10681)
     val blindSlats = ArrayList<Mesh>()
     val snowCapMeshes = ArrayList<Mesh>()
@@ -272,12 +278,41 @@ class Room(val scene: Scene, val tex: Textures) {
         val blindGroup = Group()
         val matBlind = PS1.material(color = 0x8a9cc2)
         val matWindowFrame = PS1.material(color = 0x5c6b8a)
+        val matSash = PS1.material(color = 0x4e5b78)
+        val matGlassPane = PS1.material(color = 0x82a5c4, transparent = true, opacity = 0.22f)
+
         // Frame jambs and centre mullion (cast the window-frame shadow into the room)
         fun part(m: Mesh, x: Float, y: Float, z: Float): Mesh { m.position.set(x, y, z); m.castShadow = true; blindGroup.add(m); return m }
         part(Mesh(Geo.box(2.88f, 0.08f, 0.28f), matWindowFrame), 0.8f, 3.73f, -3.08f)
         part(Mesh(Geo.box(0.08f, 2.24f, 0.28f), matWindowFrame), -0.58f, 2.65f, -3.08f)
         part(Mesh(Geo.box(0.08f, 2.24f, 0.28f), matWindowFrame), 2.18f, 2.65f, -3.08f)
         part(Mesh(Geo.box(0.05f, 2.20f, 0.06f), matWindowFrame), 0.8f, 2.65f, -3.14f)
+
+        // Fixed upper meeting rail & glass divider
+        val upperRail = Mesh(Geo.box(2.74f, 0.045f, 0.04f), matWindowFrame)
+        upperRail.position.set(0.8f, 2.65f, -3.14f); scene.add(upperRail)
+        registerInteractable(upperRail, "window")
+
+        // ---- Sliding lower window sash (lifts upward when window is opened) ----
+        fun sashPart(m: Mesh, x: Float, y: Float, z: Float): Mesh {
+            m.position.set(x, y, z); m.castShadow = true; windowSashGroup.add(m)
+            registerInteractable(m, "window")
+            return m
+        }
+        // Lower sash frame rails and stiles (Y span ~1.56 to 2.64)
+        sashPart(Mesh(Geo.box(2.72f, 0.045f, 0.04f), matSash), 0.8f, 1.58f, -3.11f)   // bottom sash rail
+        sashPart(Mesh(Geo.box(2.72f, 0.045f, 0.04f), matSash), 0.8f, 2.63f, -3.11f)   // meeting sash rail
+        sashPart(Mesh(Geo.box(0.045f, 1.05f, 0.04f), matSash), -0.54f, 2.105f, -3.11f) // left stile
+        sashPart(Mesh(Geo.box(0.045f, 1.05f, 0.04f), matSash), 2.14f, 2.105f, -3.11f)  // right stile
+        sashPart(Mesh(Geo.box(0.035f, 1.05f, 0.04f), matSash), 0.8f, 2.105f, -3.11f)   // centre mullion stile
+        // Sash lock / finger lift hardware in center of meeting rail
+        sashPart(Mesh(Geo.box(0.12f, 0.022f, 0.03f), PS1.material(color = 0x242a38)), 0.8f, 2.655f, -3.095f)
+        // Lower glass pane that moves with sash
+        val lowerGlass = sashPart(Mesh(Geo.plane(2.68f, 1.01f), matGlassPane), 0.8f, 2.105f, -3.11f)
+        lowerGlass.castShadow = false
+
+        scene.add(windowSashGroup)
+
         // 17 venetian blind slats casting slatted shadows and slicing the light rays
         for (i in 0 until 17) {
             val slat = Mesh(Geo.box(2.74f, 0.024f, 0.095f, 6, 1, 1), matBlind)
@@ -295,6 +330,28 @@ class Room(val scene: Scene, val tex: Textures) {
         for (cx in listOf(-0.25f, 0.8f, 1.85f)) part(Mesh(Geo.cylinder(0.01f, 0.01f, 2.15f, 4), matBlind), cx, 2.65f, -2.97f)
         part(Mesh(Geo.cylinder(0.012f, 0.012f, 1.45f, 5), matBlind), -0.48f, 2.85f, -2.88f)
         scene.add(blindGroup)
+    }
+
+    fun setWindowState(open: Boolean) {
+        windowOpen = open
+        onWindowStateChanged()
+        onShadowsChanged()
+    }
+    fun toggleWindow(): Boolean {
+        setWindowState(!windowOpen)
+        return windowOpen
+    }
+
+    /** Lower sash slides smoothly open (upward) or closed (downward). */
+    fun updateWindow(dt: Float) {
+        val target = if (windowOpen) 0.88f else 0.0f
+        val prev = windowRaise
+        windowRaise += (target - windowRaise) * minOf(1f, dt * 3.5f)
+        if (kotlin.math.abs(target - windowRaise) < 0.002f) windowRaise = target
+        if (kotlin.math.abs(windowRaise - prev) > 0.0001f) {
+            windowSashGroup.position.y = windowRaise
+            onShadowsChanged()
+        }
     }
 
     private val blindOrder = intArrayOf(0, 1, 3, 2)

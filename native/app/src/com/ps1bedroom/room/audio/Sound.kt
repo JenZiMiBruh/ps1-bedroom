@@ -388,7 +388,7 @@ class Sound(private val app: App) {
             rain.gain.rampTo(if (raining) 0.25 + W.rain * 0.75 else 0.0, fade)
             rainHeavy.gain.rampTo(if (raining && W.rain > 0.75f) (W.rain - 0.5) * 2 else 0.0, fade)
             glassSpot.level.gain.rampTo(vol.getValue("weather"), 0.2)
-            rainGlass.gain.rampTo(if (raining) (0.12 + W.rain * 0.4) * (if (app.room.blindsOpenState == 2) 0.7 else 1.0) else 0.0, fade)
+            rainGlass.gain.rampTo(if (raining) (0.12 + W.rain * 0.4) * (if (app.room.windowOpen) 0.35 else 1.0) else 0.0, fade)
             // Falling snow is hushed: just a soft breath of wind (a blizzard howls)
             wind.gain.rampTo(maxOf(if (isStorm) 1.0 else 0.0, W.wind * 0.85, if (snowing) 0.18 else 0.0, if (isFog) 0.12 else 0.06), fade)
             // Season & time of day (no crickets in rain, wildlife hushes in storms)
@@ -399,11 +399,12 @@ class Sound(private val app: App) {
             breeze.gain.rampTo(breezeLvl * outdoorDuck, fade)
             howl.gain.rampTo(if (isWinter) (if (night) 0.7 else 0.5) * (if (isStorm) 0.6 else (if (isPrecip) 0.45 else 1.0)) else 0.0, fade)
             city.gain.rampTo((if (day) 0.9 else (if (dawn || dusk) 0.6 else 0.35)) * (if (isStorm) 0.4 else 1.0) * app.places.outsideCityFactor(), fade)
-            // The window: blinds and snow / fog muffle everything outside
-            val winHz = doubleArrayOf(5500.0, 9000.0, 2000.0, 10000.0)[app.room.blindsOpenState]
-            val muffle = if (snowing) 0.6 else (if (isFog) 0.75 else 1.0)
+            // The window: opening the lower sash floods the bedroom with crisp, loud outdoor sounds
+            val winHz = if (app.room.windowOpen) 18000.0 else 3200.0
+            val winVol = if (app.room.windowOpen) 1.5 else 0.55
+            val muffle = if (snowing) 0.7 else (if (isFog) 0.8 else 1.0)
             windowFilter.frequency.setTargetAtTime(winHz * muffle, ctx.currentTime, 0.2)
-            windowLevel.gain.rampTo(if (app.room.blindsOpenState == 2) 0.6 else 1.0, 0.6)
+            windowLevel.gain.rampTo(winVol, 0.5)
             updateOutsideEnvSound()
         }
     }

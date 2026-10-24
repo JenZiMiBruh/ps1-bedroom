@@ -53,6 +53,18 @@ class Settings(private val app: App, private val ctx: Context) {
         changed()
         return weatherChannelView
     }
+    var calendarYear = "2001"; private set
+    fun setCalendarYear(yr: String) {
+        calendarYear = if (yr == "2026") "2026" else "2001"
+        app.furniture.refreshCalendar(force = true)
+        changed()
+    }
+    fun toggleCalendarYear(): String {
+        calendarYear = if (calendarYear == "2001") "2026" else "2001"
+        app.furniture.refreshCalendar(force = true)
+        changed()
+        return calendarYear
+    }
     @Volatile var liveStatus = "Tap Live or type a city to sync the weather, temperature, wind, and sun with the real world."
     private var autoNextAt = 0L
     private var liveNextAt = 0L
@@ -337,10 +349,16 @@ class Settings(private val app: App, private val ctx: Context) {
             // The point of a sleep timer is that the phone goes to sleep too: hand the screen back to Android's timeout
             app.keepScreenOn?.invoke(false)
             if (sleepDim) { sleeping = true; applyFps(); app.hud?.showSleeping(true) }
+            app.turnScreenOff?.invoke()
             changed()
         }
     }
-    fun wake() { sleeping = false; applyFps(); app.keepScreenOn?.invoke(true) }
+    fun wake() {
+        sleeping = false
+        applyFps()
+        app.keepScreenOn?.invoke(true)
+        app.restoreScreenBrightness?.invoke()
+    }
     /** One tap: lights down, fan on, you in bed, a 45-minute timer. */
     fun startSleepMode() {
         if (!app.sound.playing) app.toggleAudio()
@@ -466,6 +484,7 @@ class Settings(private val app: App, private val ctx: Context) {
         put("outside", app.sky.outsideEnv); put("startScreen", startScreenEnabled); put("tutorialSeen", tutorialSeen); put("sleepDim", sleepDim)
         put("liveRefreshMin", liveWeatherRefreshMinutes)
         put("tvWeatherView", weatherChannelView)
+        put("calendarYear", calendarYear)
     }
     fun saveNow() {
         lastSaved = System.currentTimeMillis()
@@ -503,6 +522,7 @@ class Settings(private val app: App, private val ctx: Context) {
             if (!s.optBoolean("tv", true) && app.tv.bedroomTvOn) app.tv.toggleBedroomTv(0f)
             s.optInt("tvCh", 0).let { if (it in 1 until Tv.PS1_TV_CHANNEL) app.tv.setChannel(it) }
             weatherChannelView = s.optString("tvWeatherView", "simple")
+            calendarYear = s.optString("calendarYear", "2001")
             app.monitor.setChannel(s.optInt("pcCh", 0))
             app.extras.setStation(s.optInt("radio", 0), app.furniture.radioDisplayMat)
             app.sound.masterVolume = s.optDouble("master", 0.85)

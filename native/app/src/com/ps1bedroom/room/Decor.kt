@@ -32,8 +32,23 @@ class Decor(private val room: Room, private val res: Resources) {
     private lateinit var stringGlowB: PointLight
     var stringLightsMode = 0; private set   // 0 off · 1 warm · 2 rainbow
     var stringLightsOn = false; private set
+    var currentHoliday = "off"; private set
     /** Built at the end of the room: the HTML's models load asynchronously, after everything else (grime 686+). */
     val kenneyRoots = ArrayList<Object3D>()
+
+    companion object {
+        val HOLIDAY_PALETTES = mapOf(
+            "halloween" to intArrayOf(0xff7700, 0xff5500, 0x8b00ff, 0x16a34a, 0x7c3aed), // Pumpkin orange, dark orange, spooky purple, slime green, violet
+            "winter" to intArrayOf(0xffe4a0, 0xef4444, 0x22c55e, 0xfbbf24, 0x38bdf8),    // Candle gold, Christmas red, pine green, star gold, icy blue
+            "valentine" to intArrayOf(0xff99bb, 0xe11d48, 0xf472b6, 0xfb7185, 0xfff1f2), // Warm pink, crimson, rose, blush, pearl white
+            "stpatrick" to intArrayOf(0x84cc16, 0x10b981, 0x22c55e, 0xf59e0b, 0x6ee7b7), // Lime, emerald, shamrock, gold, mint
+            "easter" to intArrayOf(0xfef08a, 0xc084fc, 0x7dd3fc, 0x86efac, 0xf472b6),    // Pastel yellow, lavender, sky blue, pastel mint, pastel pink
+            "summer" to intArrayOf(0xffd54f, 0xdc2626, 0xf8fafc, 0x2563eb, 0xef4444),    // Sun gold, patriotic red, star white, royal blue, crimson
+            "thanksgiving" to intArrayOf(0xd97706, 0xea580c, 0xf59e0b, 0xb91c1c, 0x78350f), // Harvest amber, burnt orange, golden yellow, rustic red, russet
+            "newyear" to intArrayOf(0xfef08a, 0xfacc15, 0xf1f5f9, 0x06b6d4, 0xa855f7)     // Champagne, sparkling gold, silver, disco cyan, electric violet
+        )
+        val DEFAULT_PALETTE = intArrayOf(0xffd9a0, 0xff6b9d, 0x7ff3ff, 0xffe066, 0x9dff8a)
+    }
 
     private fun propPart(parent: Object3D, geo: Geometry, mat: Material, x: Float, y: Float, z: Float, tag: String? = null): Mesh {
         val m = Mesh(geo, mat)
@@ -196,9 +211,31 @@ class Decor(private val room: Room, private val res: Resources) {
         stringLightsMode = mode
         stringLightsOn = mode > 0
         stringBulbs.forEachIndexed { i, b -> b.material = if (mode == 2) stringBulbMats[1 + (i % 4)] else stringBulbMats[0] }
-        val col = if (mode == 2) 0xd9a0ff else 0xffc98a
-        for (l in arrayOf(stringGlowA, stringGlowB)) { l.color.setHex(col); l.intensity = if (mode > 0) 0.55f else 0f }
+        val pal = HOLIDAY_PALETTES[currentHoliday] ?: DEFAULT_PALETTE
+        val col = if (mode == 2) pal[1] else pal[0]
+        if (::stringGlowA.isInitialized && ::stringGlowB.isInitialized) {
+            for (l in arrayOf(stringGlowA, stringGlowB)) { l.color.setHex(col); l.intensity = if (mode > 0) 0.55f else 0f }
+        }
     }
+
+    /** Apply festive theme colors to bulbs and room glows to match the active holiday. */
+    fun applyHolidayStringLights(holiday: String) {
+        currentHoliday = holiday
+        val pal = HOLIDAY_PALETTES[holiday] ?: DEFAULT_PALETTE
+        for (i in 0 until minOf(pal.size, stringBulbMats.size)) {
+            val c = pal[i]
+            stringBulbMats[i].color.setHex(c)
+            stringBulbMats[i].emissive.setHex(c)
+        }
+        val col = if (stringLightsMode == 2) pal[1] else pal[0]
+        if (::stringGlowA.isInitialized && ::stringGlowB.isInitialized) {
+            for (l in arrayOf(stringGlowA, stringGlowB)) {
+                l.color.setHex(col)
+                if (stringLightsOn) l.intensity = 0.55f
+            }
+        }
+    }
+
     fun update(t: Float) {
         if (!stringLightsOn) { for (m in stringBulbMats) m.emissiveIntensity = 0.05f; return }
         for (i in stringBulbMats.indices) {

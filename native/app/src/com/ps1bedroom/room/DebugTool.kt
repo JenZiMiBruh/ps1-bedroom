@@ -334,6 +334,13 @@ class DebugTool(
         moonRow.addView(btn("🌕 FULL") { app.post { app.env.realisticMoon = false; app.env.moonPhase = 0.5; app.env.applyEnvironmentSettings(); app.toast("Moon: Full Moon") } })
         moonRow.addView(btn("REALISTIC") { app.post { app.settings.setRealisticMoon(!app.env.realisticMoon); app.toast("Realistic Moon: ${app.env.realisticMoon}") } })
         contentContainer.addView(moonRow)
+
+        contentContainer.addView(sectionTitle("CALENDAR YEAR"))
+        val calRow = LinearLayout(act).apply { orientation = LinearLayout.HORIZONTAL }
+        calRow.addView(btn("📅 2001 NOSTALGIA") { app.post { app.settings.setCalendarYear("2001"); app.toast("📅 Wall Calendar: 2001 (Wed Oct 24)") } })
+        calRow.addView(btn("📅 2026 LIVE YEAR") { app.post { app.settings.setCalendarYear("2026"); app.toast("📅 Wall Calendar: 2026 (Live Year)") } })
+        calRow.addView(btn("TOGGLE YEAR") { app.post { val yr = app.settings.toggleCalendarYear(); app.toast("📅 Wall Calendar: $yr") } })
+        contentContainer.addView(calRow)
     }
 
     // =========================================================================
@@ -459,9 +466,27 @@ class DebugTool(
 
         val lightRow2 = LinearLayout(act).apply { orientation = LinearLayout.HORIZONTAL }
         lightRow2.addView(btn("🪟 BLINDS") { app.post { app.room.cycleWindowBlinds(); app.toast("Blinds Cycled") } })
+        lightRow2.addView(btn("🪟 WINDOW OPEN/CLOSE") { app.post { val op = app.room.toggleWindow(); app.sound.updateLayered(); app.toast("Window: ${if (op) "OPEN (LOUD)" else "CLOSED (MUFFLED)"}") } })
         lightRow2.addView(btn("❄️ AC UNIT") { app.post { app.room.toggleAcUnit(); app.toast("AC Unit Toggled") } })
-        lightRow2.addView(btn("✨ STRING LIGHTS") { app.post { app.decor.cycleStringLights(); app.toast("String Lights Cycled") } })
         contentContainer.addView(lightRow2)
+
+        val lightRow3 = LinearLayout(act).apply { orientation = LinearLayout.HORIZONTAL }
+        lightRow3.addView(btn("✨ STRING LIGHTS") { app.post { app.decor.cycleStringLights(); app.toast("String Lights Mode: ${app.decor.stringLightsMode}") } })
+        contentContainer.addView(lightRow3)
+
+        contentContainer.addView(sectionTitle("HOLIDAY DECORATIONS"))
+        val holRow1 = LinearLayout(act).apply { orientation = LinearLayout.HORIZONTAL }
+        val holRow2 = LinearLayout(act).apply { orientation = LinearLayout.HORIZONTAL }
+        holRow1.addView(btn("🎃 HALLOWEEN") { app.post { app.extras.decorMode = "halloween"; app.extras.applyDecor(); app.toast("Holiday: Halloween") } })
+        holRow1.addView(btn("🎄 WINTER") { app.post { app.extras.decorMode = "winter"; app.extras.applyDecor(); app.toast("Holiday: Winter Tree") } })
+        holRow1.addView(btn("💖 VALENTINE") { app.post { app.extras.decorMode = "valentine"; app.extras.applyDecor(); app.toast("Holiday: Valentine's") } })
+        holRow1.addView(btn("🍀 ST PATRICK") { app.post { app.extras.decorMode = "stpatrick"; app.extras.applyDecor(); app.toast("Holiday: St. Patrick's") } })
+        holRow2.addView(btn("🐰 EASTER") { app.post { app.extras.decorMode = "easter"; app.extras.applyDecor(); app.toast("Holiday: Easter / Spring") } })
+        holRow2.addView(btn("🎆 SUMMER / 4TH") { app.post { app.extras.decorMode = "summer"; app.extras.applyDecor(); app.toast("Holiday: Summer / 4th") } })
+        holRow2.addView(btn("🦃 THANKSGIVING") { app.post { app.extras.decorMode = "thanksgiving"; app.extras.applyDecor(); app.toast("Holiday: Thanksgiving") } })
+        holRow2.addView(btn("🎉 NEW YEAR") { app.post { app.extras.decorMode = "newyear"; app.extras.applyDecor(); app.toast("Holiday: New Year's") } })
+        contentContainer.addView(holRow1)
+        contentContainer.addView(holRow2)
     }
 
     // =========================================================================

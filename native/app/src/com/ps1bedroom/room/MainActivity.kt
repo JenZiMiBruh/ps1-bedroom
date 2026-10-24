@@ -53,6 +53,30 @@ class MainActivity : Activity() {
         app.onWindowShot = { clear, blinds, weather, place -> Thread { WindowWidget.saveInfo(this, weather, place); WindowWidget.saveShots(this, clear, blinds); RoomWidgetReceiver.updateAllWidgets(this, app); clear.recycle(); blinds.recycle() }.start() }
         RoomWidgetReceiver.onCommand = { cmd -> handleWidgetCommand(cmd) }
         app.keepScreenOn = { on -> runOnUiThread { if (on) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) } }
+        app.turnScreenOff = {
+            runOnUiThread {
+                try {
+                    val lp = window.attributes
+                    lp.screenBrightness = 0.0f
+                    window.attributes = lp
+                    window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                    moveTaskToBack(true)
+                } catch (e: Throwable) {
+                    android.util.Log.w("PS1Bedroom", "turnScreenOff failed", e)
+                }
+            }
+        }
+        app.restoreScreenBrightness = {
+            runOnUiThread {
+                try {
+                    val lp = window.attributes
+                    if (lp.screenBrightness == 0.0f) {
+                        lp.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+                        window.attributes = lp
+                    }
+                } catch (_: Throwable) { }
+            }
+        }
         UiTheme.load(this)
         app.hud = Hud(this, root, app).also { it.attachMenu() }
         app.cutout?.let { co ->
@@ -204,6 +228,13 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume(); app.glActive = true; view.onResume(); pacer.interacted(); pacer.start(); hideSystemBars()
+        try {
+            val lp = window.attributes
+            if (lp.screenBrightness == 0.0f) {
+                lp.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+                window.attributes = lp
+            }
+        } catch (_: Throwable) { }
         app.windowWidgets = WindowWidget.hasWidgets(this)
         app.windowShotIntervalSec = WindowWidget.refreshIntervalSec(this)
         if (app.windowWidgets) app.windowShotNow = true

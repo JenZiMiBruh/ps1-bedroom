@@ -58,6 +58,10 @@ class App : GLSurfaceView.Renderer {
     @Volatile var ytActive = false
     /** Keeps the screen on while the room is in use; the sleep timer hands it back to Android (set by the activity). */
     @Volatile var keepScreenOn: ((Boolean) -> Unit)? = null
+    /** Shuts down the phone display / locks device when sleep timer finishes (set by the activity). */
+    @Volatile var turnScreenOff: (() -> Unit)? = null
+    /** Restores normal screen brightness when waking from sleep (set by the activity). */
+    @Volatile var restoreScreenBrightness: (() -> Unit)? = null
     /** Notch / hole-punch handling (made by the activity). */
     var cutout: Cutout? = null
     /** 1.3: achievements and the sunrise alarm (made by the activity). */
@@ -207,10 +211,10 @@ class App : GLSurfaceView.Renderer {
             if (music && stream != null) (stream.positionSec * 1000).toLong() else 0L,
             if (music && stream != null && !stream.durationSec.isNaN()) (stream.durationSec * 1000).toLong() else 0L))
     }
-    fun toggleAudio() {
+    fun toggleAudio(quiet: Boolean = false) {
         val first = !sound.ready
         sound.toggle()
-        if (first && sound.playing) toast("🔊 SOUND ON: every sound is placed in the room. Walk around and listen!")
+        if (first && sound.playing && !quiet) toast("🔊 SOUND ON: every sound is placed in the room. Walk around and listen!")
         hud?.audioChanged(sound.playing)
         sound.heaterHum(extras.heaterIsOn)
         onAudioState?.invoke(sound.playing)
@@ -218,7 +222,7 @@ class App : GLSurfaceView.Renderer {
         settings.changed()
     }
     /** The start screen (or launch without it) turns the sound on if it was on last time. */
-    fun startAudioIfWanted() { if (sound.wantAudio && !sound.playing) toggleAudio() }
+    fun startAudioIfWanted() { if (sound.wantAudio && !sound.playing) toggleAudio(quiet = true) }
     private var lastMonitorUpdate = 0f
     private val SPHERE_MONITOR_C = Vec3()
     /** Walk / sit / lie down (HTML playerMode); the on-screen UI that drives it. */
@@ -340,14 +344,17 @@ class App : GLSurfaceView.Renderer {
                     com.ps1bedroom.room.engine.PS1.syncGrime(256)   // HTML 8225: weather and season FX
                     weatherFx = WeatherFx(room, env, sky); weatherFx.renderer = renderer; room.extraDynamicRoots.addAll(weatherFx.dynamicRoots())
                     env.envHooks += { weatherFx.updateSettings() }
-                    furniture = Furniture(room, env); furniture.build()
+                    furniture = Furniture(room, env); furniture.calendarYear = { settings.calendarYear }; furniture.build()
                     env.envHooks += { furniture.refreshCalendar() }
+                    room.extraBatchExcluded += furniture.calendarMesh
                     decor = Decor(room, res); decor.build()
                     room.extraBatchExcluded.addAll(decor.stringBulbs)
                     jasper = Jasper(room, env); jasper.build()
                     room.extraDynamicRoots += jasper.dogGroup
                     room.extraDynamicRoots += jasper.bowlsGroup
                     extras = Extras(room, env, tv, desk, bedroom); extras.build(); tv.tapes = extras
+                    extras.onDecorChanged = { decor.applyHolidayStringLights(extras.activeDecor()) }
+                    decor.applyHolidayStringLights(extras.activeDecor())
                     room.extraDynamicRoots.addAll(extras.dynamicRoots())
                     myMusic.buildRoomParts(); room.extraDynamicRoots.addAll(myMusic.dynamicRoots())
                     places = Places(room, env, sky, exterior, weatherFx) { renderer.shadowsNeedUpdate = true }   // HTML 14241: the places outside
@@ -477,6 +484,7 @@ class App : GLSurfaceView.Renderer {
             if (t - lastCalendarCheck > 60f) { lastCalendarCheck = t; furniture.refreshCalendar() }
             if (t - lastClockDraw > 1f) { lastClockDraw = t; bedroom.drawAlarmClock(env.currentHour()) }
             room.updateBlinds(dt)
+            room.updateWindow(dt)
             weatherFx.updateLightning(dt * 60f)
             // The backdrop redraws ~3x a second while the window is on screen, every 2.5 s otherwise (as in the HTML)
             if (t - lastSkylineUpdate > (if (renderer.sphereInView(SPHERE_WINDOW_C, 2.0f)) 0.33f else 2.5f)) {
@@ -567,6 +575,14 @@ class App : GLSurfaceView.Renderer {
         if (tag.startsWith("vhs:")) { extras.insertTape(tag.substringAfter(':').toInt(), lastT); return }
         when (tag) {
             "blinds" -> room.cycleWindowBlinds()
+            "window" -> {
+                val op = room.toggleWindow()
+                toast(if (op) "🪟 WINDOW: OPEN (breezy crisp outdoor sound)" else "🪟 WINDOW: CLOSED (sound muffled behind glass)")
+            }
+            "calendar" -> {
+                val yr = settings.toggleCalendarYear()
+                toast("📅 WALL CALENDAR: $yr (${if (yr == "2026") "Live Real-World Date" else "Retro 2001 Nostalgia"})")
+            }
             "switch" -> toggleFanLight()
             "lavalamp" -> toast(desk.cycleLava())
             "cat" -> bedroom.toggleCatEyes()
@@ -574,7 +590,12 @@ class App : GLSurfaceView.Renderer {
             "fanspin" -> fan.toggleCeilingFanSpin()
             "ac" -> room.toggleAcUnit()
             "lamp" -> furniture.toggleLamp()
-            "string" -> decor.cycleStringLights()
+            "string" -> {
+                decor.cycleStringLights()
+                val modeNames = arrayOf("OFF", "WARM", "FESTIVE")
+                val holName = extras.activeDecor().replaceFirstChar { it.uppercase() }
+                toast("💡 STRING LIGHTS: ${modeNames[decor.stringLightsMode]} ${if (decor.stringLightsMode > 0 && holName != "Off") "($holName theme)" else ""}")
+            }
             "dog" -> jasper.petDog(lastT)
             "dogFood" -> jasper.feed(lastT)
             "wastebasket" -> { sfx("caseClick"); hud?.openPaperToss() }
@@ -610,7 +631,7 @@ class App : GLSurfaceView.Renderer {
         }
         // The HTML plays these from inside each toggle
         when (tag) {
-            "blinds" -> sfx("blinds")
+            "blinds", "window" -> sfx("blinds")
             "switch" -> { sfx("lightSwitch"); sfx("lightChain") }
             "fan" -> sfx("lightChain")
             "fanspin" -> sfx("fanChain")
@@ -620,7 +641,7 @@ class App : GLSurfaceView.Renderer {
             "lavalamp" -> sfx("lavaSwitch")
             "cat" -> sfx(if (bedroom.catEyesGlowing) "meow" else "purr")
             "pc" -> sfx(if (monitor.pcPoweredOn) "pcOn" else "pcOff")
-            "door", "discman", "brickphone", "tama", "box", "dresser" -> sfx("caseClick")
+            "door", "discman", "brickphone", "tama", "box", "dresser", "calendar" -> sfx("caseClick")
             "gba" -> sfx("ps1Button")
             "boombox", "bbscreen" -> sfx("ui")
             "lamp", "string" -> sfx("ui")

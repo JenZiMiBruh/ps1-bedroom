@@ -238,7 +238,10 @@ class Hud(private val act: Activity, private val root: FrameLayout, private val 
     private var toastAnim: ValueAnimator? = null
     /** showToast: any thread. */
     fun toast(msg: String) = act.runOnUiThread {
+        if (overlays.bootShowing) return@runOnUiThread
         toastView.text = msg
+        toastView.setTextColor(T.toastText)
+        toastView.background = panel(PANEL, T.toastLine, 8f, 4f)
         toastView.removeCallbacks(hideToast)
         slideToast(true)
         toastView.postDelayed(hideToast, 4200)

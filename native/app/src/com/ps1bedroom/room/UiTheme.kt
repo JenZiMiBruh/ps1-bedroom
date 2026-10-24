@@ -97,7 +97,7 @@ object UiTheme {
             good = Color.rgb(0x22, 0xc5, 0x5e); goodBg = Color.rgb(0x0f, 0x2a, 0x1c)
             activeBg = mix(hsv(h, 0.68f * k, 0.13f), a1, 0.2f); activeText = Color.WHITE
             shadow = Color.BLACK; field = hsv(h, 0.7f * k, 0.09f); scrim = Color.argb(89, 0, 0, 0)
-            toastLine = mix(a1, Color.rgb(0xc0, 0x84, 0xfc), 0.5f); toastText = mix(text, a1, 0.25f)
+            toastLine = a1; toastText = Color.WHITE
         } else {
             panel = hsv(h, 0.06f * k + 0.02f, 0.985f, 246); panel2 = hsv(h, 0.1f * k + 0.03f, 0.94f, 240)
             line = hsv(h, 0.26f * k + 0.06f, 0.76f); lineHi = hsv(h, 0.5f * k + 0.05f, 0.55f)

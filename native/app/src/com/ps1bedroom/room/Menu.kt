@@ -734,8 +734,11 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
             Triple(if (app.desk.lavaOn) "LAVA LAMP: ${app.desk.LAVA_NAMES[app.desk.lavaIdx].uppercase()}" else "LAVA LAMP: OFF", app.desk.lavaOn, { post { app.toast(app.desk.cycleLava()); app.sfx("lavaSwitch"); s.changed() } })
         ))
         h4("Window")
-        tiles(listOf(Triple("BLINDS: ${blindLabels.getOrElse(app.room.blindsOpenState) { "SLATTED" }}", app.room.blindsOpenState != 3, { post { app.room.cycleWindowBlinds(); s.changed() } })))
-        note("Tap the blinds (here or in the room) to cycle: slatted → tilted open → rolled all the way up → closed.", true)
+        tiles(listOf(
+            Triple("BLINDS: ${blindLabels.getOrElse(app.room.blindsOpenState) { "SLATTED" }}", app.room.blindsOpenState != 3, { post { app.room.cycleWindowBlinds(); s.changed() } }),
+            Triple("WINDOW: ${if (app.room.windowOpen) "OPEN (LOUD)" else "CLOSED (MUFFLED)"}", app.room.windowOpen, { post { app.room.toggleWindow(); app.sound.updateLayered(); s.changed() } })
+        ))
+        note("Slide the window sash open to flood the bedroom with crisp, loud outdoor sounds (rain, wind, crickets, traffic), or close it to muffle the sound behind glass. The blinds filter visual light.", true)
     }
     private fun buildAppliances() {
         h4("Appliances")
@@ -771,6 +774,11 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
         h4("Your own photos")
         tiles(listOf(Triple("📷 BOOMBOX POSTER", false, { app.pickPosterPhoto?.invoke("band") }), Triple("📷 DESK POSTER", false, { app.pickPosterPhoto?.invoke("main") })))
         note("Pick any picture from your phone: it's cropped to fit the poster. Only a small copy is kept in the app.", true)
+        h4("Wall calendar")
+        chips(listOf("2001" to "2001 (Retro Nostalgia)", "2026" to "2026 (Live Real-World Date)").map { (yr, l) ->
+            Triple(l, s.calendarYear == yr, { post { s.setCalendarYear(yr); app.sfx("caseClick") } })
+        })
+        note("Switch between October 2001 nostalgia (Wednesday 24th) and current live 2026 calendar with exact days of the week. You can also tap the wall calendar in the room directly!", true)
     }
     private fun buildConsole() {
         h4("PlayStation under the TV")
@@ -819,10 +827,21 @@ class Menu(private val act: Activity, private val root: FrameLayout, private val
     }
     private fun buildDecor() {
         h4("Decorations")
-        chips(listOf("auto" to "Auto (by date)", "off" to "None", "halloween" to "Halloween", "winter" to "Winter holidays", "valentine" to "Valentine's", "summer" to "Summer").map { (k, l) ->
+        chips(listOf(
+            "auto" to "Auto (by date)",
+            "off" to "None",
+            "halloween" to "Halloween",
+            "winter" to "Winter holidays",
+            "valentine" to "Valentine's",
+            "stpatrick" to "St. Patrick's",
+            "easter" to "Easter / Spring",
+            "summer" to "Summer / 4th",
+            "thanksgiving" to "Thanksgiving",
+            "newyear" to "New Year's"
+        ).map { (k, l) ->
             Triple(l + (if (k == "auto" && app.extras.decorMode == "auto") " · ${app.extras.activeDecor()}" else ""), app.extras.decorMode == k, { post { app.extras.decorMode = k; app.extras.applyDecor(); s.changed() } })
         })
-        note("Auto puts up decorations for the time of year: Halloween in October, a little tree in December, hearts for Valentine's and a box fan in summer.")
+        note("Auto puts up decorations for each holiday: Halloween in October, Thanksgiving in November, Winter tree in December, New Year's confetti, Valentine hearts in February, St. Patrick's clovers in March, Easter eggs in April, and 4th of July bunting in summer. The room's hanging string lights dynamically tint to match every holiday!")
     }
 
     // ---- Look ----

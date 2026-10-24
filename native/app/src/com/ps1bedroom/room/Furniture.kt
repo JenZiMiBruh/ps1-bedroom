@@ -39,8 +39,10 @@ class Furniture(private val room: Room, private val env: Environment) {
     lateinit var cassetteDeckMat: Material
     lateinit var radioDisplay: Mesh
     lateinit var dresserGroupRef: Group
+    lateinit var calendarMesh: Mesh; private set
     private lateinit var calendarTex: CanvasTex
     private var calendarKey = ""
+    var calendarYear: () -> String = { "2001" }
     private val CAL_WEATHER = Weather(seed = 103.0, blotch = 0.12, warm = 0.15, creases = 1)
 
     private fun propPart(parent: Object3D, geo: Geometry, mat: Material, x: Float, y: Float, z: Float, tag: String? = null): Mesh {
@@ -279,12 +281,13 @@ class Furniture(private val room: Room, private val env: Environment) {
 
         // ---- Wall calendar on the left wall by the desk ----
         calendarTex = createCanvasTex(128, 198, weather = CAL_WEATHER) { ctx, w, h -> drawCalendar(ctx, w, h) }
-        val calendarMesh = Mesh(Geo.plane(0.55f, 0.85f), PS1.material(map = calendarTex.tex, polygonOffset = true, polygonOffsetFactor = -4f, polygonOffsetUnits = -4f))
+        calendarMesh = Mesh(Geo.plane(0.55f, 0.85f), PS1.material(map = calendarTex.tex, polygonOffset = true, polygonOffsetFactor = -4f, polygonOffsetUnits = -4f))
         calendarMesh.position.set(-3.715f, 2.55f, -0.15f)
         calendarMesh.rotation.y = (PI / 2).toFloat()
         calendarMesh.translateZ(0.01f)
         scene.add(calendarMesh)
-        calendarKey = calendarDay().let { "${it[0]}/${it[1]}" }
+        room.registerInteractable(calendarMesh, "calendar")
+        calendarKey = calendarDay().let { "${it[0]}/${it[1]}/${calendarYear()}" }
 
         // ---- Movie poster over the bed ----
         wallPicture(0.85f, 1.2f, 4.365f, 2.9f, -0.6f, (-PI / 2).toFloat(), Weather(seed = 104.0, blotch = 0.2, creases = 2, edge = 0.2)) { ctx, w, h ->
@@ -399,13 +402,18 @@ class Furniture(private val room: Room, private val env: Environment) {
         ctx.save(); ctx.beginPath(); ctx.rect(4, 5, w - 8, artH - 5); ctx.clip(); ctx.translate(4, 5); ctx.scale((w - 8) / 128.0, (artH - 5) / 76.0)
         drawCalArt(ctx, m, 128, 76); ctx.restore()
         for (x in doubleArrayOf(w * 0.3, w * 0.7)) { ctx.fillStyle = "#6b7280"; ctx.fillRect(x - 2, 0, 4, 4) } // binding holes
+        val yr = if (calendarYear() == "2026") 2026 else 2001
         ctx.fillStyle = "#b91c1c"; ctx.font = "bold 13px monospace"; ctx.textAlign = "center"; ctx.textBaseline = "middle"
-        ctx.fillText(CAL_MONTHS[m] + " 2001", w / 2, artH + 11)
-        val first = Calendar.getInstance().apply { clear(); set(2001, m, 1) }.get(Calendar.DAY_OF_WEEK) - 1
-        val days = Calendar.getInstance().apply { clear(); set(2001, m, 1) }.getActualMaximum(Calendar.DAY_OF_MONTH)
+        ctx.fillText(CAL_MONTHS[m] + " $yr", w / 2, artH + 11)
+        val first = Calendar.getInstance().apply { clear(); set(yr, m, 1) }.get(Calendar.DAY_OF_WEEK) - 1
+        val days = Calendar.getInstance().apply { clear(); set(yr, m, 1) }.getActualMaximum(Calendar.DAY_OF_MONTH)
         val gx = 4.0; val gy = artH + 22.0; val cw = (w - 8) / 7.0; val chh = (h - gy - 4) / 7
         ctx.font = "bold 8px monospace"
-        val activeDow = env.dayOfWeek - 1
+        val activeDow = if (yr == 2026) {
+            Calendar.getInstance().apply { clear(); set(2026, m, day) }.get(Calendar.DAY_OF_WEEK) - 1
+        } else {
+            (env.dayOfWeek - 1)
+        }
         "SMTWTFS".forEachIndexed { c, l ->
             ctx.fillStyle = if (c == activeDow) "#dc2626" else "#374151"
             ctx.fillText(l.toString(), gx + c * cw + cw / 2, gy + chh / 2)
@@ -421,10 +429,10 @@ class Furniture(private val room: Room, private val env: Environment) {
         }
         ctx.textBaseline = "alphabetic"; ctx.textAlign = "left"
     }
-    /** Redraws the calendar when the date changes (the HTML checks once a minute). */
-    fun refreshCalendar() {
-        val (m, day) = calendarDay(); val k = "$m/$day/${env.dayOfWeek}"
-        if (k == calendarKey) return
+    /** Redraws the calendar when the date changes or when the year toggle changes. */
+    fun refreshCalendar(force: Boolean = false) {
+        val (m, day) = calendarDay(); val k = "$m/$day/${env.dayOfWeek}/${calendarYear()}"
+        if (!force && k == calendarKey) return
         calendarKey = k
         drawCalendar(calendarTex.ctx, 128, 198); weatherCanvas(calendarTex.ctx, 128, 198, CAL_WEATHER); calendarTex.tex.needsUpdate()
     }

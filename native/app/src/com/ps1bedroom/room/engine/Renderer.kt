@@ -763,6 +763,26 @@ class Renderer {
         uploadedGeometries += g
     }
 
+    /**
+     * v0.59: frees the GPU buffers and textures of everything under [root] (call on the GL thread before throwing a
+     * scene away). The renderer kept every uploaded object forever, so rebuilt scenes slowly ran the GPU out of memory.
+     */
+    fun release(root: Object3D) {
+        root.traverse { o ->
+            if (o !is Mesh) return@traverse
+            val g = o.geometry
+            if (g.uploaded) {
+                glDeleteBuffers(g.vbo.size, g.vbo, 0); glDeleteVertexArrays(1, intArrayOf(g.vao), 0)
+                g.uploaded = false; g.vao = 0; uploadedGeometries.remove(g)
+            }
+            for (m in o.materials) for (t in arrayOf(m.map, m.emissiveMap)) {
+                if (t == null || t.glId == 0 || t.external != null) continue
+                glDeleteTextures(1, intArrayOf(t.glId), 0); t.glId = 0; t.uploadedVersion = 0; uploadedTextures.remove(t)
+            }
+        }
+        curVao = -1
+    }
+
     private var upPx = IntArray(0); private var upOut = IntArray(0); private var upBuf: ByteBuffer = ByteBuffer.allocateDirect(4)
     /** GL id for a texture, uploading it like a three.js CanvasTexture (flipY on, not premultiplied) when it changed. */
     private fun texId(t: Texture): Int {

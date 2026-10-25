@@ -35,6 +35,8 @@ class Decor(private val room: Room, private val res: Resources) {
     var currentHoliday = "off"; private set
     /** Built at the end of the room: the HTML's models load asynchronously, after everything else (grime 686+). */
     val kenneyRoots = ArrayList<Object3D>()
+    /** The virtual pet's LCD (32 x 16), redrawn by Tamagotchu a couple of times a second. */
+    val tamaLcd = createCanvasTex(32, 16) { ctx, w, h -> ctx.fillStyle = "#9fbf6a"; ctx.fillRect(0, 0, w, h) }
 
     companion object {
         val HOLIDAY_PALETTES = mapOf(
@@ -174,9 +176,16 @@ class Decor(private val room: Room, private val res: Resources) {
         scene.add(tama)
         val egg = propPart(tama, Geo.sphere(0.04f, 10, 8), PS1.material(color = 0xff8fc8), 0f, 0.049f, 0f, "tama")
         egg.scale.set(1f, 1.2f, 0.6f)
-        val tamaFace = Mesh(Geo.plane(0.035f, 0.03f), PS1.material(color = 0x9fbf6a, emissive = 0x9fbf6a, emissiveIntensity = 0.15f))
+        // v0.59: the screen is a live 32 x 16 LCD drawn by Tamagotchu (the pet really lives in there now)
+        PS1.material(color = 0x9fbf6a, emissive = 0x9fbf6a, emissiveIntensity = 0.15f)   // (keeps the grime rotation the same for later surfaces)
+        val tamaFace = Mesh(Geo.plane(0.035f, 0.03f), PS1.material(map = tamaLcd.tex, emissive = 0xffffff, emissiveMap = tamaLcd.tex, emissiveIntensity = 0.32f))
         tamaFace.position.set(0.026f, 0.054f, 0f); tamaFace.rotation.y = (PI / 2).toFloat()
         tama.add(tamaFace); room.registerInteractable(tamaFace, "tama")
+        // the three buttons under the screen
+        for (i in 0 until 3) {
+            val b = propPart(tama, Geo.sphere(0.0045f, 6, 4), PS1.material(color = 0xfde047, emissive = 0x6b5a10, emissiveIntensity = 0.6f), 0.03f, 0.028f, (i - 1) * 0.012f, "tama")
+            b.scale.set(0.6f, 1f, 1f)
+        }
     }
 
     /** Low-poly models from Kenney's Furniture Kit (CC0 1.0, kenney.nl), materials swapped for PS1 ones. */

@@ -22,6 +22,7 @@ class MainActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        CrashLog.install(this)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         view = object : GLSurfaceView(this) {
             override fun onSizeChanged(w: Int, h: Int, ow: Int, oh: Int) { super.onSizeChanged(w, h, ow, oh); app.viewHeight = h.toFloat() }
@@ -39,6 +40,7 @@ class MainActivity : Activity() {
         app.density = resources.displayMetrics.density
         app.settings = Settings(app, this)
         app.myMusic = MyMusic(app, this)
+        app.tama = Tamagotchu(applicationContext)
         app.posterPhotoFor = { which -> posterPhoto(which) }
         app.achievements = Achievements(app, this); app.alarm = Alarm(app, this)
         app.pickMusic = { folder -> runOnUiThread { pickMusic(folder) } }
@@ -91,6 +93,7 @@ class MainActivity : Activity() {
         hideSystemBars()
         handleShare(intent)
         handleShortcut(intent)
+        CrashLog.showIfAny(this)
     }
     private fun handleWidgetCommand(cmd: String): Boolean {
         if (!app.isBuilt) return false

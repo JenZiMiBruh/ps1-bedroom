@@ -46,6 +46,9 @@ class App : GLSurfaceView.Renderer {
     lateinit var monitor: Monitor; private set
     /** My Music (made by the activity: it needs a Context). */
     lateinit var myMusic: MyMusic
+    /** v0.59: the virtual pet on the dresser (made by the activity: it needs a Context). */
+    lateinit var tama: Tamagotchu
+    private var lastTamaDraw = 0f
     /** Song changes for the media notification (title, artist, cover). */
     @Volatile var onNowPlaying: ((String?, String?, android.graphics.Bitmap?) -> Unit)? = null
     /** Opens the system file picker for songs (false) or a whole album folder (true). */
@@ -116,7 +119,7 @@ class App : GLSurfaceView.Renderer {
     private var lastShotT = -1000f
     private var lastShotKey = ""
     private fun windowShotDue(t: Float): Boolean {
-        if (!windowWidgets || onWindowShot == null || !built || t < 3.0f || surfaceW <= 10 || surfaceH <= 10) return false
+        if (!windowWidgets || onWindowShot == null || !built || t < 3.0f || surfaceW <= 10 || surfaceH <= 10 || gtaWorld?.active == true) return false
         // every N minutes (configured in WindowWidgetConfig), and straight away when the place, the weather or the time of day changes
         val key = sky.outsideEnv + "|" + env.weatherKind + "|" + env.currentTime + "|" + room.blindsOpenState
         if (windowShotNow || key != lastShotKey || t - lastShotT > windowShotIntervalSec) { windowShotNow = false; lastShotKey = key; lastShotT = t; return true }
@@ -127,10 +130,10 @@ class App : GLSurfaceView.Renderer {
     fun windowShotOnLeave() { if (built && windowWidgets && onWindowShot != null && surfaceW > 10 && surfaceH > 10) { lastShotT = lastT; takeWindowShot() } }
     private fun takeWindowShot() {
         if (surfaceW <= 10 || surfaceH <= 10) return
+        val px = camera.position.x; val py = camera.position.y; val pz = camera.position.z
+        val rx = camera.rotation.x; val ry = camera.rotation.y; val rz = camera.rotation.z
+        val fov = camera.fov
         try {
-            val px = camera.position.x; val py = camera.position.y; val pz = camera.position.z
-            val rx = camera.rotation.x; val ry = camera.rotation.y; val rz = camera.rotation.z
-            val fov = camera.fov
             // From just inside the glass, looking out; the field of view is set so a 3:2 crop of the screen spans the window
             val aspect = surfaceW.toFloat() / maxOf(1, surfaceH)
             val half = if (aspect < 1.5f) 0.62f / aspect else 0.62f / 1.5f
@@ -139,14 +142,17 @@ class App : GLSurfaceView.Renderer {
             camera.position.set(0.8f, 2.62f, -1.75f); camera.lookAtTarget(shotPos.set(0.8f, 2.72f, -8f))   // the camera version (looks down -Z, uses the new position)
             val withBlinds = shot3x2() ?: return
             for (s in room.blindSlats) s.visible = false
-            val clear = shot3x2() ?: return
-            for (s in room.blindSlats) s.visible = true
-            camera.position.set(px, py, pz); camera.rotation.set(rx, ry, rz); camera.fov = fov; camera.updateProjectionMatrix()
+            val clear = shot3x2()
+            if (clear == null) { withBlinds.recycle(); return }
             val st = settings.status()
             val p = places.envDef()
             onWindowShot?.invoke(clear, withBlinds, "${st.time.substringBefore(' ')} ${st.temp} ${st.weather}", "${p.icon} ${p.name}")
         } catch (e: Throwable) {
             android.util.Log.w("PS1Bedroom", "takeWindowShot failed", e)
+        } finally {
+            // v0.59: always put the blinds and the camera back (a failed shot used to leave them hidden / moved)
+            for (s in room.blindSlats) s.visible = true
+            camera.position.set(px, py, pz); camera.rotation.set(rx, ry, rz); camera.fov = fov; camera.updateProjectionMatrix()
         }
     }
     /** Renders the current camera and keeps the middle 3:2 at 480 x 320. */
@@ -246,7 +252,7 @@ class App : GLSurfaceView.Renderer {
     /** True while a 3D-era GTA is in game on the TV (tapping the TV then takes the controller). */
     fun gtaTvPlayable() = tv.bedroomTvOn && tv.bedroomTvChannel == Tv.PS1_TV_CHANNEL && library.currentGame().template == "gta3d" && ps1.phase(lastT) == "game" && !ytActive
     fun startGtaPlay(key: String) = post {
-        val gw = gtaWorld ?: GtaWorld(env) { sfx(it) }.also { gtaWorld = it }
+        val gw = gtaWorld ?: GtaWorld(env, { sfx(it) }, { renderer.release(it) }).also { gtaWorld = it }
         val aspect = surfaceW.toFloat() / max(1, surfaceH)
         gw.load(key, aspect, minOf(540, minOf(surfaceW, surfaceH)))
         hud?.openGtaPlay(gw)
@@ -254,6 +260,7 @@ class App : GLSurfaceView.Renderer {
     fun stopGtaPlay() = post { gtaWorld?.active = false; renderer.shadowsNeedUpdate = true }
     /** The 3D-era GTA games render a chase-cam drive into a texture that the TV shows (only while one is playing). */
     private fun updateGtaTvFeed(t: Float) {
+        if (gtaWorld?.active == true) return   // (playing full screen: no need to also draw the TV picture)
         if ((ytActive || hud?.yt?.active == true) && !tv.bedroomTvOn) {
             ytActive = false
             tv.ytShowing = false
@@ -499,6 +506,13 @@ class App : GLSurfaceView.Renderer {
             if (monitor.pcPoweredOn && t - lastMonitorUpdate > 0.16f && renderer.sphereInView(SPHERE_MONITOR_C, 0.6f)) { monitor.update(t); lastMonitorUpdate = t }
             fan.update(dt)
             decor.update(t)
+            // the pet: catch up, redraw its LCD in the room twice a second, and beep when it starts calling
+            if (t - lastTamaDraw > 0.5f && ::tama.isInitialized) {
+                lastTamaDraw = t
+                val now = System.currentTimeMillis()
+                if (tama.tick(now)) { sfx("ui"); toast("🥚 TAMAGOTCHU: ${tama.name} is calling you! Tap it on the dresser.") }
+                tama.paintRoomLcd(decor.tamaLcd.ctx, now); decor.tamaLcd.tex.needsUpdate()
+            }
             reactJasper(t)
             jasper.update(t, dt)
             extras.update(t, dt, fanLightOn, furniture.lampOn, decor.stringLightsOn)
@@ -547,9 +561,17 @@ class App : GLSurfaceView.Renderer {
             val gw = gtaWorld
             if (gw != null && gw.active) {
                 // v0.58: playing a GTA full screen: its city is drawn instead of the bedroom
-                gw.update(dt)
-                renderer.renderToTarget(gw.scene, gw.cam, gw.rt)
-                renderer.present(gw.rt)
+                // (a problem in the game drops you back in the bedroom with a note, instead of freezing every frame)
+                try {
+                    gw.update(dt)
+                    renderer.renderToTarget(gw.scene, gw.cam, gw.rt)
+                    renderer.present(gw.rt)
+                } catch (e: Throwable) {
+                    android.util.Log.e("PS1Bedroom", "GTA play failed", e)
+                    CrashLog.recordNonFatal("GTA play", e)
+                    gw.active = false; hud?.closeGtaPlay(); toast("🎮 The game hit a problem and closed. The report shows on the next launch.")
+                    renderer.render(scene, camera)
+                }
             } else renderer.render(scene, camera)
             if (ytActive) placeYouTube()
             photoCallback?.let { cb -> photoCallback = null; readScreen()?.let { b -> cb(b) } }
@@ -565,6 +587,7 @@ class App : GLSurfaceView.Renderer {
             }
         } catch (e: Throwable) {
             android.util.Log.e("PS1Bedroom", "Error in onDrawFrame", e)
+            CrashLog.recordNonFatal("the frame loop", e)
         }
     }
 
@@ -680,7 +703,7 @@ class App : GLSurfaceView.Renderer {
             "discman" -> toast("💿 SONIX D-SPIN Discman: 45-second anti-skip! A burned mix CD is still inside.")
             "gba" -> toast("🎮 GAME KID ADVANCE: The battery light is red. Of course it is.")
             "brickphone" -> toast("📱 NOKA 3310: 1 new text message. You have 2 bars and a high score in Snake.")
-            "tama" -> toast("🥚 TAMAGOTCHU: Your pet is hungry. Again. It has been hungry since 1998.")
+            "tama" -> hud?.openTama()
             "box" -> toast("📦 A box of old stuff: Pogs, a Tamagotchi with dead batteries, a Furby that still talks at night.")
             "dresser" -> toast("🗄️ DRESSER: Stuffed with band tees, a Tamagotchi with dead batteries and a stack of GamePro magazines.")
             "chair" -> if (player.mode != "chair") setPlayerMode("chair") else pullChair()
@@ -754,11 +777,14 @@ class App : GLSurfaceView.Renderer {
     // ---- Photo mode: the next frame is read back from the screen ----
     @Volatile private var photoCallback: ((android.graphics.Bitmap) -> Unit)? = null
     fun requestPhoto(cb: (android.graphics.Bitmap) -> Unit) { photoCallback = cb }
+    private var readBuf: java.nio.ByteBuffer? = null
     private fun readScreen(): android.graphics.Bitmap? {
         val w = surfaceW; val h = surfaceH
         if (w <= 10 || h <= 10) return null
         return try {
-            val buf = java.nio.ByteBuffer.allocateDirect(w * h * 4).order(java.nio.ByteOrder.nativeOrder())
+            // (one reused native buffer: a fresh 10 MB direct buffer per shot piled up outside the Java heap until Android killed the app)
+            val buf = readBuf?.takeIf { it.capacity() >= w * h * 4 } ?: java.nio.ByteBuffer.allocateDirect(w * h * 4).order(java.nio.ByteOrder.nativeOrder()).also { readBuf = it }
+            buf.clear()
             android.opengl.GLES30.glBindFramebuffer(android.opengl.GLES30.GL_FRAMEBUFFER, 0)
             android.opengl.GLES30.glReadPixels(0, 0, w, h, android.opengl.GLES30.GL_RGBA, android.opengl.GLES30.GL_UNSIGNED_BYTE, buf)
             val src = android.graphics.Bitmap.createBitmap(w, h, android.graphics.Bitmap.Config.ARGB_8888)

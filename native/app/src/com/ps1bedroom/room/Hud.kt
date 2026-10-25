@@ -367,6 +367,14 @@ class Hud(private val act: Activity, private val root: FrameLayout, private val 
         val v = gtaView ?: GtaPlayView(act, root) { app.stopGtaPlay() }.also { gtaView = it }
         v.world = world; v.open()
     }
+    fun closeGtaPlay() = act.runOnUiThread { gtaView?.close() }
+
+    /** v0.59: the Tamagotchu device (tap the pet on the dresser). */
+    @Volatile private var tamaPanel: TamagotchuPanel? = null
+    fun openTama() = act.runOnUiThread {
+        menu.close()
+        (tamaPanel ?: TamagotchuPanel(act, root, app.tama) { app.sfx("ui") }.also { tamaPanel = it }).open()
+    }
 
     /** Retro CRT TV Remote Control. */
     @Volatile private var tvRemote: TvRemote? = null
@@ -388,6 +396,7 @@ class Hud(private val act: Activity, private val root: FrameLayout, private val 
     }
     fun back(): Boolean {
         gtaView?.let { if (it.isOpen) return it.back() }
+        tamaPanel?.let { if (it.isOpen) { it.close(); return true } }
         debugTool?.let { if (it.isOpen) { it.close(); return true } }
         tvRemote?.let { if (it.isOpen) { it.close(); return true } }
         paperToss?.let { if (it.isOpen) { it.close(); return true } }

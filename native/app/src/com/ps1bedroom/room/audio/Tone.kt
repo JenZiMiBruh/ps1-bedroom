@@ -67,7 +67,12 @@ class AudioCtx {
             while (running) {
                 if (suspended) { try { Thread.sleep(40) } catch (e: InterruptedException) { }; continue }
                 for (b in 0 until chunkBlocks) {
-                    synchronized(lock) { renderBlock(out, b * BLOCK * 2) }
+                    // v0.60: one bad block must never kill the app: record it, output silence, keep going
+                    try { synchronized(lock) { renderBlock(out, b * BLOCK * 2) } }
+                    catch (e: Throwable) {
+                        com.ps1bedroom.room.CrashLog.recordNonFatal("the audio thread", e)
+                        java.util.Arrays.fill(out, b * BLOCK * 2, (b + 1) * BLOCK * 2, 0f)
+                    }
                 }
                 t.write(out, 0, out.size, AudioTrack.WRITE_BLOCKING)
             }
@@ -646,7 +651,8 @@ class Vibrato(ctx: AudioCtx, val frequency: Double = 5.0, val depth: Double = 0.
             bl[w] = outL[i]; br[w] = outR[i]
             val d = (maxDelay * (1 + depth * sin(2 * PI * ph)) * ctx.sr)
             var r = w - d; if (r < 0) r += size
-            val i0 = r.toInt(); val f = (r - i0).toFloat(); val i1 = (i0 + 1) % size
+            // v0.60 crash fix: w - d + size can round to exactly `size` (reading one past the end); wrap the index
+            val i0 = r.toInt() % size; val f = (r - r.toInt()).toFloat().coerceIn(0f, 1f); val i1 = (i0 + 1) % size
             outL[i] = bl[i0] + (bl[i1] - bl[i0]) * f; outR[i] = br[i0] + (br[i1] - br[i0]) * f
             w = (w + 1) % size; ph += dph; if (ph >= 1) ph -= 1
         }

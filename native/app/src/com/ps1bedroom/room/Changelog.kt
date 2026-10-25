@@ -24,6 +24,10 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.60", "Fixed the random crash", listOf(
+            "Fixed the crash that could happen at any time (found with the new crash report): the vibrato on some music and sounds could, very rarely, read one step past the end of its buffer because of a rounding edge case, which stopped the sound engine and closed the app",
+            "The sound engine is now crash-proof: if a sound ever goes wrong it plays a moment of silence, records what happened for the next launch, and keeps going instead of closing the app"
+        )),
         Entry("0.59", "Crash fixes and a crash reporter, GTA maps like the real ones, a living Tamagotchu", listOf(
             "Crash fixes: the Window widget's snapshots no longer pile up 10 MB native buffers until Android kills the app; a failed snapshot can't leave the blinds hidden or the camera moved any more; switching GTA games frees the old city's GPU memory; the TV's GTA picture isn't drawn in the background while you play; the app gets a bigger memory allowance",
             "If anything still goes wrong, the app now records it. The next time you open it you'll see what happened, with a Copy report button, so it can be fixed. A problem inside GTA closes the game and drops you back in the bedroom instead of freezing",

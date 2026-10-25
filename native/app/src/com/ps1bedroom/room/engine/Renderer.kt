@@ -271,6 +271,21 @@ class Renderer {
         glBindFramebuffer(GL_FRAMEBUFFER, 0)
     }
 
+    /** Shows an offscreen target full screen (the playable GTA world draws into one, then this puts it on the display). */
+    fun present(rt: RenderTarget) {
+        val tex = rt.ensure()
+        glBindFramebuffer(GL_FRAMEBUFFER, 0)
+        glViewport(0, 0, screenW, screenH)
+        glDisable(GL_DEPTH_TEST); glDisable(GL_CULL_FACE); glDisable(GL_BLEND)
+        glUseProgram(blitProg)
+        glActiveTexture(GL_TEXTURE0); glBindTexture(GL_TEXTURE_2D, tex)
+        glUniform1i(blitTex, 0)
+        glBindVertexArray(quadVao); glDrawArrays(GL_TRIANGLES, 0, 6)
+        glBindVertexArray(0)
+    }
+    val screenWidth get() = screenW
+    val screenHeight get() = screenH
+
     private val lightVisitor: (Object3D) -> Unit = { o ->
         when (o) {
             is AmbientLight -> { ar += o.color.r * o.intensity; ag += o.color.g * o.intensity; ab += o.color.b * o.intensity }

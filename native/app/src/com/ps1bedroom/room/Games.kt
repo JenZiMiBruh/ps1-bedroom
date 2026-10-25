@@ -154,20 +154,53 @@ object Games {
     }
     /** The famous panel-grid cover: panels = (x, y, w, h, colTop, colBottom, draw) in fractions of the art area. */
     class Panel(val x: Double, val y: Double, val w: Double, val h: Double, val c1: String, val c2: String, val draw: ((Canvas2D, Double, Double, Double, Double) -> Unit)?)
-    fun panelCover(ctx: Canvas2D, x0: Double, w: Double, h: Double, panels: List<Panel>, gap: Double = 0.012): Frame {
+    /**
+     * v0.58: closer to the real covers: white gutters between the panels (as on the actual GTA box art), comic-style
+     * halftone shading, a soft vignette and a hard key light on each panel. The black logo band stays black.
+     */
+    fun panelCover(ctx: Canvas2D, x0: Double, w: Double, h: Double, panels: List<Panel>, gap: Double = 0.014): Frame {
         val F = coverFrame(x0, w, h)
-        ctx.fillStyle = "#050505"; ctx.fillRect(x0, 0, F.W, h)
+        ctx.fillStyle = "#f2f1ec"; ctx.fillRect(x0, 0, F.W, h)
         for (pn in panels) {
             val X = F.X(pn.x + gap / 2); val Y = F.Y(pn.y + gap / 2); val PW = F.W * (pn.w - gap); val PH = h * (pn.h - gap)
+            val logoBand = pn.draw == null
             ctx.save(); ctx.beginPath(); ctx.rect(X, Y, PW, PH); ctx.clip()
             val g = ctx.createLinearGradient(0, Y, 0, Y + PH); g.addColorStop(0, pn.c1); g.addColorStop(1, pn.c2)
             ctx.fillStyle = g; ctx.fillRect(X, Y, PW, PH)
-            pn.draw?.invoke(ctx, X, Y, PW, PH)
+            if (!logoBand) {
+                // key light from the top left
+                val kl = ctx.createRadialGradient(X + PW * 0.25, Y + PH * 0.2, 1, X + PW * 0.25, Y + PH * 0.2, max(PW, PH) * 0.9)
+                kl.addColorStop(0, "rgba(255,255,255,0.28)"); kl.addColorStop(1, "rgba(255,255,255,0)")
+                ctx.fillStyle = kl; ctx.fillRect(X, Y, PW, PH)
+                pn.draw?.invoke(ctx, X, Y, PW, PH)
+                // halftone dots, denser toward the bottom (the printed-comic look of the real panels)
+                val step = max(2.0, F.S * 2.2)
+                var yy = Y + step / 2
+                while (yy < Y + PH) {
+                    val k = (yy - Y) / PH
+                    ctx.fillStyle = "rgba(0,0,0,${0.05 + 0.12 * k})"
+                    var xx = X + (if (((yy - Y) / step).toInt() % 2 == 0) 0.0 else step / 2)
+                    while (xx < X + PW) { ctx.fillRect(xx, yy, max(0.6, step * 0.28 * (0.6 + k)), max(0.6, step * 0.28 * (0.6 + k))); xx += step }
+                    yy += step
+                }
+                // vignette
+                val vg = ctx.createRadialGradient(X + PW / 2, Y + PH / 2, min(PW, PH) * 0.3, X + PW / 2, Y + PH / 2, max(PW, PH) * 0.75)
+                vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,0.38)")
+                ctx.fillStyle = vg; ctx.fillRect(X, Y, PW, PH)
+            }
             ctx.restore()
-            ctx.strokeStyle = "#000"; ctx.lineWidth = max(1.0, F.S * 0.9).toFloat()
+            ctx.strokeStyle = "rgba(0,0,0,0.55)"; ctx.lineWidth = max(0.6, F.S * 0.4).toFloat()
             ctx.strokeRect(X, Y, PW, PH)
         }
         return F
+    }
+    /** Rockstar's corner badge (a yellow rounded square with R*), bottom right of their covers. */
+    fun rockstarBadge(ctx: Canvas2D, right: Double, bottom: Double, size: Double) {
+        ctx.fillStyle = "#f5c518"; ctx.beginPath(); ctx.roundRect(right - size, bottom - size, size, size, size * 0.18); ctx.fill()
+        ctx.fillStyle = "#111111"; ctx.font = "bold ${(size * 0.62).roundToInt()}px \"Arial Black\", Impact, sans-serif"; ctx.textAlign = "center"
+        ctx.fillText("R", right - size * 0.58, bottom - size * 0.24)
+        ctx.font = "bold ${(size * 0.42).roundToInt()}px sans-serif"; ctx.fillText("*", right - size * 0.22, bottom - size * 0.42)
+        ctx.textAlign = "left"
     }
     // Panel drawing shortcuts
     private fun guy(col: String, pose: Int, k: Double = 0.95, deco: Deco? = null): (Canvas2D, Double, Double, Double, Double) -> Unit = { ctx, x, y, w, h -> figure(ctx, x + w * 0.5, y + h * k, min(w, h) / 42, col, pose, deco) }
@@ -646,6 +679,7 @@ object Games {
             ctx.fillText(b.text, 6, band * 0.74)
             ctx.fillStyle = "#ffffff"; ctx.fillRect(4, h - 30, 18, 26)
             ctx.fillStyle = "#000"; ctx.font = "bold 16px Impact, sans-serif"; ctx.textAlign = "center"; ctx.fillText(game.esrb, 13, h - 10)
+            if (game.pub.startsWith("Rockstar")) rockstarBadge(ctx, w - 4.0, h - 4.0, 22.0)
             ctx.strokeStyle = "rgba(255, 255, 255, 0.10)"; ctx.lineWidth = 5f
             ctx.beginPath(); ctx.moveTo(w * 0.6, 0); ctx.lineTo(w * 0.15, h); ctx.stroke()
         }.tex

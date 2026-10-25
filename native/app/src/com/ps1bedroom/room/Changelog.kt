@@ -24,6 +24,15 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.58", "Play the GTA games for real, sharper GTA covers", listOf(
+            "Every 3D GTA on the TV is now playable: when one is in game, tap the TV to pick up the controller. Each game has its own small open city in its own style, with its own districts, cars, main character and places to go inside",
+            "Drive any car (GAS / BRAKE, steer with the left side), get out, and take someone else's car (that raises your wanted level). Walk around on foot (push the stick all the way to run) and drag the right side to look around. Traffic stays in its lane, turns at junctions and stops for cars, people and you",
+            "Go inside: walk into a glowing marker. Your safehouse lets you sleep to save and heal (III: Portland Safehouse, VC: Ocean View Hotel, SA: Grove Street, LCS: Toni's Safehouse, VCS: Vic's Apartment, IV: Roman's Apartment, V: Franklin's House, VI: Lucia's Apartment). Each game also has its own shops, like Ammu-Nation for armour, Cluckin' Bell, Burger Shot, Marco's Bistro, Ma Cipriani's, Cherry Popper and the 24/7 for food, and Gash, Binco, Perseus and Ponsonbys for new outfits",
+            "Cash and health pickups, a wanted level that cools down over time, WASTED (you wake up at your safehouse $100 lighter), district and car names as you move around, and a game clock",
+            "Each game's own HUD, laid out like the originals: the radar (round for III to IV with health and armour around it in IV, rectangular in V, rounded in VI), the weapon icon, clock, money, health and armour, and wanted stars, in that game's colours and lettering",
+            "Pause menu (≡ or the back button) in each game's style, with a full map with blips for your safehouse and the shops, your stats, the controls, and Quit Game",
+            "GTA covers look closer to the real box art: white gutters between the panels, comic-book halftone shading and lighting on every panel, and Rockstar's badge in the corner"
+        )),
         Entry("0.57", "GTA traffic that never collides, a look for every GTA, new boot sounds, steadier frame rate", listOf(
             "GTA on the TV (III through VI): traffic now drives in real lanes, two each way. Cars keep their distance and slow down behind slower ones, and your car changes lanes only into a clear gap, overtakes through the oncoming lane only when it's empty, and brakes when it's boxed in. No more cars driving through each other",
             "Every GTA looks different now: Liberty City's elevated railway and rainy blue night (III) or grey fog (LCS), neon pink Vice City, low desert towns with hills and power lines in San Andreas, tall sepia-grey Algonquin towers in IV, Los Santos hills with the VINEWOOD sign in V, and the Leonida beach in VI. Each game also gets its own colour grade, traffic colours, driving speed and HUD",

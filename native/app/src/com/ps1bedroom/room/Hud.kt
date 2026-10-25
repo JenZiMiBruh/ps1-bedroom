@@ -360,6 +360,14 @@ class Hud(private val act: Activity, private val root: FrameLayout, private val 
     val isPaperTossOpen: Boolean get() = paperToss?.isOpen == true
     fun openPaperToss() = act.runOnUiThread { menu.close(); (paperToss ?: PaperToss(act, root, app).also { paperToss = it }).open() }
 
+    /** v0.58: playing a 3D-era GTA full screen (tap the TV while one is in game). */
+    @Volatile private var gtaView: GtaPlayView? = null
+    fun openGtaPlay(world: GtaWorld) = act.runOnUiThread {
+        menu.close()
+        val v = gtaView ?: GtaPlayView(act, root) { app.stopGtaPlay() }.also { gtaView = it }
+        v.world = world; v.open()
+    }
+
     /** Retro CRT TV Remote Control. */
     @Volatile private var tvRemote: TvRemote? = null
     val isTvRemoteOpen: Boolean get() = tvRemote?.isOpen == true
@@ -379,6 +387,7 @@ class Hud(private val act: Activity, private val root: FrameLayout, private val 
         app.post { app.setPlayerMode(next) }
     }
     fun back(): Boolean {
+        gtaView?.let { if (it.isOpen) return it.back() }
         debugTool?.let { if (it.isOpen) { it.close(); return true } }
         tvRemote?.let { if (it.isOpen) { it.close(); return true } }
         paperToss?.let { if (it.isOpen) { it.close(); return true } }

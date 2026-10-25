@@ -240,6 +240,18 @@ class App : GLSurfaceView.Renderer {
     lateinit var consoles: Consoles; private set
     lateinit var library: GameLibrary; private set
     private var gta3d: Gta3d? = null
+    private var gtaHintShown = false
+    // v0.58: the playable GTA (built the first time you pick up the controller)
+    @Volatile var gtaWorld: GtaWorld? = null; private set
+    /** True while a 3D-era GTA is in game on the TV (tapping the TV then takes the controller). */
+    fun gtaTvPlayable() = tv.bedroomTvOn && tv.bedroomTvChannel == Tv.PS1_TV_CHANNEL && library.currentGame().template == "gta3d" && ps1.phase(lastT) == "game" && !ytActive
+    fun startGtaPlay(key: String) = post {
+        val gw = gtaWorld ?: GtaWorld(env) { sfx(it) }.also { gtaWorld = it }
+        val aspect = surfaceW.toFloat() / max(1, surfaceH)
+        gw.load(key, aspect, minOf(540, minOf(surfaceW, surfaceH)))
+        hud?.openGtaPlay(gw)
+    }
+    fun stopGtaPlay() = post { gtaWorld?.active = false; renderer.shadowsNeedUpdate = true }
     /** The 3D-era GTA games render a chase-cam drive into a texture that the TV shows (only while one is playing). */
     private fun updateGtaTvFeed(t: Float) {
         if ((ytActive || hud?.yt?.active == true) && !tv.bedroomTvOn) {
@@ -254,6 +266,7 @@ class App : GLSurfaceView.Renderer {
         if (active) {
             val g3 = gta3d ?: Gta3d(renderer, env).also { gta3d = it }
             g3.setTheme(game.theme3d!!)
+            if (!gtaHintShown) { gtaHintShown = true; toast("🎮 Tap the TV to pick up the controller and play ${game.title}") }
             g3.render(ps1.gameTime(t), SystemClock.uptimeMillis())
             tv.useFeed(g3.rt.texture)
         } else {
@@ -531,7 +544,13 @@ class App : GLSurfaceView.Renderer {
             }
             renderer.post.time = t
             if (windowShotDue(t)) takeWindowShot()
-            renderer.render(scene, camera)
+            val gw = gtaWorld
+            if (gw != null && gw.active) {
+                // v0.58: playing a GTA full screen: its city is drawn instead of the bedroom
+                gw.update(dt)
+                renderer.renderToTarget(gw.scene, gw.cam, gw.rt)
+                renderer.present(gw.rt)
+            } else renderer.render(scene, camera)
             if (ytActive) placeYouTube()
             photoCallback?.let { cb -> photoCallback = null; readScreen()?.let { b -> cb(b) } }
             camera.position.copy(basePos)
@@ -640,7 +659,9 @@ class App : GLSurfaceView.Renderer {
             "dogFood" -> jasper.feed(lastT)
             "wastebasket" -> { sfx("caseClick"); hud?.openPaperToss() }
             "dogWater" -> jasper.giveWater(lastT)
-            "tv" -> if (ytActive) hud?.yt?.let { yt -> hud?.runUi { yt.togglePlay() } } else tv.cycleBedroomTvChannel(lastT)
+            "tv" -> if (ytActive) hud?.yt?.let { yt -> hud?.runUi { yt.togglePlay() } }
+                else if (gtaTvPlayable()) startGtaPlay(library.currentGame().theme3d!!)
+                else tv.cycleBedroomTvChannel(lastT)
             "tvPower" -> tvPower()
             "ps1Power" -> ps1.powerToggle(lastT)
             "ps1Reset" -> ps1.resetPress(lastT)

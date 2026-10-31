@@ -187,6 +187,7 @@ Also on **[itch.io](https://galloade.itch.io/ps1-bedroom)**.
 | 👾 **Living Tamagotchu** | Authentic virtual pet on the dresser: hatches, grows, plays, gets hungry, and sleeps on the real clock |
 | 🎮 **Playable CRT Games** | Pick up the controller and drive around open-city 3D GTAs with authentic HUDs and pause maps |
 | 🐕 **Smart Jasper AI** | German Shepherd with coat swatches, reactive room AI, and seamless obstacle pathfinding |
+| 🎮 **Full Gamepad Support** | Plug-and-play Bluetooth controller support (DualShock, DualSense, Xbox, 8BitDo): walk, look, drive in GTA, and navigate menus |
 
 <br>
 
@@ -201,7 +202,7 @@ Also on **[itch.io](https://galloade.itch.io/ps1-bedroom)**.
 - 🐕 **Jasper Companion 2.0**: Trick training (fetch tennis ball, roll over, shake paw), dog toy box with squeaky physics toys, feeding/water bowls, and backyard leash walks.
 - 🖥️ **RetroOS 2001 PC Expansion**: 56k dial-up connection with screeching modem handshake audio, Instant Messenger buddy list with nostalgic sounds, simulated 2000s web browser with retro fansites and cheat codes, and playable 3D Pinball / Solitaire.
 - 🌦️ **Interactive Doppler Radar & Emergency Alert System (EAS)**: High-resolution Doppler radar loop on the CRT TV weather channel showing incoming storm cells, paired with atmospheric sirens and cozy thunderstorm weather reports.
-- 🕹️ **Full Bluetooth Gamepad & Controller Support**: Native DualShock 4, DualSense, Xbox, and 8BitDo wireless controller support for room traversal, camera orbit, and full analog CRT GTA driving.
+- 🪟 **Panoramic Exterior Vista & Balcony Overhaul**: Open the bedroom window sash or step out onto the fire escape / balcony to view the horizon with free-look zoom binoculars, dynamic traffic intersections, and bird flocks that land on railings.
 - 🛋️ **Modular Bedroom Interior Customizer**: Grid-based furniture rearrangement (swap bed and desk spots, rotate the TV cart), custom bedding, vintage wallpapers, and hangable corkboard for sticky notes and polaroids.
 - 👥 **Passive Ambient Co-Presence ("Midnight Study Session")**: Optional lightweight multiplayer to share a 4-word room code with a friend to study together in synchronized real-time weather and boombox soundscapes.
 
@@ -250,6 +251,7 @@ A huge batch of top community-requested features have officially arrived in the 
 - ✅ 🖼️ **[Your own photos on posters](../../issues/18)** & 📻 **[Poster options above the boombox](../../issues/19)**: Custom photo gallery loading and switchable posters.
 - ✅ 📺 **[Move and hide the YouTube buttons](../../issues/21)**: Seamless CRT YouTube integration with customizable controls.
 - ✅ 🐾 **[More animals and dog breeds](../../issues/17)**: Coat variations for Jasper, reactive thunder/music AI, and obstacle-avoidance pathfinding.
+- ✅ 🎮 **Full Gamepad & Controller Support**: Seamless plug-and-play Bluetooth controller support across the entire app — walk, look with dual thumbsticks, drive cars in GTA, and navigate menus with D-pad / A / B / Start / Select.
 
 <br>
 

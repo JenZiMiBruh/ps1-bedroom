@@ -30,6 +30,11 @@ class JasperPathfinder {
     fun toWorldX(gx: Int): Float = minX + (gx + 0.5f) * cellSize
     fun toWorldZ(gz: Int): Float = minZ + (gz + 0.5f) * cellSize
 
+    fun isCellWalkable(gx: Int, gz: Int): Boolean {
+        if (gx !in 0 until cols || gz !in 0 until rows) return false
+        return walkable[gz * cols + gx]
+    }
+
     /**
      * Rebuilds the walkable grid, padding obstacles by dog radius clearance.
      */
@@ -71,11 +76,11 @@ class JasperPathfinder {
                     walkable[idx] = false
                     continue
                 }
-                // Dynamic obstacles (heater, chair, tv cart)
+                // Dynamic obstacles (heater, chair, tv cart) with generous clearance padding
                 for ((obj, radius) in obstacles) {
                     val odx = wx - obj.position.x
                     val odz = wz - obj.position.z
-                    val r = radius + 0.02f // slight clearance padding
+                    val r = radius + 0.08f // safety clearance padding so paths never scrape collision bounds
                     if (odx * odx + odz * odz <= r * r) {
                         walkable[idx] = false
                         break
@@ -93,21 +98,18 @@ class JasperPathfinder {
         if (walkable[idx]) return idx
         var best = -1
         var bestD2 = Float.MAX_VALUE
-        val maxR = 15
+        val maxR = 20
         for (r in 1..maxR) {
             for (dz in -r..r) {
                 for (dx in -r..r) {
                     if (abs(dx) != r && abs(dz) != r) continue
                     val nx = gx + dx
                     val nz = gz + dz
-                    if (nx in 0 until cols && nz in 0 until rows) {
-                        val nidx = nz * cols + nx
-                        if (walkable[nidx]) {
-                            val d2 = (dx * dx + dz * dz).toFloat()
-                            if (d2 < bestD2) {
-                                bestD2 = d2
-                                best = nidx
-                            }
+                    if (isCellWalkable(nx, nz)) {
+                        val d2 = (dx * dx + dz * dz).toFloat()
+                        if (d2 < bestD2) {
+                            bestD2 = d2
+                            best = nz * cols + nx
                         }
                     }
                 }
@@ -131,7 +133,7 @@ class JasperPathfinder {
             val t = i.toFloat() / count
             val gx = toGridX(x1 + dx * t)
             val gz = toGridZ(z1 + dz * t)
-            if (!walkable[gz * cols + gx]) return false
+            if (!isCellWalkable(gx, gz)) return false
         }
         return true
     }
@@ -143,10 +145,15 @@ class JasperPathfinder {
         buildGrid(obstacles)
 
         val sIdx = findNearestWalkable(toGridX(start.x), toGridZ(start.z))
-        val gIdx = findNearestWalkable(toGridX(goal.x), toGridZ(goal.z))
+        val rawGgx = toGridX(goal.x)
+        val rawGgz = toGridZ(goal.z)
+        val goalIsWalkable = isCellWalkable(rawGgx, rawGgz)
+        val gIdx = if (goalIsWalkable) rawGgz * cols + rawGgx else findNearestWalkable(rawGgx, rawGgz)
+        val clampedGoal = if (goalIsWalkable) Vec3(goal.x, 0f, goal.z) else Vec3(toWorldX(gIdx % cols), 0f, toWorldZ(gIdx / cols))
+
         if (sIdx == gIdx) {
-            val dist = hypot(goal.x - start.x, goal.z - start.z)
-            return if (dist > 0.06f) listOf(Vec3(goal.x, 0f, goal.z)) else emptyList()
+            val dist = hypot(clampedGoal.x - start.x, clampedGoal.z - start.z)
+            return if (dist > 0.08f) listOf(clampedGoal) else emptyList()
         }
 
         gScore.fill(Float.MAX_VALUE)
@@ -221,7 +228,7 @@ class JasperPathfinder {
         val pts = ArrayList<Vec3>(raw.size + 2)
         pts.add(Vec3(start.x, 0f, start.z))
         for (i in 1 until raw.size - 1) pts.add(raw[i])
-        pts.add(Vec3(goal.x, 0f, goal.z))
+        pts.add(clampedGoal)
 
         val smoothed = ArrayList<Vec3>()
         var cIdx = 0

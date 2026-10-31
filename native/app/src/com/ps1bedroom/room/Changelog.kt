@@ -24,6 +24,9 @@ object Changelog {
     class Entry(val version: String, val title: String, val notes: List<String>)
 
     val entries = listOf(
+        Entry("0.60.1", "Jasper navigation fix around the TV", listOf(
+            "Fixed: Jasper no longer gets stuck walking into the TV cart forever. Sunbeam points and spot destinations near obstacles are clamped safely away from collision bounds, the TV watching spot has generous clearance and faces the TV, and Jasper now detects repeated obstruction and safely steps back and recovers"
+        )),
         Entry("0.60", "Fixed the random crash", listOf(
             "Fixed the crash that could happen at any time (found with the new crash report): the vibrato on some music and sounds could, very rarely, read one step past the end of its buffer because of a rounding edge case, which stopped the sound engine and closed the app",
             "The sound engine is now crash-proof: if a sound ever goes wrong it plays a moment of silence, records what happened for the next launch, and keeps going instead of closing the app"

@@ -70,6 +70,7 @@ class Jasper(private val room: Room, private val env: Environment) {
     private var poseK = 1f; private var sitK = 0f
     private val path = ArrayList<Vec3>()
     private var stuckTimer = 0f
+    private var stuckRetries = 0
     private val lastWalkPos = Vec3()
     private var until = 0f
     private var spot: Spot? = null
@@ -335,6 +336,13 @@ class Jasper(private val room: Room, private val env: Environment) {
         val k = -from.y / dir.y
         val p = from.clone().addScaledVector(dir, k)
         if (p.z < -2.4f || p.z > 2.8f || p.x < -2.9f || p.x > 1.3f) return null // landed on the bed / out of reach
+        // Ensure sunbeam does not land on or inside bedroom obstacles (TV cart, chair, heater, desk, dresser, bowls)
+        for ((o, r) in obstacles) {
+            if (kotlin.math.hypot(p.x - o.position.x, p.z - o.position.z) < r + 0.20f) return null
+        }
+        if (p.x <= -0.10f && p.z <= -0.45f) return null // desk
+        if (p.x <= -2.75f && p.z in 1.45f..3.05f) return null // dresser
+        if (p.x in 1.45f..2.20f && p.z in 2.15f..2.55f) return null // bowls
         return p
     }
     private fun dogSpots(): List<Spot> {
@@ -344,7 +352,7 @@ class Jasper(private val room: Room, private val env: Environment) {
             Spot("rug", Vec3(0.6f, 0f, 1.5f), if (night) "sleep" else "lie", 2f),
             Spot("door", Vec3(2.3f, 0f, 2.65f), "sit", if (doorOpen) 3f else 1f),
             Spot("bed", Vec3(2.75f, 0.85f, 0.25f), "sleep", if (night) 6f else 1f, bed = true),
-            Spot("tv", Vec3(-1.25f, 0f, 1.55f), "lie", if (bedroomTvOn) 2.5f else 0.5f),
+            Spot("tv", Vec3(-1.10f, 0f, 1.40f), "lie", if (bedroomTvOn) 2.5f else 0.5f),
             Spot("desk", Vec3(-0.35f, 0f, 0.15f), "sit", if (sittingAtDesk) 5f else 0.6f),
             Spot("bowls", Vec3(1.66f, 0f, 2.02f), "sit", if (careEnabled && (hunger < 45f || thirst < 45f)) 4.5f else 0.7f)
         )
@@ -363,6 +371,7 @@ class Jasper(private val room: Room, private val env: Environment) {
         spot = s
         path.clear()
         stuckTimer = 0f
+        stuckRetries = 0
         val startFloor = if (onBed) {
             jump = Jump(pos.clone(), Vec3(1.25f, 0f, 0.25f), 0f, 0.9f, 0f)
             onBed = false
@@ -379,8 +388,17 @@ class Jasper(private val room: Room, private val env: Environment) {
 
     /** Furniture he walks around (TV cart, chair, heater) with clearance radii; set by the app. */
     var obstacles: List<Pair<Object3D, Float>> = emptyList()
+        set(v) {
+            field = v
+            val s = spot
+            if (s != null && state == "walk" && !onBed && jump == null) {
+                sendDog(s)
+            }
+        }
     // native fix: he used to walk straight through the bed, the desk, the chair and everything else
     private fun keepClear() {
+        pos.x = pos.x.coerceIn(Room.MIN_X + 0.35f, Room.MAX_X - 0.35f)
+        pos.z = pos.z.coerceIn(Room.MIN_Z + 0.35f, Room.MAX_Z - 0.35f)
         if (pos.x > 1.38f && pos.z < 1.58f) pos.x = 1.38f            // bed
         if (pos.x < -0.1f && pos.z < -0.45f) pos.z = -0.45f          // desk
         if (pos.x < -2.8f && pos.z > 1.5f && pos.z < 3.05f) pos.x = -2.8f // dresser
@@ -421,10 +439,14 @@ class Jasper(private val room: Room, private val env: Environment) {
                 if (dist < arrivalDist) {
                     path.removeAt(0)
                     stuckTimer = 0f
+                    stuckRetries = 0
                     if (path.isEmpty()) {
                         val s = spot!!
                         if (s.bed) { jump = Jump(pos.clone(), Vec3(s.pos.x, 0f, s.pos.z), 0f, 0f, 0.83f); onBed = true }
                         state = "rest"
+                        if (s.name == "tv") {
+                            heading = atan2(TV_POS.x - pos.x, TV_POS.z - pos.z)
+                        }
                         if (pendingAction == "eat") {
                             heading = 0f // face +Z directly toward the food bowl
                             actionKind = "eat"
@@ -468,15 +490,41 @@ class Jasper(private val room: Room, private val env: Environment) {
                     val actualProgress = kotlin.math.hypot(pos.x - lastWalkPos.x, pos.z - lastWalkPos.z)
                     if (actualProgress < stepDist * 0.25f) {
                         stuckTimer += dt
-                        if (stuckTimer > 1.2f) {
+                        if (stuckTimer > 0.8f) {
                             stuckTimer = 0f
-                            val dest = spot?.let { if (it.bed) Vec3(1.25f, 0f, 0.25f) else Vec3(it.pos.x, 0f, it.pos.z) } ?: target
-                            val replanned = pathfinder.findPath(pos, dest, obstacles)
-                            path.clear()
-                            path.addAll(replanned)
+                            stuckRetries++
+                            if (stuckRetries >= 2) {
+                                // Safe recovery: nudge away from nearest obstacle and settle down
+                                stuckRetries = 0
+                                path.clear()
+                                pendingAction = ""
+                                actionKind = ""
+                                for ((o, r) in obstacles) {
+                                    val dx = pos.x - o.position.x; val dz = pos.z - o.position.z
+                                    val d = kotlin.math.hypot(dx, dz)
+                                    if (d < r + 0.25f && d > 0.0001f) {
+                                        pos.x = o.position.x + (dx / d) * (r + 0.15f)
+                                        pos.z = o.position.z + (dz / d) * (r + 0.15f)
+                                    }
+                                }
+                                state = "rest"
+                                pose = spot?.pose ?: "lie"
+                                until = t + 15f
+                            } else {
+                                val dest = spot?.let { if (it.bed) Vec3(1.25f, 0f, 0.25f) else Vec3(it.pos.x, 0f, it.pos.z) } ?: target
+                                val replanned = pathfinder.findPath(pos, dest, obstacles)
+                                path.clear()
+                                if (replanned.isNotEmpty()) {
+                                    path.addAll(replanned)
+                                } else {
+                                    state = "rest"
+                                    pose = spot?.pose ?: "lie"
+                                }
+                            }
                         }
                     } else {
                         stuckTimer = 0f
+                        stuckRetries = 0
                     }
                 }
             }

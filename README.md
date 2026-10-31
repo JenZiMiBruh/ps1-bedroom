@@ -13,7 +13,7 @@
 ![Release](https://img.shields.io/badge/🎃%20RELEASE-Halloween%20(Oct%2031%2C%202026)-ff3ea5?style=for-the-badge&labelColor=1a1033)
 ![Google Play](https://img.shields.io/badge/GOOGLE%20PLAY-before%20the%20end%20of%202026-22c55e?style=for-the-badge&logo=googleplay&logoColor=white&labelColor=1a1033)
 
-![Native build](https://img.shields.io/badge/native%20build-v0.60-a78bfa?style=flat-square&labelColor=1a1033)
+![Native build](https://img.shields.io/badge/native%20build-v0.60.1-a78bfa?style=flat-square&labelColor=1a1033)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.0-7f52ff?style=flat-square&logo=kotlin&logoColor=white&labelColor=1a1033)
 ![OpenGL ES](https://img.shields.io/badge/OpenGL%20ES-3.0-5586a4?style=flat-square&logo=opengl&logoColor=white&labelColor=1a1033)
 ![APK](https://img.shields.io/badge/APK-~1.2%20MB-ef4444?style=flat-square&labelColor=1a1033)
@@ -104,6 +104,7 @@ Newest first. The same list is in the app (tap the version tag in the bottom-lef
 
 | Build | What changed |
 |---|---|
+| **0.60.1** | Jasper TV navigation & stuck recovery fix: obstacle clearance padding, goal clamping, sunbeam rejection over furniture, TV watch orientation, multi-retry safe step-back |
 | **0.60** | Vibrato ring-buffer overrun crash fix; audio thread resilience ensures sound engine survives and logs render errors |
 | **0.59** | Crash reporter with copyable launch diagnostics; memory leak fixes (WindowWidget snapshots, GTA GPU textures); real-world layout GTA maps (islands, bridges, districts, water boundaries); living Tamagotchu virtual pet on dresser with full lifecycle, health, feeding and mini-game |
 | **0.58** | Playable GTA open cities (III, VC, SA, LCS, VCS, IV, V, VI): drive, walk, steal cars, safehouse saves, shops, cash pickups, wanted levels, WASTED state, authentic per-game HUDs and pause maps; comic-book GTA covers |

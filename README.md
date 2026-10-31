@@ -97,6 +97,44 @@ The port follows the web version section by section and is checked against it as
 
 - ⚡ **CPU / GPU optimization pass** across the whole app
 - ✔️ **Parity pass**: side-by-side checks against the web version from the same camera spots
+- 🎮 **Full Bluetooth Gamepad & Wireless Controller Support**: direct DualShock/DualSense/Xbox controller mapping for room traversal and CRT GTA driving
+
+### 🚀 Major Additions & Long-Term Overhauls
+
+- 🚪 **The Full Hallway & Apartment Expansion**: Step through the bedroom door into the wood-paneled 2001 apartment hallway. Explore the midnight kitchen (humming fridge, glowing digital microwave, late-night snacks & Surge soda), retro bathroom, and cozy living room couch where Jasper follows and curls up beside you.
+- 📻 **Live Web Radio & 24/7 Lo-Fi Streamer**: Connect the boombox to real live Shoutcast/Icecast retro radio stations, 24/7 Lo-Fi chill beats, ambient rain streams, synthwave, and live NOAA weather radio with analog frequency tuning.
+- 🍂 **Living Four-Season Micro-Climate Overhaul**: Continuous, gradual seasonal transitions. Autumn leaf-raking piles in suburban yards; dynamic winter snow accumulation on window sills, roofs, and car windshields; springtime cherry blossom flurries; humid summer night cicadas and distant thunderstorm heat lightning.
+- 📼 **VCR Camcorder & Magnetic VHS Recording Engine**: Record CRT gameplay, live window weather, or bedroom views onto virtual VHS tapes with authentic tracking flutter, scanline glitch, head chatter, tape hiss, and timestamp overlay ("REC ⏺ OCT 31 2001").
+- 🐕 **Jasper Companion 2.0**: Trick training (fetch tennis ball, roll over, shake paw), dog toy box with squeaky physics toys, feeding/water bowls, and backyard leash walks.
+- 🖥️ **RetroOS 2001 PC Expansion**: 56k dial-up connection with screeching modem handshake audio, Instant Messenger buddy list with nostalgic sounds, simulated 2000s web browser with retro fansites and cheat codes, and playable 3D Pinball / Solitaire.
+- 🌦️ **Interactive Doppler Radar & Emergency Alert System (EAS)**: High-resolution Doppler radar loop on the CRT TV weather channel showing incoming storm cells, paired with atmospheric sirens and cozy thunderstorm weather reports.
+- 🛋️ **Modular Bedroom Interior Customizer**: Grid-based furniture rearrangement (swap bed and desk spots, rotate the TV cart), custom bedding, vintage wallpapers, and hangable corkboard for sticky notes and polaroids.
+- 👥 **Passive Ambient Co-Presence ("Midnight Study Session")**: Optional lightweight multiplayer to share a 4-word room code with a friend to study together in synchronized real-time weather and boombox soundscapes.
+
+### 💡 Creative Ideas & Feature Wishlist
+
+<table>
+<tr>
+<td width="50%" valign="top">
+
+- 🛹 **Backyard Skate Minigame**: Fingerboard / mini skateboard trick ramp on the desk or driveway
+- 📻 **Cassette Tape Mixtape Maker**: Record boombox songs onto blank cassette tapes with hand-written Sharpie labels
+- 🐱 **A Stray Cat on the Fire Escape**: An inquisitive neighborhood cat that visits the windowsill or fire escape during quiet nights
+- 🐟 **Virtual Aquarium / Fish Bowl**: Low-poly neon tetras swimming on the desk shelf with gentle bubbling aerator sound
+- 🔦 **Nighttime Flashlight & Laser Pointer**: Interactive flashlight beam to explore dark room corners and play with Jasper
+
+</td>
+<td width="50%" valign="top">
+
+- 🥪 **Late-Night Snack System**: Grab pizza, Surge, or snacks from the kitchen or desk stash
+- 🌧️ **Micro-Weather Transitions**: Watch distant storm fronts visibly roll in across the horizon before rain reaches the glass
+- 🛸 **Late-Night Paranoias & Mysteries**: Rare eerie phenomena (subtle UFO lights over distant mountains, mysterious numbers station on the radio)
+- 🖨️ **Dot-Matrix / BubbleJet Desk Printer**: Print out ASCII art banners, achievement certificates, or cheat codes from the PC
+- 📷 **Disposable Camera Album**: Snap 24 retro grainy disposable camera photos and get them "developed" on the desk
+
+</td>
+</tr>
+</table>
 
 ## 📝 Changelog
 

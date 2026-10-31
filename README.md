@@ -92,12 +92,13 @@ The port follows the web version section by section and is checked against it as
 - **Share cards and daily surprises**: postcards of your room from photo mode, and something new in the room each day
 - **Android integration**: MediaSession (shade, lock screen, headphones, Bluetooth, watch), audio focus, Now Playing widget, and self-sufficient background Window Widget refreshing without needing the app open
 - **In-app changelog & Developer Debug Tool**: Menu → About, and retro PS1 in-app debug suite with instant 1-tap testing
+- **Full Controller & Gamepad Support**: Plug-and-play Bluetooth and USB gamepad mapping (DualShock 4, DualSense, Xbox Wireless, 8BitDo, generic HID); dual-analog sticks for movement and camera orbit, D-pad menu navigation, face-button actions, photo mode shortcuts, and analog vehicle steering in GTA
 
 ### 🔨 In progress / up next
 
 - ⚡ **CPU / GPU optimization pass** across the whole app
 - ✔️ **Parity pass**: side-by-side checks against the web version from the same camera spots
-- 🎮 **Full Bluetooth Gamepad & Wireless Controller Support**: direct DualShock/DualSense/Xbox controller mapping for room traversal and CRT GTA driving
+
 
 ### 🚀 Major Additions & Long-Term Overhauls
 
@@ -110,6 +111,7 @@ The port follows the web version section by section and is checked against it as
 - 🌦️ **Interactive Doppler Radar & Emergency Alert System (EAS)**: High-resolution Doppler radar loop on the CRT TV weather channel showing incoming storm cells, paired with atmospheric sirens and cozy thunderstorm weather reports.
 - 🛋️ **Modular Bedroom Interior Customizer**: Grid-based furniture rearrangement (swap bed and desk spots, rotate the TV cart), custom bedding, vintage wallpapers, and hangable corkboard for sticky notes and polaroids.
 - 👥 **Passive Ambient Co-Presence ("Midnight Study Session")**: Optional lightweight multiplayer to share a 4-word room code with a friend to study together in synchronized real-time weather and boombox soundscapes.
+- 🪟 **Panoramic Exterior Vista & Balcony Overhaul**: Open the bedroom window sash or step out onto the fire escape / balcony to view the horizon with free-look zoom binoculars, dynamic traffic intersections, and bird flocks that land on railings.
 
 ### 💡 Creative Ideas & Feature Wishlist
 

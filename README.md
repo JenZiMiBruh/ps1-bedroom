@@ -9,15 +9,17 @@
 <p>A cozy ambience app that looks like a PlayStation game from 2001.<br>Leave it on while you study, work, game or fall asleep.</p>
 
 [![Play in your browser](https://img.shields.io/badge/▶%20PLAY-in%20your%20browser-ff3ea5?style=for-the-badge&logo=googlechrome&logoColor=white&labelColor=1a1033)](https://jenzimibruh.github.io/ps1-bedroom/play/)
-[![Android: native app Oct 21](https://img.shields.io/badge/📱%20ANDROID-native%20app%20Oct%2021-7ff3ff?style=for-the-badge&logo=android&logoColor=white&labelColor=1a1033)](../../issues/29)
+[![Android: Native App v0.60.1 Out Now](https://img.shields.io/badge/📱%20ANDROID-Native%20v0.60.1%20Out%20Now-22c55e?style=for-the-badge&logo=android&logoColor=white&labelColor=1a1033)](https://github.com/JenZiMiBruh/ps1-bedroom/releases/tag/v0.60.1)
 [![itch.io](https://img.shields.io/badge/ALSO%20ON-itch.io-fa5c5c?style=for-the-badge&logo=itchdotio&logoColor=white&labelColor=1a1033)](https://galloade.itch.io/ps1-bedroom)
 
 [![Version](https://img.shields.io/github/v/release/JenZiMiBruh/ps1-bedroom?style=flat-square&label=version&color=a78bfa&labelColor=1a1033)](../../releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/JenZiMiBruh/ps1-bedroom/total?style=flat-square&label=downloads&color=ffd23f&labelColor=1a1033)](../../releases)
-![Native Android](https://img.shields.io/badge/native%20Android-Oct%2021%2C%202026-22c55e?style=flat-square&logo=android&logoColor=white&labelColor=1a1033)
+![Native Android](https://img.shields.io/badge/native%20Android-v0.60.1%20OUT%20NOW-22c55e?style=flat-square&logo=android&logoColor=white&labelColor=1a1033)
 ![Google Play](https://img.shields.io/badge/Google%20Play-before%20end%20of%202026-22c55e?style=flat-square&logo=googleplay&logoColor=white&labelColor=1a1033)
 ![Free](https://img.shields.io/badge/free-no%20ads%2C%20no%20account-3b82f6?style=flat-square&labelColor=1a1033)
 ![three.js](https://img.shields.io/badge/three.js-r128-white?style=flat-square&logo=three.js&logoColor=white&labelColor=1a1033)
+![Kotlin](https://img.shields.io/badge/Kotlin-2.0-7f52ff?style=flat-square&logo=kotlin&logoColor=white&labelColor=1a1033)
+![OpenGL ES](https://img.shields.io/badge/OpenGL%20ES-3.0-5586a4?style=flat-square&logo=opengl&logoColor=white&labelColor=1a1033)
 
 <sub><a href="#-new-in-135--clear-skies">What's new</a> &nbsp;·&nbsp; <a href="#-the-room">The room</a> &nbsp;·&nbsp; <a href="#-15-places-outside">Places</a> &nbsp;·&nbsp; <a href="#%EF%B8%8F-get-it">Download</a> &nbsp;·&nbsp; <a href="#-made-for-android">Android</a> &nbsp;·&nbsp; <a href="#-changelog">Changelog</a> &nbsp;·&nbsp; <a href="../../wiki">📖 Wiki</a></sub>
 
@@ -32,10 +34,19 @@
 <br>
 
 > [!IMPORTANT]
-> ### 📣 Coming October 21, 2026: a true native Android app
-> PS1 Bedroom is being rebuilt from scratch in **Kotlin + OpenGL ES**: the same room 1:1, with **sleep-friendly audio** (no more crackle or clipping overnight), a **cooler, lighter renderer** and better battery life for all-night use.
-> **Releases October 21, 2026** here on GitHub, and comes to **Google Play before the end of 2026**. The old web-view APKs have been taken down because they weren't optimized enough; until the native app lands, play in your browser.
-> [Read the announcement →](../../issues/29) · [Follow the `native` branch →](../../tree/native)
+> ### 🎃 OUT NOW: PS1 Bedroom Native for Android (v0.60.1 — Halloween Release)!
+> PS1 Bedroom has been completely rebuilt from the ground up as a **pure native Android app in Kotlin + OpenGL ES 3.0**! No web view, no browser overhead — just butter-smooth, sleep-friendly retro perfection.
+> 
+> * ⚡ **Native Hardware Performance**: 60 / 90 / 120 fps pacing with smart thermal scaling and eco idle — your phone stays ice-cold overnight.
+> * 🔊 **Crash-Proof Native 3D Audio**: Clean, spatial synth mixer with zero overnight crackle or clipping.
+> * 📺 **Playable 3D Open-City GTAs**: Every GTA from III to VI is playable with authentic per-game HUDs, cars, traffic, and districts right on the bedroom CRT!
+> * 👾 **Living Tamagotchu Virtual Pet**: Hatches, grows, eats, plays, sleeps, and poops on the real-world clock on the bedroom dresser.
+> * 🐕 **Jasper German Shepherd**: Jointed PS1 model, custom coats, reactive room AI, and smart obstacle navigation.
+> * 🗑️ **Paper Toss Deluxe & Gooey Lava Lamp**: Real marching-tetrahedra metaballs and a full paper-tossing mini-game.
+> * 📱 **Android Power Features**: True background playback, lock screen player with cover art, and "My Window" + "Controls" home widgets.
+> 📲 **[Download Native APK v0.60.1 (1.6 MB)](https://github.com/JenZiMiBruh/ps1-bedroom/releases/download/v0.60.1/PS1-Bedroom-native-v0.60.1.apk)** &nbsp;·&nbsp; **[View GitHub Release](../../releases/tag/v0.60.1)** &nbsp;·&nbsp; **[Explore the `native` branch](../../tree/native)**  
+> *(Coming to Google Play before the end of 2026!)*
+
 
 ## 🆕 New in 1.3.5 — Clear Skies
 
@@ -128,14 +139,19 @@
 
 ### 📱 Android
 
-[![Native app Oct 21](https://img.shields.io/badge/📅%20NATIVE%20APP-October%2021%2C%202026-7ff3ff?style=for-the-badge&logo=android&logoColor=white&labelColor=1a1033)](../../issues/29)
+[![Download Native APK](https://img.shields.io/badge/⬇️%20DOWNLOAD%20NATIVE%20APK-v0.60.1%20(1.6%20MB)-22c55e?style=for-the-badge&logo=android&logoColor=white&labelColor=1a1033)](https://github.com/JenZiMiBruh/ps1-bedroom/releases/download/v0.60.1/PS1-Bedroom-native-v0.60.1.apk)
+[![GitHub Releases](https://img.shields.io/badge/📦%20RELEASE-v0.60.1-a78bfa?style=for-the-badge&logo=github&logoColor=white&labelColor=1a1033)](../../releases/tag/v0.60.1)
 
-The Android app is being rebuilt as a **true native app** (Kotlin + OpenGL ES): cooler, lighter and sleep-friendly.
+The native Android app is officially live! Built from scratch in **pure Kotlin + OpenGL ES 3.0**: cooler, lighter, crash-proof, and designed for all-night sleep ambience.
 
-- 📅 **October 21, 2026**: native APK here on GitHub Releases
+- 📲 **[Download PS1-Bedroom-native-v0.60.1.apk](https://github.com/JenZiMiBruh/ps1-bedroom/releases/download/v0.60.1/PS1-Bedroom-native-v0.60.1.apk)** (~1.6 MB)
+- 🔋 **Battery & Sleep Friendly**: 60 / 90 / 120 fps pacing with eco idle — keeps your phone ice-cold for 8+ hours
+- 🎮 **Playable CRT GTAs & Tamagotchu**: Full open-world 3D GTAs on the CRT and living virtual pet on the dresser
+- 🐕 **Jasper German Shepherd**: Jointed PS1 model with reactive AI, coat swatches, and smart obstacle avoidance
 - ▶️ **Google Play** before the end of 2026
 
-The old web-view APKs were taken down because they weren't optimized enough. Until then, play in your browser (it works on phones too). Follow along on the [`native` branch](../../tree/native).
+- 📦 **Offline & Lightweight**: No browser engine or heavy dependencies; works on Android 7.0 through Android 15.
+- 🛠️ Follow the continuous native development on the [`native` branch](../../tree/native).
 
 </td>
 <td width="50%" valign="top">
@@ -158,7 +174,7 @@ Also on **[itch.io](https://galloade.itch.io/ps1-bedroom)**.
 
 ## 📱 Made for Android
 
-<sub>These come back in the native Android app (October 21, 2026).</sub>
+<sub>Available now in the native Android app (v0.60.1)!</sub>
 
 | | |
 |---|---|
@@ -168,6 +184,9 @@ Also on **[itch.io](https://galloade.itch.io/ps1-bedroom)**.
 | 📤 **Share to play** | Share a YouTube video to PS1 Bedroom and it plays on the CRT |
 | 🔋 **All-night battery** | Automatic quality, a 30 / 60 / 120 fps setting and an eco idle mode, so it stays cool for hours |
 | 🎵 **Your albums** | Add album folders and it reads the track order and cover art. Your music stays on your device |
+| 👾 **Living Tamagotchu** | Authentic virtual pet on the dresser: hatches, grows, plays, gets hungry, and sleeps on the real clock |
+| 🎮 **Playable CRT Games** | Pick up the controller and drive around open-city 3D GTAs with authentic HUDs and pause maps |
+| 🐕 **Smart Jasper AI** | German Shepherd with coat swatches, reactive room AI, and seamless obstacle pathfinding |
 
 <br>
 

@@ -13,7 +13,7 @@
 ![Release](https://img.shields.io/badge/🎃%20RELEASE-Halloween%20(Oct%2031%2C%202026)-ff3ea5?style=for-the-badge&labelColor=1a1033)
 ![Google Play](https://img.shields.io/badge/GOOGLE%20PLAY-before%20the%20end%20of%202026-22c55e?style=for-the-badge&logo=googleplay&logoColor=white&labelColor=1a1033)
 
-![Native build](https://img.shields.io/badge/native%20build-v0.45-a78bfa?style=flat-square&labelColor=1a1033)
+![Native build](https://img.shields.io/badge/native%20build-v0.60-a78bfa?style=flat-square&labelColor=1a1033)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.0-7f52ff?style=flat-square&logo=kotlin&logoColor=white&labelColor=1a1033)
 ![OpenGL ES](https://img.shields.io/badge/OpenGL%20ES-3.0-5586a4?style=flat-square&logo=opengl&logoColor=white&labelColor=1a1033)
 ![APK](https://img.shields.io/badge/APK-~1.2%20MB-ef4444?style=flat-square&labelColor=1a1033)
@@ -60,38 +60,40 @@ The port follows the web version section by section and is checked against it as
 
 ### ✅ Done
 
-- **Engine**: OpenGL ES 3 renderer that mirrors three.js r128, the PS1 shader (vertex snap, affine warp, grime, macro variation), the post pass (ambient occlusion, light rays through the window, colour grade, dither), and the orbit camera with drag, pinch and pan
-- **Performance**: frame pacing, idle slow-down, thermal quality steps, static batching, shadow maps only redrawn when needed
+- **Engine**: OpenGL ES 3 renderer with dynamic resolution up to 4K Ultra HD (2160p), supersampling anti-aliasing (SSAA), PS1 shader (vertex snap, affine warp, grime, macro variation), post pass (ambient occlusion, light rays through the window, colour grade, dither), and orbit camera with drag, pinch and pan
+- **Performance**: frame pacing (supports 60/90/120 Hz screens), idle slow-down, thermal dynamic resolution downscaling, static batching, shadow maps only redrawn when needed
 - **The room**: walls, floor, ceiling, rug, door with its UNDER CONSTRUCTION sign, baseboard all the way round, light switch, AC unit with a sweeping louvre
-- **Window and blinds**: all four blind states with the slat animation; tap to change
+- **Window and blinds**: all four blind states with the slat animation; sliding lower window sash opening for crystal-clear outdoor soundscape
 - **Real sun and moon**: the light through the window follows the time of day, the season and the moon phase
 - **The sky**: dome with time-of-day colours, sunset glow, twinkling stars, Milky Way, sun and moon, drifting clouds; airliners, birds, shooting stars, rainbows
-- **The city outside**: 3D towers with day/night facades and roof beacons, highway traffic that follows the clock and weather (police chases, wet roads), commuter train, tri-vision billboards, LED ticker, swaying seasonal trees
-- **Desk corner**: desk and hutch, CD rack, PC tower with the "DO NOT TURN OFF" sticky note, monitor, keyboard, mouse, cordless phone, MP3 player, Surge can, lava lamp (tap for colours)
+- **The city outside**: 3D towers with day/night facades and roof beacons, highway traffic that follows the clock and weather (police chases, wet road tire spray), commuter train, tri-vision billboards, LED ticker, swaying seasonal trees
+- **Desk corner**: desk and hutch, CD rack, PC tower with the "DO NOT TURN OFF" sticky note, monitor, keyboard, mouse, cordless phone (rings, silent, no calls), MP3 player, Surge can, real gooey metaball lava lamp with dynamic marching tetrahedra wax
 - **Bed corner**: bookcase bed with the space comforter, LED clock radio showing the room's time, office chair, wall shelf with the cat photo (tap for night-vision eyes)
 - **Ceiling fan**: spinning blades, glowing shade, pull chains (tap to toggle the fan and the light)
-- **More of the room**: dresser with the boombox, nightstand reading lamp, wastebasket, backpack, the 2001 wall calendar, posters, string lights (warm / rainbow), windowsill plants, Discman, Game Kid Advance, Noka, Tamagotchu, Kenney furniture-kit models
-- **Jasper**: the German Shepherd with the split-colour eye, wandering between his favourite spots, sleeping on the bed at night, wagging when you pet him
-- **CRT TV**: the MAGNAVOLT set on its media cart with the VCR, seven live channels, scanlines and glow; tap to flip channels or power it off
-- **PlayStation**: power, reset and a hinged lid, the disc spinning up, the boot screens and Bandi-coot Rush on the TV, the controller and real cable hookups to the TV and a power strip
-- **Game library**: 11 PS1 games and every GTA with hand-drawn covers; pick one up and swap the disc; each game plays on the TV in its own style, GTA III to VI as a 3D drive
+- **More of the room**: dresser with the boombox, nightstand reading lamp, wastebasket, backpack, the 2001/2026 wall calendar with active week highlight, posters, string lights with date-based holiday themes, windowsill plants, Discman, Game Kid Advance, Noka, Ken-ney furniture-kit models
+- **Tamagotchu**: living virtual pet on the dresser; hatches, grows through life stages, gets hungry/bored on the real clock, poops, sleeps at night, gets sick, calls for attention, full interactive handheld device with 8 classic icons and guessing game
+- **Jasper**: the German Shepherd with the split-colour eye, wandering between his favourite spots, sleeping on the bed at night, wagging when you pet him, reacting to thunder, TV power, boombox music, and PS1 boot-ups
+- **CRT TV**: the MAGNAVOLT set on its media cart with the VCR, seven live channels, scanlines and glow; tap to flip channels or power it off; high-legibility Simple View and advanced Doppler radar WeatherStar 4000; Sony RM-90 retro TV remote and TV zoom camera
+- **PlayStation**: power, reset and a hinged lid, disc spinning, authentic PS1–PS5 boot sounds, Bandi-coot Rush on TV, controller and real cable hookups
+- **Game library & Playable GTA**: 11 PS1 games and every GTA with hand-drawn comic covers; pick up / swap discs; tap TV during 3D GTA (III, VC, SA, LCS, VCS, IV, V, VI) to play in miniature open cities matching real map layouts, drive cars, steal vehicles, walk/run, enter safehouses and shops, authentic HUDs, wanted levels and pause map
+- **Paper Toss Deluxe**: flick crumpled paper into the wastebasket, featuring strikes, wind, sliding basket, cardboard box obstacle, combo multiplier streaks ("ON FIRE"), golden wads, coins, upgrade shop and lifetime stats
 - **15 places outside the window**: Downtown, a 40th-floor skyscraper, Neon City, the neighborhood, suburbs, a backyard, a trailer park, Arizona, a desert canyon, a tropical island, a beach boardwalk, a lake, a forest, the mountains and a farm, each with its own painted backdrop, 3D yard, sprite trees and live details
-- **Weather**: rain with splashes on the sill, snow, falling leaves and blossoms, fireflies on summer nights, dust drifting in the light beam, raindrops and frost on the window glass, the seasonal ground outside, lightning flashes; every particle type is one GPU-instanced draw call
-- **VCR tapes and room extras**: four tapes to swap into the VCR (commercials, a kung-fu movie, an ocean video), the answering machine, glow-in-the-dark constellations on the ceiling, the space heater, a choice of posters, wall / carpet / sheet colours, seasonal decorations by date, boombox stations
+- **Weather & Wind Physics**: physical raindrops and snowflakes striking and trickling on glass, live wind vector simulation, indoor leaves blowing through open window onto furniture/floor, supersonic lightning ionization arc with synchronized thunder EQ (low rumble, high crackle, full spectrum)
+- **Crash reporter**: automatic uncaught exception and non-fatal error recorder (`CrashLog.kt`) with copyable diagnostic reports on launch
+- **VCR tapes and room extras**: four tapes to swap into the VCR (commercials, a kung-fu movie, an ocean video), answering machine, glow-in-the-dark ceiling constellations, space heater, poster choices, room colours, seasonal decorations by date, boombox stations
 - **Player modes**: walk with the joystick, sit in the rolling chair (TV, desk, window) or lie on the bed, with the dock, crosshair and pop-up messages
-- **Menu and top bar**: every World, Room, Display and Timers setting from the web version, live weather for your city, the status bar that steps through time / weather / season / place, saved settings
-- **Start screen, how-to and photo mode**: the PS1 boot sequence, the first-launch tutorial, photos saved to Pictures / PS1 Bedroom
-- **The PC**: the live monitor (XP desktop + four game parodies), and a usable 2001 desktop with Messenger, dial-up, WinBeats and Minesweeper
-- **Sound**: a native synth engine running the full soundscape: every source placed in the room, weather and wildlife through the window, all the music and game soundtracks, the mixer, background playback
+- **Menu and top bar**: every World, Room, Display and Timers setting, sound mixer presets (Default, Study, Rainy night, Sleep, Lively, Music first + custom mixes), live weather for your city, top bar status stepping, saved settings
+- **Start screen, how-to and photo mode**: PS1 boot sequence, first-launch tutorial, photos saved to Pictures / PS1 Bedroom
+- **The PC**: live monitor (XP desktop + four game parodies), and a usable 2001 desktop with Messenger, dial-up, WinBeats and Minesweeper
+- **Sound**: crash-proof native synth engine running the full soundscape: every source placed in the room, weather and wildlife through the window, music and game soundtracks, mixer, background playback
 - **My Music**: your own songs and albums on the boombox, with covers in the room and notification controls
 - **YouTube on the TV**: links or shared videos play on the bedroom CRT, pinned to the glass, with full screen
-- **Achievements and the sunrise alarm**: 18 trophies with their own fanfares, a 20-minute sunrise glow before your alarm
+- **Achievements and sunrise alarm**: 18 trophies with their own fanfares, 20-minute sunrise glow before your alarm
 - **Share cards and daily surprises**: postcards of your room from photo mode, and something new in the room each day
-- **Android media integration**: MediaSession (shade, lock screen, headphones, Bluetooth, watch), audio focus, a Now Playing home-screen widget
-- **In-app changelog**: Menu → About
+- **Android integration**: MediaSession (shade, lock screen, headphones, Bluetooth, watch), audio focus, Now Playing widget, and self-sufficient background Window Widget refreshing without needing the app open
+- **In-app changelog & Developer Debug Tool**: Menu → About, and retro PS1 in-app debug suite with instant 1-tap testing
 
 ### 🔨 In progress / up next
-
 
 - ⚡ **CPU / GPU optimization pass** across the whole app
 - ✔️ **Parity pass**: side-by-side checks against the web version from the same camera spots
@@ -102,6 +104,32 @@ Newest first. The same list is in the app (tap the version tag in the bottom-lef
 
 | Build | What changed |
 |---|---|
+| **0.60** | Vibrato ring-buffer overrun crash fix; audio thread resilience ensures sound engine survives and logs render errors |
+| **0.59** | Crash reporter with copyable launch diagnostics; memory leak fixes (WindowWidget snapshots, GTA GPU textures); real-world layout GTA maps (islands, bridges, districts, water boundaries); living Tamagotchu virtual pet on dresser with full lifecycle, health, feeding and mini-game |
+| **0.58** | Playable GTA open cities (III, VC, SA, LCS, VCS, IV, V, VI): drive, walk, steal cars, safehouse saves, shops, cash pickups, wanted levels, WASTED state, authentic per-game HUDs and pause maps; comic-book GTA covers |
+| **0.57** | Lane-based non-colliding GTA traffic (2 lanes each way, distance keeping, overtaking); distinct look per GTA game; authentic PS1–PS5 boot sounds; vsync-aware pacing + dynamic resolution downscaling; weather channel layout polish; leaves land on bed/pillows/desk |
+| **0.56** | Quality preset crash fix; resting indoor leaves that stay on floor/desk; 3x sharp Paper Toss UI; desk phone mute modes; Jasper head tracking fix; fast gradient lava mesher |
+| **0.55** | Paper Toss Deluxe mini-game (strikes, wind, sliding basket, box obstacles, combo streaks, coin shop); clean single-card simple weather view; seamless wall textures; outer wall leaf barrier |
+| **0.54** | Real gooey metaball lava lamp wax with marching tetrahedra mesh; sound mixer presets (Default, Study, Rainy night, Sleep, Lively, Music first + custom mixes); Jasper reactive AI (thunder flinch, trotting to TV, boombox perk-up, bedtime) |
+| **0.53.11** | YouTube restart fix; lighter non-waking widget alarms; throttled off-screen outdoor scenes |
+| **0.53.10** | 4K Ultra HD rendering & resolution scaling up to 2160p (3840×2160), supersampling anti-aliasing (SSAA), 160p–2160p presets and slider, vertex wobble off option |
+| **0.53.9** | Physical window glass raindrops and snow, wind-driven precipitation & indoor blowing leaves, lightning supersonic ionization whip + thunder EQ (low/high/full), Weather Channel Simple & Advanced overhaul, wall calendar active week highlight, debug tool expansion |
+| **0.53.8** | Self-sufficient background Window Widget engine with periodic AlarmManager scheduling; dynamic 2D canvas PS1 outdoor renderer |
+| **0.53.7** | Open window soundscape with sliding sash; theme-styled toasts; 2001/2026 calendar toggle; holiday-themed string lights; sleep mode display turn-off |
+| **0.53.6** | Developer Debug Suite; high-legibility TV weather simple view; retro Sony RM-90 TV remote; TV screen zoom camera; backyard swing set alignment fix |
+| **0.53.5** | Location weather dynamics: freeway traffic rain spray & snow wakes, leaves landing on roofs and cars, barn rooftop weather vane |
+| **0.53.4** | Window leaf hit slider; complete 90s WeatherStar 4000 weather channel broadcast overhaul |
+| **0.53.3** | Live wind speed and wind direction from Open-Meteo API; leaves rolling across window glass |
+| **0.53.2** | Realistic lightning audio and visual flashes; dynamic days of the week system |
+| **0.53.1** | Day of the week traffic and lighting simulation |
+| **0.53.0** | Live Open-Meteo weather integration for user's city |
+| **0.52** | High-performance audio limiter and soundscape balancing |
+| **0.51** | OrbitControls touch improvements and smooth camera transitions |
+| **0.50** | TV YouTube integration refinements |
+| **0.49** | Audio latency optimizations |
+| **0.48** | Paper Toss mini-game initial release |
+| **0.47** | Sound mixing and reverb polish |
+| **0.46** | Enhanced console models and cables |
 | **0.45** | Thumb-friendly bottom UI, full controller support, leaves/debris controls, richer seasonal & weather reactions, real-time Downtown weather ticker, Jasper blinking & bed spacing, console cord & frame fixes |
 | **0.44** | Menu home page with quick toggles and sub-tabs, light / dark / phone / room-clock modes, 6 colour themes |
 | **0.43** | YouTube rendered on the TV screen inside the 3D room |
